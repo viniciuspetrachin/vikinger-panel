@@ -1,0 +1,14 @@
+.git
+.gitignore
+.env
+config
+data
+.mod-cache
+**/__pycache__
+**/.pytest_cache
+**/.venv
+**/node_modules
+app/node_modules
+docs/screenshots
+*.md
+!app/requirements.txt
