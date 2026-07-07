@@ -806,6 +806,69 @@
           </div>
         </section>
 
+        <!-- DOAÇÕES -->
+        <section x-show="page === 'donation'" class="space-y-6">
+          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6">
+            <h3 class="font-display text-lg font-semibold text-valheim-gold mb-2">Apoie o projeto</h3>
+            <p class="text-sm text-gray-400 leading-relaxed" x-text="donationPitch"></p>
+          </div>
+
+          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4">
+            <h4 class="section-title">Doações voluntárias</h4>
+            <p class="text-sm text-gray-500">O painel é gratuito para uso pessoal. Se ele te ajuda, qualquer contribuição
+              financia novas features, correções e documentação.</p>
+            <div x-show="hasDonationOptions()" class="flex flex-wrap gap-3">
+              <template x-for="link in donationInfo.links" :key="link.id">
+                <a :href="link.url" target="_blank" rel="noopener"
+                   class="btn btn-sm btn-neutral inline-flex items-center gap-2">
+                  <span>♥</span><span x-text="link.label"></span>
+                </a>
+              </template>
+            </div>
+            <div x-show="donationInfo.pix_key" class="bg-valheim-900 rounded-lg border border-valheim-700 p-4">
+              <p class="text-xs text-gray-500 uppercase tracking-wider mb-2">Pix (Brasil)</p>
+              <div class="flex flex-wrap items-center gap-3">
+                <code class="font-mono text-sm text-valheim-gold-light break-all" x-text="donationInfo.pix_key"></code>
+                <button @click="copyText(donationInfo.pix_key)" class="btn btn-sm btn-ghost">Copiar chave</button>
+              </div>
+            </div>
+            <p x-show="!hasDonationOptions()" class="text-sm text-gray-500 italic">
+              Links de doação ainda não configurados. Defina <code class="text-gray-400">PANEL_DONATION_*</code> no
+              <code class="text-gray-400">.env</code> do servidor.
+            </p>
+          </div>
+
+          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4">
+            <h4 class="section-title">Licenciamento comercial</h4>
+            <p class="text-sm text-gray-400 leading-relaxed">
+              Provedores de <strong class="text-gray-200">hospedagem</strong> que desejam oferecer este painel aos
+              clientes precisam de uma <strong class="text-gray-200">licença comercial</strong>. Revenda e white-label
+              sem autorização violam a <span class="text-valheim-gold-light" x-text="donationInfo.license || 'Polyform Shield 1.0.0'"></span>.
+            </p>
+            <ul class="text-sm text-gray-500 space-y-2 list-disc list-inside">
+              <li>Uso pessoal e contribuição open source: <span class="text-green-400">gratuito</span></li>
+              <li>Hospedagem comercial / revenda: <span class="text-yellow-400">licença paga</span></li>
+              <li>Doações não substituem licença comercial</li>
+            </ul>
+            <div class="flex flex-wrap gap-3 pt-2">
+              <a x-show="donationInfo.commercial_url"
+                 :href="donationInfo.commercial_url" target="_blank" rel="noopener"
+                 class="btn btn-sm btn-neutral">Ver planos comerciais</a>
+              <a x-show="donationInfo.license_url"
+                 :href="donationInfo.license_url" target="_blank" rel="noopener"
+                 class="btn btn-sm btn-ghost">Texto da licença</a>
+              <a x-show="versionInfo.repo_url"
+                 :href="(versionInfo.repo_url || '') + '/blob/main/COMMERCIAL-LICENSE.md'" target="_blank" rel="noopener"
+                 class="btn btn-sm btn-ghost">COMMERCIAL-LICENSE.md</a>
+            </div>
+            <p x-show="donationInfo.commercial_email" class="text-sm text-gray-500">
+              Contato para licenciamento:
+              <a :href="'mailto:' + donationInfo.commercial_email" class="text-valheim-gold-light hover:underline"
+                 x-text="donationInfo.commercial_email"></a>
+            </p>
+          </div>
+        </section>
+
         <!-- SOBRE -->
         <section x-show="page === 'about'" class="space-y-6">
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6">
@@ -815,7 +878,13 @@
               <div><dt class="text-gray-500 text-xs uppercase tracking-wider">Versão</dt><dd class="font-mono text-valheim-gold mt-1" x-text="versionInfo.version || '—'"></dd></div>
               <div><dt class="text-gray-500 text-xs uppercase tracking-wider">Build</dt><dd class="font-mono text-gray-300 mt-1" x-text="versionInfo.build_date || '—'"></dd></div>
               <div><dt class="text-gray-500 text-xs uppercase tracking-wider">Commit</dt><dd class="font-mono text-gray-400 mt-1 truncate" x-text="versionInfo.commit || '—'"></dd></div>
-              <div><dt class="text-gray-500 text-xs uppercase tracking-wider">Licença</dt><dd class="text-gray-300 mt-1" x-text="versionInfo.license || 'MIT'"></dd></div>
+              <div><dt class="text-gray-500 text-xs uppercase tracking-wider">Licença</dt>
+                <dd class="text-gray-300 mt-1">
+                  <a x-show="versionInfo.license_url" :href="versionInfo.license_url" target="_blank" rel="noopener"
+                     class="text-valheim-gold-light hover:underline" x-text="versionInfo.license || 'Polyform Shield 1.0.0'"></a>
+                  <span x-show="!versionInfo.license_url" x-text="versionInfo.license || 'Polyform Shield 1.0.0'"></span>
+                </dd>
+              </div>
             </dl>
             <a x-show="versionInfo.repo_url" :href="versionInfo.repo_url" target="_blank" rel="noopener"
                class="btn btn-sm btn-ghost mt-4 inline-flex">Repositório</a>

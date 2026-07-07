@@ -10,6 +10,7 @@ import { files } from "./state/files.js";
 import { logs } from "./state/logs.js";
 import { audit } from "./state/audit.js";
 import { help } from "./state/help.js";
+import { donation } from "./state/donation.js";
 import { about } from "./state/about.js";
 
 function panel() {
@@ -88,6 +89,10 @@ function panel() {
       if (this.page === "logs") await this.loadLogs();
       if (this.page === "audit") await this.loadAudit();
       if (this.page === "about") await this.loadVersion();
+      if (this.page === "donation") {
+        await this.loadVersion();
+        await this.loadDonationInfo();
+      }
 
       if (this.page !== "files" && this.page !== "server") {
         window.PanelEditor?.destroy("file");
@@ -112,6 +117,7 @@ function panel() {
     logs,
     audit,
     help,
+    donation,
     about,
     core,
   );

@@ -9,8 +9,33 @@ from pathlib import Path
 
 __version__ = "2.0.0"
 
-REPO_URL = "https://github.com/vinicius/valheim-panel"
-LICENSE = "MIT"
+REPO_URL = "https://github.com/viniciuspetrachin/valheim-panel"
+LICENSE = "Polyform Shield 1.0.0"
+LICENSE_URL = "https://polyformproject.org/licenses/shield/1.0.0"
+
+_DONATION_ENV = (
+    ("PANEL_DONATION_GITHUB", "GitHub Sponsors"),
+    ("PANEL_DONATION_KOFI", "Ko-fi"),
+    ("PANEL_DONATION_BUYMEACOFFEE", "Buy Me a Coffee"),
+)
+
+
+def donation_links() -> list[dict]:
+    links = []
+    for env_key, label in _DONATION_ENV:
+        url = os.environ.get(env_key, "").strip()
+        if url:
+            links.append({"id": env_key.lower(), "label": label, "url": url})
+    return links
+
+
+def donation_info() -> dict:
+    return {
+        "links": donation_links(),
+        "pix_key": os.environ.get("PANEL_DONATION_PIX", "").strip(),
+        "commercial_email": os.environ.get("PANEL_COMMERCIAL_EMAIL", "").strip(),
+        "commercial_url": os.environ.get("PANEL_COMMERCIAL_URL", "").strip(),
+    }
 
 
 @lru_cache(maxsize=1)
@@ -46,4 +71,6 @@ def version_info() -> dict:
         "build_date": build_date(),
         "repo_url": os.environ.get("PANEL_REPO_URL", REPO_URL),
         "license": LICENSE,
+        "license_url": LICENSE_URL,
+        "donation": donation_info(),
     }
