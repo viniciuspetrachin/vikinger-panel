@@ -21,6 +21,7 @@ export const server = {
 
   async loadServerPage() {
     await this.loadWorlds();
+    await this.loadUpdatesPage();
     await this.loadEnv();
     this.selectedWorld = this.envValues.WORLD_NAME || this.worlds.find((w) => w.active)?.name || "";
     this.$nextTick(() => this.mountListEditors());

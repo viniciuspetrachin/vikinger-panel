@@ -65,8 +65,8 @@
     <main class="flex-1 overflow-y-auto">
       <header class="sticky top-0 z-10 bg-valheim-950/80 backdrop-blur border-b border-valheim-700 px-8 py-4 flex items-center justify-between">
         <h2 class="font-display text-lg font-semibold text-gray-100" x-text="pageTitle()"></h2>
-        <button @click="refreshStatus()" :disabled="isBusy('refreshStatus')" class="btn btn-sm btn-ghost">
-          <svg class="w-4 h-4" :class="isBusy('refreshStatus') && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        <button @click="refreshStatus()" :disabled="actionPending === 'refreshStatus'" class="btn btn-sm btn-ghost">
+          <svg class="w-4 h-4" :class="actionPending === 'refreshStatus' && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           Atualizar
         </button>
       </header>
@@ -195,6 +195,7 @@
               <div>
                 <label class="block text-xs text-gray-500 mb-1">Mundo Ativo</label>
                 <select x-model="selectedWorld" @change="onWorldSelectChange()"
+                        :disabled="isBusyPrefix('switchWorld:')"
                         class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none">
                   <template x-for="world in worlds" :key="world.name">
                     <option :value="world.name" x-text="world.name + (world.pending && !world.has_db && !world.running ? ' (pendente)' : '')"></option>
@@ -220,12 +221,16 @@
                 </div>
               </div>
             </div>
-            <div class="flex gap-3 pt-2">
-              <button @click="saveEnv()" :disabled="isBusy('saveEnv')" class="btn btn-primary">
-                <span x-show="isBusy('saveEnv')" class="spinner"></span> Salvar Configurações
+            <div class="flex gap-3 pt-2" :class="isBusyGroup('saveEnv', 'saveEnvRestart') && 'opacity-75'">
+              <button @click="saveEnv()" :disabled="isBusyGroup('saveEnv', 'saveEnvRestart')" class="btn btn-primary">
+                <span x-show="actionPending === 'saveEnv'" class="spinner"></span>
+                <span x-show="actionPending !== 'saveEnv'">Salvar Configurações</span>
+                <span x-show="actionPending === 'saveEnv'">Salvando...</span>
               </button>
-              <button @click="saveEnv(true)" :disabled="isBusy('saveEnvRestart')" class="btn btn-warning">
-                <span x-show="isBusy('saveEnvRestart')" class="spinner"></span> Salvar e Reiniciar
+              <button @click="saveEnv(true)" :disabled="isBusyGroup('saveEnv', 'saveEnvRestart')" class="btn btn-warning">
+                <span x-show="actionPending === 'saveEnvRestart'" class="spinner"></span>
+                <span x-show="actionPending !== 'saveEnvRestart'">Salvar e Reiniciar</span>
+                <span x-show="actionPending === 'saveEnvRestart'">Reiniciando...</span>
               </button>
             </div>
           </div>
@@ -244,8 +249,110 @@
               </div>
             </template>
             <button @click="saveServerLists()" :disabled="isBusy('saveServerLists')" class="btn btn-primary">
-              <span x-show="isBusy('saveServerLists')" class="spinner"></span> Salvar Listas
+              <span x-show="actionPending === 'saveServerLists'" class="spinner"></span>
+              <span x-show="actionPending !== 'saveServerLists'">Salvar Listas</span>
+                <span x-show="actionPending === 'saveServerLists'">Salvando...</span>
             </button>
+          </div>
+
+          <!-- Atualizações do jogo -->
+          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4"
+               :class="isBusyGroup('checkGameUpdate', 'saveUpdateConfig', 'saveUpdateConfigRestart') && 'opacity-90'">
+            <div>
+              <h3 class="font-display text-sm font-semibold text-valheim-gold">Atualizações do jogo</h3>
+              <p class="text-xs text-gray-500 mt-1">Controle updates do Valheim via valheim-updater (SteamCMD).</p>
+            </div>
+
+            <div x-show="showModsWarning()" class="rounded-lg border border-amber-600/40 bg-amber-950/30 px-4 py-3 text-sm text-amber-200">
+              Atualizações do Valheim podem quebrar mods. Faça backup antes. Verifique compatibilidade de cada mod após atualizar o jogo.
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs text-gray-500 mb-2">Modo do servidor</label>
+                <div class="flex flex-wrap gap-3">
+                  <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" name="serverMode" :checked="!bepinexEnabled" @change="bepinexEnabled = false"
+                           :disabled="isBusyGroup('checkGameUpdate', 'saveUpdateConfig', 'saveUpdateConfigRestart')"
+                           class="accent-valheim-gold" />
+                    Vanilla
+                  </label>
+                  <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" name="serverMode" :checked="bepinexEnabled" @change="bepinexEnabled = true"
+                           :disabled="isBusyGroup('checkGameUpdate', 'saveUpdateConfig', 'saveUpdateConfigRestart')"
+                           class="accent-valheim-gold" />
+                    Com mods (BepInEx)
+                  </label>
+                </div>
+                <p class="text-xs text-gray-600 mt-1">Vanilla desativa o BepInEx; os mods permanecem no disco.</p>
+              </div>
+
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">Versão instalada</label>
+                <p class="text-sm">
+                  Build <span class="font-mono text-valheim-gold" x-text="gameVersion.buildid || '—'"></span>
+                  <span class="text-gray-500 text-xs" x-show="gameVersion.last_updated"
+                        x-text="' · ' + (gameVersion.last_updated || '')"></span>
+                </p>
+                <p class="text-xs text-gray-600 mt-1">
+                  Updater: <span x-text="updateStatus.updater_state || '—'"></span>
+                </p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label class="flex items-center gap-3 text-sm cursor-pointer">
+                <input type="checkbox" :checked="updateConfig.UPDATE_AUTO === 'true'"
+                       @change="updateConfig.UPDATE_AUTO = $event.target.checked ? 'true' : 'false'"
+                       :disabled="isBusyGroup('checkGameUpdate', 'saveUpdateConfig', 'saveUpdateConfigRestart')"
+                       class="rounded border-valheim-600 accent-valheim-gold" />
+                Auto-atualização do jogo
+              </label>
+              <label class="flex items-center gap-3 text-sm cursor-pointer">
+                <input type="checkbox" :checked="updateConfig.UPDATE_IF_IDLE === 'true'"
+                       @change="updateConfig.UPDATE_IF_IDLE = $event.target.checked ? 'true' : 'false'"
+                       :disabled="isBusyGroup('checkGameUpdate', 'saveUpdateConfig', 'saveUpdateConfigRestart')"
+                       class="rounded border-valheim-600 accent-valheim-gold" />
+                Só quando o servidor estiver vazio
+              </label>
+            </div>
+
+            <div x-show="updateConfig.UPDATE_AUTO === 'true'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">Intervalo de verificação</label>
+                <select x-model="updateIntervalPreset"
+                        :disabled="isBusyGroup('checkGameUpdate', 'saveUpdateConfig', 'saveUpdateConfigRestart')"
+                        class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none">
+                  <template x-for="preset in updateIntervalPresets" :key="preset.id">
+                    <option :value="preset.id" x-text="preset.label"></option>
+                  </template>
+                </select>
+              </div>
+              <div x-show="updateIntervalPreset === 'custom'">
+                <label class="block text-xs text-gray-500 mb-1">Cron personalizado</label>
+                <input x-model="updateCronCustom" placeholder="*/15 * * * *"
+                       :disabled="isBusyGroup('checkGameUpdate', 'saveUpdateConfig', 'saveUpdateConfigRestart')"
+                       class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm font-mono focus:border-valheim-gold focus:outline-none" />
+              </div>
+            </div>
+
+            <div class="flex flex-wrap gap-3 pt-1">
+              <button @click="saveUpdateConfig()" :disabled="isBusyGroup('checkGameUpdate', 'saveUpdateConfig', 'saveUpdateConfigRestart')" class="btn btn-primary">
+                <span x-show="actionPending === 'saveUpdateConfig'" class="spinner"></span>
+                <span x-show="actionPending !== 'saveUpdateConfig'">Salvar</span>
+                <span x-show="actionPending === 'saveUpdateConfig'">Salvando...</span>
+              </button>
+              <button @click="saveUpdateConfig(true)" :disabled="isBusyGroup('checkGameUpdate', 'saveUpdateConfig', 'saveUpdateConfigRestart')" class="btn btn-warning">
+                <span x-show="actionPending === 'saveUpdateConfigRestart'" class="spinner"></span>
+                <span x-show="actionPending !== 'saveUpdateConfigRestart'">Salvar e recriar container</span>
+                <span x-show="actionPending === 'saveUpdateConfigRestart'">Recriando container...</span>
+              </button>
+              <button @click="checkGameUpdate()" :disabled="isBusyGroup('checkGameUpdate', 'saveUpdateConfig', 'saveUpdateConfigRestart')" class="btn btn-neutral">
+                <span x-show="actionPending === 'checkGameUpdate'" class="spinner"></span>
+                <span x-show="actionPending !== 'checkGameUpdate'">Verificar atualizações agora</span>
+                <span x-show="actionPending === 'checkGameUpdate'">Verificando...</span>
+              </button>
+            </div>
           </div>
         </section>
 
@@ -255,15 +362,18 @@
             <h3 class="font-display text-sm font-semibold text-valheim-gold mb-4">Instalar Mod</h3>
             <div class="flex flex-col md:flex-row gap-3">
               <label class="btn btn-neutral cursor-pointer" :class="isBusy('uploadMod') && 'opacity-50 pointer-events-none'">
-                <span x-show="isBusy('uploadMod')" class="spinner"></span>
-                <span x-show="!isBusy('uploadMod')">📁 Upload (.zip / .dll)</span>
-                <span x-show="isBusy('uploadMod')">Enviando...</span>
+                <span x-show="actionPending === 'uploadMod'" class="spinner"></span>
+                <span x-show="actionPending !== 'uploadMod'">📁 Upload (.zip / .dll)</span>
+                <span x-show="actionPending === 'uploadMod'">Enviando...</span>
                 <input type="file" accept=".zip,.dll" class="hidden" @change="uploadMod($event)" :disabled="isBusy('uploadMod')" />
               </label>
               <input x-model="modUrl" placeholder="URL Thunderstore (página, download ou r2modman)"
+                     :disabled="isBusy('installModUrl')"
                      class="flex-1 bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none" />
               <button @click="installModUrl()" :disabled="isBusy('installModUrl')" class="btn btn-primary">
-                <span x-show="isBusy('installModUrl')" class="spinner"></span> Instalar URL
+                <span x-show="actionPending === 'installModUrl'" class="spinner"></span>
+                <span x-show="actionPending !== 'installModUrl'">Instalar URL</span>
+                <span x-show="actionPending === 'installModUrl'">Instalando...</span>
               </button>
             </div>
           </div>
@@ -271,7 +381,7 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <template x-for="mod in mods" :key="mod.name">
               <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-5 flex items-start gap-4"
-                   :class="!mod.enabled && 'opacity-60'">
+                   :class="[!mod.enabled && 'opacity-60', isBusy('toggleMod:' + mod.name) && 'opacity-75']">
                 <div class="w-10 h-10 rounded-lg bg-valheim-700 flex items-center justify-center text-lg shrink-0">⚔</div>
                 <div class="flex-1 min-w-0">
                   <p class="font-medium text-sm truncate" x-text="mod.name"></p>
@@ -279,6 +389,14 @@
                   <p class="text-xs" :class="mod.enabled ? 'text-green-500' : 'text-gray-600'"
                      x-text="mod.enabled ? 'Ativo' : 'Desativado'"></p>
                   <p class="text-xs text-gray-600" x-text="mod.config ? 'Config: ' + mod.config : 'Sem config'"></p>
+                  <p class="text-xs mt-1" x-show="mod.installed_version">
+                    Versão: <span class="font-mono" x-text="mod.installed_version"></span>
+                    <span x-show="mod.latest_version && mod.update_available">
+                      → <span class="font-mono text-amber-400" x-text="mod.latest_version"></span>
+                    </span>
+                  </p>
+                  <p class="text-xs mt-1" :class="modStatusClass(mod.update_status)"
+                     x-text="modStatusLabel(mod.update_status)"></p>
                 </div>
                 <div class="flex flex-col gap-1 shrink-0">
                   <label class="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
@@ -287,15 +405,75 @@
                            :disabled="isBusy('toggleMod:' + mod.name)" class="rounded border-valheim-600 accent-valheim-gold" />
                     <span x-text="mod.enabled ? 'Ligado' : 'Desligado'"></span>
                   </label>
+                  <button x-show="mod.update_status !== 'unknown'"
+                          @click="checkModUpdate(mod.name)"
+                          :disabled="isBusy('checkModUpdate:' + mod.name)"
+                          class="btn btn-sm btn-ghost">
+                    <span x-show="actionPending === ('checkModUpdate:' + mod.name)" class="spinner"></span>
+                    <span x-show="actionPending !== ('checkModUpdate:' + mod.name)">Buscar atualizações</span>
+                <span x-show="actionPending === ('checkModUpdate:' + mod.name)">Buscando...</span>
+                  </button>
+                  <button x-show="mod.update_available"
+                          @click="updateMod(mod.name)"
+                          :disabled="isBusy('updateMod:' + mod.name)"
+                          class="btn btn-sm btn-primary">
+                    <span x-show="actionPending === ('updateMod:' + mod.name)" class="spinner"></span>
+                    <span x-show="actionPending !== ('updateMod:' + mod.name)">Atualizar mod</span>
+                <span x-show="actionPending === ('updateMod:' + mod.name)">Atualizando...</span>
+                  </button>
+                  <button x-show="mod.update_status === 'unknown' && modLinkTarget !== mod.name"
+                          @click="openModLink(mod.name)"
+                          class="btn btn-sm btn-ghost">Vincular Thunderstore</button>
+                  <div x-show="modLinkTarget === mod.name" class="flex flex-col gap-1 w-44">
+                    <input x-model="modLinkUrl" placeholder="URL Thunderstore"
+                           class="bg-valheim-900 border border-valheim-600 rounded px-2 py-1 text-xs focus:border-valheim-gold focus:outline-none" />
+                    <div class="flex gap-1">
+                      <button @click="linkModThunderstore(mod.name)" :disabled="isBusy('linkMod:' + mod.name)"
+                              class="btn btn-sm btn-primary flex-1">
+                        <span x-show="actionPending === ('linkMod:' + mod.name)" class="spinner"></span>
+                        <span x-show="actionPending !== ('linkMod:' + mod.name)">OK</span>
+                <span x-show="actionPending === ('linkMod:' + mod.name)">Vinculando...</span>
+                      </button>
+                      <button @click="cancelModLink()" class="btn btn-sm btn-ghost">✕</button>
+                    </div>
+                  </div>
                   <button x-show="mod.config" @click="editFile('config/bepinex/' + mod.config)" class="btn btn-sm btn-ghost">Config</button>
                   <button @click="deleteMod(mod.name)" :disabled="isBusy('deleteMod:' + mod.name)" class="btn btn-sm btn-ghost-danger">
-                    <span x-show="isBusy('deleteMod:' + mod.name)" class="spinner"></span> Remover
+                    <span x-show="actionPending === ('deleteMod:' + mod.name)" class="spinner"></span>
+                    <span x-show="actionPending !== ('deleteMod:' + mod.name)">Remover</span>
+                <span x-show="actionPending === ('deleteMod:' + mod.name)">Removendo...</span>
                   </button>
                 </div>
               </div>
             </template>
           </div>
           <p x-show="!mods.length" class="text-gray-500 text-sm text-center py-8">Nenhum mod instalado</p>
+
+          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4">
+            <div>
+              <h3 class="font-display text-sm font-semibold text-valheim-gold">Exportar perfil r2modman</h3>
+              <p class="text-xs text-gray-500 mt-1">
+                Exporta mods vinculados ao Thunderstore e configs BepInEx para importar no r2modman.
+                Mods sem vínculo são ignorados.
+              </p>
+              <p x-show="exportSkipped > 0" class="text-xs text-amber-400 mt-1"
+                 x-text="exportSkipped + ' mod(s) sem vínculo Thunderstore serão ignorados'"></p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+              <button @click="downloadR2zExport()" :disabled="isBusy('downloadR2zExport')"
+                      class="btn btn-neutral">
+                <span x-show="actionPending === 'downloadR2zExport'" class="spinner"></span>
+                <span x-show="actionPending !== 'downloadR2zExport'">Baixar .r2z</span>
+                <span x-show="actionPending === 'downloadR2zExport'">Gerando...</span>
+              </button>
+              <button @click="copyR2modmanCode()" :disabled="isBusy('copyR2modmanCode')"
+                      class="btn btn-primary">
+                <span x-show="actionPending === 'copyR2modmanCode'" class="spinner"></span>
+                <span x-show="actionPending !== 'copyR2modmanCode'">Copiar código</span>
+                <span x-show="actionPending === 'copyR2modmanCode'">Publicando...</span>
+              </button>
+            </div>
+          </div>
 
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4">
             <div>
@@ -325,11 +503,15 @@
             <div class="flex flex-wrap gap-3 items-center">
               <input x-model="newWorldName" placeholder="Nome do mundo"
                      class="flex-1 min-w-[200px] bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none" />
-              <button @click="createWorld(false)" :disabled="isBusy('createWorld')" class="btn btn-primary">
-                <span x-show="isBusy('createWorld')" class="spinner"></span> Criar
+              <button @click="createWorld(false)" :disabled="isBusyGroup('createWorld', 'createWorldActivate')" class="btn btn-primary">
+                <span x-show="actionPending === 'createWorld'" class="spinner"></span>
+                <span x-show="actionPending !== 'createWorld'">Criar</span>
+                <span x-show="actionPending === 'createWorld'">Criando...</span>
               </button>
-              <button @click="createWorld(true)" :disabled="isBusy('createWorldActivate')" class="btn btn-warning">
-                <span x-show="isBusy('createWorldActivate')" class="spinner"></span> Criar e Ativar
+              <button @click="createWorld(true)" :disabled="isBusyGroup('createWorld', 'createWorldActivate')" class="btn btn-warning">
+                <span x-show="actionPending === 'createWorldActivate'" class="spinner"></span>
+                <span x-show="actionPending !== 'createWorldActivate'">Criar e Ativar</span>
+                <span x-show="actionPending === 'createWorldActivate'">Criando...</span>
               </button>
             </div>
           </div>
@@ -350,10 +532,14 @@
                       :class="world.active ? 'bg-valheim-gold/20 text-valheim-gold' : 'bg-valheim-700 text-gray-400'"
                       x-text="worldBadge(world)"></span>
                 <button x-show="!world.active" @click="switchWorld(world.name)" :disabled="isBusy('switchWorld:' + world.name)" class="btn btn-sm btn-primary">
-                  <span x-show="isBusy('switchWorld:' + world.name)" class="spinner"></span> Ativar
+                  <span x-show="actionPending === ('switchWorld:' + world.name)" class="spinner"></span>
+                  <span x-show="actionPending !== ('switchWorld:' + world.name)">Ativar</span>
+                <span x-show="actionPending === ('switchWorld:' + world.name)">Ativando...</span>
                 </button>
                 <button x-show="!world.active" @click="deleteWorld(world.name)" :disabled="isBusy('deleteWorld:' + world.name)" class="btn btn-sm btn-danger">
-                  <span x-show="isBusy('deleteWorld:' + world.name)" class="spinner"></span> Apagar
+                  <span x-show="actionPending === ('deleteWorld:' + world.name)" class="spinner"></span>
+                  <span x-show="actionPending !== ('deleteWorld:' + world.name)">Apagar</span>
+                <span x-show="actionPending === ('deleteWorld:' + world.name)">Apagando...</span>
                 </button>
               </div>
             </template>
@@ -373,7 +559,9 @@
                   </template>
                 </select>
                 <button @click="loadWorldConfig()" :disabled="isBusy('loadWorldConfig')" class="btn btn-sm btn-neutral">
-                  <span x-show="isBusy('loadWorldConfig')" class="spinner"></span> ↻ Atualizar
+                  <span x-show="actionPending === 'loadWorldConfig'" class="spinner"></span>
+                  <span x-show="actionPending !== 'loadWorldConfig'">↻ Atualizar</span>
+                <span x-show="actionPending === 'loadWorldConfig'">Carregando...</span>
                 </button>
               </div>
             </div>
@@ -506,11 +694,15 @@
                 </details>
 
                 <div class="flex flex-wrap gap-3 pt-2 border-t border-valheim-700/50">
-                  <button @click="saveWorldConfig(false)" :disabled="isBusy('saveWorldConfig')" class="btn btn-primary">
-                    <span x-show="isBusy('saveWorldConfig')" class="spinner"></span> Salvar configurações
+                  <button @click="saveWorldConfig(false)" :disabled="isBusyGroup('saveWorldConfig', 'saveWorldConfigRestart')" class="btn btn-primary">
+                    <span x-show="actionPending === 'saveWorldConfig'" class="spinner"></span>
+                    <span x-show="actionPending !== 'saveWorldConfig'">Salvar configurações</span>
+                <span x-show="actionPending === 'saveWorldConfig'">Salvando...</span>
                   </button>
-                  <button x-show="worldConfigRequiresRestart" @click="saveWorldConfig(true)" :disabled="isBusy('saveWorldConfigRestart')" class="btn btn-warning">
-                    <span x-show="isBusy('saveWorldConfigRestart')" class="spinner"></span> Salvar e reiniciar
+                  <button x-show="worldConfigRequiresRestart" @click="saveWorldConfig(true)" :disabled="isBusyGroup('saveWorldConfig', 'saveWorldConfigRestart')" class="btn btn-warning">
+                    <span x-show="actionPending === 'saveWorldConfigRestart'" class="spinner"></span>
+                    <span x-show="actionPending !== 'saveWorldConfigRestart'">Salvar e reiniciar</span>
+                <span x-show="actionPending === 'saveWorldConfigRestart'">Reiniciando...</span>
                   </button>
                 </div>
                 <p class="text-xs text-gray-600">Backup automático do .fwl anterior em <span class="font-mono">panel-data/world_fwl_backups/</span> antes de cada gravação.</p>
@@ -562,15 +754,21 @@
               </div>
             </div>
             <div class="flex flex-wrap gap-3 pt-2">
-              <button @click="saveBackupConfig()" :disabled="isBusy('saveBackupConfig')" class="btn btn-primary">
-                <span x-show="isBusy('saveBackupConfig')" class="spinner"></span> Salvar
+              <button @click="saveBackupConfig()" :disabled="isBusyGroup('saveBackupConfig', 'saveBackupConfigRestart', 'triggerBackup')" class="btn btn-primary">
+                <span x-show="actionPending === 'saveBackupConfig'" class="spinner"></span>
+                <span x-show="actionPending !== 'saveBackupConfig'">Salvar</span>
+                <span x-show="actionPending === 'saveBackupConfig'">Salvando...</span>
               </button>
-              <button @click="saveBackupConfig(true)" :disabled="isBusy('saveBackupConfigRestart')" class="btn btn-warning">
-                <span x-show="isBusy('saveBackupConfigRestart')" class="spinner"></span> Salvar e Reiniciar
+              <button @click="saveBackupConfig(true)" :disabled="isBusyGroup('saveBackupConfig', 'saveBackupConfigRestart', 'triggerBackup')" class="btn btn-warning">
+                <span x-show="actionPending === 'saveBackupConfigRestart'" class="spinner"></span>
+                <span x-show="actionPending !== 'saveBackupConfigRestart'">Salvar e Reiniciar</span>
+                <span x-show="actionPending === 'saveBackupConfigRestart'">Reiniciando...</span>
               </button>
               <button @click="openBackupModal()" class="btn btn-info">Backup Agora</button>
-              <button @click="triggerBackup()" :disabled="isBusy('triggerBackup')" class="btn btn-neutral">
-                <span x-show="isBusy('triggerBackup')" class="spinner"></span> Backup Automático (container)
+              <button @click="triggerBackup()" :disabled="isBusyGroup('saveBackupConfig', 'saveBackupConfigRestart', 'triggerBackup')" class="btn btn-neutral">
+                <span x-show="actionPending === 'triggerBackup'" class="spinner"></span>
+                <span x-show="actionPending !== 'triggerBackup'">Backup Automático (container)</span>
+                <span x-show="actionPending === 'triggerBackup'">Executando...</span>
               </button>
             </div>
             <p class="text-xs text-gray-600">Reinicie o container após alterar o intervalo para aplicar o novo cron.</p>
@@ -600,7 +798,9 @@
                       <td class="py-2 flex gap-2">
                         <a :href="backupDownloadUrl(b.name)" class="btn btn-sm btn-ghost">Download</a>
                         <button @click="deleteBackup(b.name)" :disabled="isBusy('deleteBackup:' + b.name)" class="btn btn-sm btn-ghost-danger">
-                          <span x-show="isBusy('deleteBackup:' + b.name)" class="spinner"></span> Apagar
+                          <span x-show="actionPending === ('deleteBackup:' + b.name)" class="spinner"></span>
+                          <span x-show="actionPending !== ('deleteBackup:' + b.name)">Apagar</span>
+                <span x-show="actionPending === ('deleteBackup:' + b.name)">Apagando...</span>
                         </button>
                       </td>
                     </tr>
@@ -616,9 +816,13 @@
           <div class="flex gap-3 mb-4">
             <template x-for="s in ['config', 'data', 'root']" :key="s">
               <button @click="fileScope = s; loadFileTree()"
-                      class="btn-tab"
+                      class="btn-tab flex items-center gap-2"
                       :class="fileScope === s && 'btn-tab-active'"
-                      x-text="s"></button>
+                      :disabled="isBusy('fileScope:' + s)">
+                <span x-show="actionPending === ('fileScope:' + s)" class="spinner"></span>
+                <span x-show="actionPending !== ('fileScope:' + s)" x-text="s"></span>
+                <span x-show="actionPending === ('fileScope:' + s)">Carregando...</span>
+              </button>
             </template>
           </div>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -633,7 +837,9 @@
                   <div class="flex gap-2">
                     <a :href="'/api/files/download?path=' + encodeURIComponent(editPath)" class="btn btn-sm btn-ghost">Download</a>
                     <button @click="saveFile()" :disabled="isBusy('saveFile')" class="btn btn-sm btn-primary">
-                      <span x-show="isBusy('saveFile')" class="spinner"></span> Salvar
+                      <span x-show="actionPending === 'saveFile'" class="spinner"></span>
+                      <span x-show="actionPending !== 'saveFile'">Salvar</span>
+                <span x-show="actionPending === 'saveFile'">Salvando...</span>
                     </button>
                   </div>
                 </div>
@@ -662,7 +868,9 @@
             <button @click="logSource = 'bepinex'; loadLogs()" class="btn-tab"
                     :class="logSource === 'bepinex' && 'btn-tab-active'">BepInEx</button>
             <button @click="loadLogs()" :disabled="isBusy('loadLogs')" class="btn btn-sm btn-neutral ml-auto">
-              <span x-show="isBusy('loadLogs')" class="spinner"></span> ↻ Atualizar
+              <span x-show="actionPending === 'loadLogs'" class="spinner"></span>
+              <span x-show="actionPending !== 'loadLogs'">↻ Atualizar</span>
+                <span x-show="actionPending === 'loadLogs'">Carregando...</span>
             </button>
             <label class="flex items-center gap-2 text-xs text-gray-500">
               <input type="checkbox" x-model="logAutoRefresh" class="rounded" />
@@ -769,8 +977,9 @@
                   </div>
                 </div>
                 <button @click="applyMemoryLimit()" :disabled="isBusy('applyMemory')" class="btn btn-primary">
-                  <span x-show="isBusy('applyMemory')" class="spinner"></span>
-                  Aplicar limite de RAM
+                  <span x-show="actionPending === 'applyMemory'" class="spinner"></span>
+                  <span x-show="actionPending !== 'applyMemory'">Aplicar limite de RAM</span>
+                <span x-show="actionPending === 'applyMemory'">Aplicando...</span>
                 </button>
               </div>
               <p class="text-xs text-amber-500/80">Aplicar recria o container — jogadores conectados serão desconectados.</p>
@@ -919,7 +1128,9 @@
         <section x-show="page === 'audit'" class="space-y-4">
           <div class="flex items-center gap-3">
             <button @click="loadAudit()" :disabled="isBusy('loadAudit')" class="btn btn-sm btn-neutral">
-              <span x-show="isBusy('loadAudit')" class="spinner"></span> ↻ Atualizar
+              <span x-show="actionPending === 'loadAudit'" class="spinner"></span>
+              <span x-show="actionPending !== 'loadAudit'">↻ Atualizar</span>
+                <span x-show="actionPending === 'loadAudit'">Carregando...</span>
             </button>
             <a href="/api/audit/download" class="btn btn-sm btn-ghost">Baixar log completo</a>
             <label class="flex items-center gap-2 text-xs text-gray-500 ml-auto">
@@ -1009,8 +1220,9 @@
           <button @click="createBackup(t.id)" :disabled="isBusy('createBackup:' + t.id)"
                   class="btn btn-primary w-full flex-col items-start !justify-start text-left py-3">
             <span class="flex items-center gap-2 font-semibold">
-              <span x-show="isBusy('createBackup:' + t.id)" class="spinner"></span>
-              <span x-text="t.label"></span>
+              <span x-show="actionPending === ('createBackup:' + t.id)" class="spinner"></span>
+              <span x-show="actionPending !== ('createBackup:' + t.id)" x-text="t.label"></span>
+                <span x-show="actionPending === ('createBackup:' + t.id)">Criando backup...</span>
             </span>
             <span class="text-xs opacity-80 font-normal" x-text="t.desc"></span>
           </button>

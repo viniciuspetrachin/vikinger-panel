@@ -48,6 +48,15 @@ npm install
 npm run build   # gera app.css, app.bundle.js, editor.bundle.js
 ```
 
+### Deploy local (Docker)
+
+Após mudanças em `app/`, reconstrua o container — **F5 no navegador não basta**:
+
+```bash
+./scripts/reload-panel.sh           # docker compose build panel && up -d
+./scripts/reload-panel.sh --tests   # pytest unit + e2e, depois deploy
+```
+
 ### Convenções
 
 - Rotas mutantes (`POST`/`PUT`/`DELETE`) são auditadas em `panel-data/logs/audit.jsonl`

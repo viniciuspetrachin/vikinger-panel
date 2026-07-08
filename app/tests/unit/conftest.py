@@ -45,7 +45,8 @@ def env_dir(tmp_path, monkeypatch):
     env_file.write_text("SERVER_NAME=Test\nWORLD_NAME=TestWorld\nSERVER_PORT=2456\n")
     compose = root / "docker-compose.yml"
     compose.write_text(
-        "services:\n  valheim:\n    image: test\n    container_name: valheim-server\n    stop_grace_period: 120s\n"
+        "services:\n  valheim:\n    image: test\n    container_name: valheim-server\n"
+        "    stop_grace_period: 120s\n    environment:\n      BEPINEX: \"true\"\n"
     )
 
     make_test_fwl(worlds / "TestWorld.fwl", "TestWorld")
@@ -59,8 +60,13 @@ def env_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "FWL_STAGING_DIR", panel_data / "world_fwl_staging")
     monkeypatch.setattr(main, "CONFIG_DIR", config)
     monkeypatch.setattr(main, "DATA_DIR", data)
+    runtime_plugins = data / "bepinex" / "BepInEx" / "plugins"
+    runtime_plugins.mkdir(parents=True, exist_ok=True)
+
     monkeypatch.setattr(main, "PLUGINS_DIR", plugins)
     monkeypatch.setattr(main, "PLUGINS_DISABLED_DIR", plugins / "disabled")
+    monkeypatch.setattr(main, "RUNTIME_PLUGINS_DIR", runtime_plugins)
+    monkeypatch.setattr(main, "RUNTIME_PLUGINS_DISABLED_DIR", runtime_plugins / "disabled")
     monkeypatch.setattr(main, "BEPINEX_CFG_DIR", bepinex)
     monkeypatch.setattr(main, "WORLDS_DIR", worlds)
     monkeypatch.setattr(main, "WORLDS_PENDING_FILE", config / "worlds_pending.json")
@@ -70,6 +76,8 @@ def env_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "COMPOSE_FILE", compose)
     monkeypatch.setattr(main, "LOGS_DIR", logs)
     monkeypatch.setattr(main, "AUDIT_FILE", logs / "audit.jsonl")
+    monkeypatch.setattr(main, "MODS_REGISTRY_FILE", panel_data / "mods-registry.json")
+    monkeypatch.setattr(main, "APP_MANIFEST_PATH", data / "dl" / "server" / "steamapps" / "appmanifest_896660.acf")
 
     monkeypatch.setattr(main, "container_running", lambda: True)
     monkeypatch.setattr(main, "get_container_world_name", lambda: "TestWorld")

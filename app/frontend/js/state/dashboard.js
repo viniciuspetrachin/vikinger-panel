@@ -17,11 +17,11 @@ export const dashboard = {
   },
 
   async refreshStatus() {
-    this.loading = true;
-    try {
-      this.status = await this.api("GET", "/api/status");
-    } catch (e) { this.toast(e.message, "error"); }
-    this.loading = false;
+    return this.withBusy("refreshStatus", async () => {
+      try {
+        this.status = await this.api("GET", "/api/status");
+      } catch (e) { this.toast(e.message, "error"); }
+    });
   },
 
   async loadPlayers() {

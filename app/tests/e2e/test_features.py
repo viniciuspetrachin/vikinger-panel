@@ -331,3 +331,46 @@ def test_mod_toggle_visible(page: Page, base_url: str) -> None:
     page.get_by_role("button", name="Mods e Configs", exact=True).click()
     page.wait_for_timeout(500)
     expect(page.get_by_text("Nenhum mod instalado")).to_be_visible()
+
+
+def test_server_updates_section(page: Page, base_url: str) -> None:
+    _boot(page, base_url)
+    page.get_by_role("button", name="Servidor", exact=True).click()
+    page.wait_for_timeout(800)
+    expect(page.get_by_role("heading", name="Atualizações do jogo")).to_be_visible()
+    expect(page.get_by_role("button", name="Verificar atualizações agora", exact=True)).to_be_visible()
+    expect(page.get_by_text("Auto-atualização do jogo")).to_be_visible()
+
+
+def test_server_save_update_config_busy(page: Page, base_url: str) -> None:
+    _boot(page, base_url)
+    page.get_by_role("button", name="Servidor", exact=True).click()
+    page.wait_for_timeout(800)
+    btn = page.get_by_role("button", name="Salvar", exact=True)
+    btn.click()
+    page.wait_for_function(
+        "() => !document.querySelector('[x-data]')._x_dataStack[0].actionPending",
+        timeout=8000,
+    )
+
+
+def test_server_check_game_update_shows_loading(page: Page, base_url: str) -> None:
+    def slow_check(route):
+        page.wait_for_timeout(1500)
+        route.continue_()
+
+    _boot(page, base_url)
+    page.route("**/api/updates/check", slow_check)
+    page.get_by_role("button", name="Servidor", exact=True).click()
+    page.wait_for_timeout(800)
+    btn = page.get_by_role("button", name="Verificar atualizações agora", exact=True)
+    btn.click()
+    page.wait_for_function(
+        "() => document.querySelector('[x-data]')._x_dataStack[0].actionPending === 'checkGameUpdate'",
+        timeout=3000,
+    )
+    expect(btn).to_contain_text("Verificando...")
+    page.wait_for_function(
+        "() => !document.querySelector('[x-data]')._x_dataStack[0].actionPending",
+        timeout=8000,
+    )

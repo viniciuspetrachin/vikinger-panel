@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Valheim Server Management Panel - API Backend"""
 
+import base64
 import io
 import json
 import logging
@@ -10,7 +11,7 @@ import shutil
 import subprocess
 import time
 import zipfile
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -37,6 +38,8 @@ CONFIG_DIR = ROOT / "config"
 DATA_DIR = ROOT / "data"
 PLUGINS_DIR = CONFIG_DIR / "bepinex" / "plugins"
 PLUGINS_DISABLED_DIR = PLUGINS_DIR / "disabled"
+RUNTIME_PLUGINS_DIR = DATA_DIR / "bepinex" / "BepInEx" / "plugins"
+RUNTIME_PLUGINS_DISABLED_DIR = RUNTIME_PLUGINS_DIR / "disabled"
 FIX_PLUGINS_SCRIPT = ROOT / "scripts" / "fix-plugins-permissions.sh"
 BEPINEX_CFG_DIR = CONFIG_DIR / "bepinex"
 WORLDS_DIR = CONFIG_DIR / "worlds_local"
@@ -52,6 +55,8 @@ MEMORY_MAX_GB = 28
 ALLOWED_EXTENSIONS = {".cfg", ".txt", ".json", ".md", ".env", ".yml", ".yaml", ".ini", ".log", ".sh", ".xml", ".prefs"}
 
 _metrics_prev: Optional[dict] = None
+_mod_update_cache: dict[str, tuple[float, dict]] = {}
+MOD_UPDATE_CACHE_TTL = 300
 
 _SIZE_UNIT = {
     "B": 1,
@@ -67,6 +72,8 @@ _SIZE_UNIT = {
 }
 
 LOGS_DIR = PANEL_DATA_DIR / "logs"
+MODS_REGISTRY_FILE = PANEL_DATA_DIR / "mods-registry.json"
+APP_MANIFEST_PATH = DATA_DIR / "dl" / "server" / "steamapps" / "appmanifest_896660.acf"
 AUDIT_FILE = LOGS_DIR / "audit.jsonl"
 AUDIT_MAX_BYTES = 5 * 1024 * 1024
 AUDIT_BODY_MAX = 8192
@@ -269,6 +276,7 @@ def stop_valheim_container() -> subprocess.CompletedProcess:
 
 
 def restart_valheim_container() -> subprocess.CompletedProcess:
+    sync_plugins_to_runtime()
     if container_exists():
         return docker("restart", CONTAINER_NAME)
     return docker_compose("up", "-d", COMPOSE_SERVICE)
@@ -574,6 +582,292 @@ def write_memory_limit_gb(gb: Optional[int]) -> None:
     COMPOSE_FILE.write_text(text, encoding="utf-8")
 
 
+UPDATE_DEFAULT_CRON = "*/15 * * * *"
+UPDATE_ENV_KEYS = ("UPDATE_CRON", "UPDATE_IF_IDLE")
+UPDATE_DEFAULTS = {
+    "UPDATE_CRON": UPDATE_DEFAULT_CRON,
+    "UPDATE_IF_IDLE": "true",
+}
+
+
+def update_config() -> dict[str, str]:
+    env = read_env()
+    cron = env.get("UPDATE_CRON", UPDATE_DEFAULT_CRON)
+    auto = bool(cron.strip()) if cron is not None else True
+    return {
+        "UPDATE_AUTO": "true" if auto else "false",
+        "UPDATE_IF_IDLE": env.get("UPDATE_IF_IDLE", UPDATE_DEFAULTS["UPDATE_IF_IDLE"]),
+        "UPDATE_CRON": cron.strip() if cron and cron.strip() else UPDATE_DEFAULT_CRON,
+    }
+
+
+def write_update_config(values: dict[str, str]) -> None:
+    updates: dict[str, str] = {}
+    auto = values.get("UPDATE_AUTO", "true").lower() in ("true", "1", "yes")
+    if auto:
+        updates["UPDATE_CRON"] = values.get("UPDATE_CRON", UPDATE_DEFAULT_CRON).strip() or UPDATE_DEFAULT_CRON
+    else:
+        updates["UPDATE_CRON"] = ""
+    if "UPDATE_IF_IDLE" in values:
+        updates["UPDATE_IF_IDLE"] = values["UPDATE_IF_IDLE"]
+    write_env(updates)
+
+
+def read_bepinex_compose() -> bool:
+    if not COMPOSE_FILE.exists():
+        return False
+    text = COMPOSE_FILE.read_text(encoding="utf-8")
+    match = re.search(r'^\s*BEPINEX:\s*["\']?(true|false)["\']?\s*$', text, re.MULTILINE | re.IGNORECASE)
+    return match.group(1).lower() == "true" if match else False
+
+
+def write_bepinex_compose(enabled: bool) -> None:
+    if not COMPOSE_FILE.exists():
+        raise HTTPException(404, "docker-compose.yml não encontrado")
+    val = "true" if enabled else "false"
+    text = COMPOSE_FILE.read_text(encoding="utf-8")
+    if re.search(r"^\s*BEPINEX:", text, re.MULTILINE):
+        text = re.sub(
+            r'^\s*BEPINEX:.*$',
+            f'      BEPINEX: "{val}"',
+            text,
+            count=1,
+            flags=re.MULTILINE,
+        )
+    else:
+        text = re.sub(
+            r"(^\s*environment:\s*\n)",
+            rf'\1      BEPINEX: "{val}"\n',
+            text,
+            count=1,
+            flags=re.MULTILINE,
+        )
+    COMPOSE_FILE.write_text(text, encoding="utf-8")
+
+
+def read_game_version() -> dict:
+    if not APP_MANIFEST_PATH.exists():
+        return {"buildid": None, "last_updated": None}
+    content = APP_MANIFEST_PATH.read_text(encoding="utf-8", errors="replace")
+    buildid = None
+    last_updated_ts = None
+    for line in content.splitlines():
+        if '"buildid"' in line:
+            match = re.search(r'"buildid"\s+"(\d+)"', line)
+            if match:
+                buildid = match.group(1)
+        if '"LastUpdated"' in line:
+            match = re.search(r'"LastUpdated"\s+"(\d+)"', line)
+            if match:
+                last_updated_ts = int(match.group(1))
+    return {
+        "buildid": buildid,
+        "last_updated": datetime.fromtimestamp(last_updated_ts).isoformat() if last_updated_ts else None,
+    }
+
+
+def trigger_game_update_check() -> str:
+    if not container_running():
+        raise HTTPException(400, "Container não está rodando")
+    r = docker("exec", CONTAINER_NAME, "supervisorctl", "signal", "HUP", "valheim-updater")
+    output = (r.stdout + r.stderr).strip()
+    if r.returncode != 0:
+        raise HTTPException(500, output or "Falha ao solicitar verificação de atualização")
+    return output
+
+
+def read_mods_registry() -> dict:
+    if not MODS_REGISTRY_FILE.exists():
+        return {"packages": []}
+    try:
+        data = json.loads(MODS_REGISTRY_FILE.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {"packages": []}
+    if not isinstance(data.get("packages"), list):
+        return {"packages": []}
+    return data
+
+
+def write_mods_registry(data: dict) -> None:
+    ensure_panel_data_dirs()
+    MODS_REGISTRY_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def normalize_thunderstore_url(url: str) -> str:
+    raw = url.strip().split("#", 1)[0].split("?", 1)[0].strip()
+    return raw
+
+
+def parse_thunderstore_package_ref(url: str) -> tuple[str, str, Optional[str]] | None:
+    raw = normalize_thunderstore_url(url)
+    ror2mm = ROR2MM_RE.match(raw)
+    if ror2mm:
+        return ror2mm.group("owner"), ror2mm.group("name"), ror2mm.group("version")
+    page = THUNDERSTORE_PAGE_RE.match(raw)
+    if page:
+        return page.group("owner"), page.group("name"), None
+    download = THUNDERSTORE_DOWNLOAD_RE.match(raw)
+    if download:
+        return download.group("owner"), download.group("name"), download.group("version")
+    gcdn = parse_gcdn_thunderstore_url(raw)
+    if gcdn:
+        return gcdn
+    return None
+
+
+def parse_thunderstore_from_download_url(url: str) -> tuple[str, str, Optional[str]] | None:
+    raw = normalize_thunderstore_url(url)
+    download = THUNDERSTORE_DOWNLOAD_RE.match(raw)
+    if download:
+        return download.group("owner"), download.group("name"), download.group("version")
+    return parse_gcdn_thunderstore_url(raw)
+
+
+def compare_versions(installed: str, latest: str) -> int:
+    if installed == latest:
+        return 0
+
+    def parts(v: str) -> list:
+        return [int(x) if x.isdigit() else x.lower() for x in re.split(r"[.\-_]", v) if x]
+
+    a, b = parts(installed), parts(latest)
+    for i in range(max(len(a), len(b))):
+        pa = a[i] if i < len(a) else 0
+        pb = b[i] if i < len(b) else 0
+        if pa == pb:
+            continue
+        if isinstance(pa, int) and isinstance(pb, int):
+            return -1 if pa < pb else 1
+        sa, sb = str(pa), str(pb)
+        if sa == sb:
+            continue
+        return -1 if sa < sb else 1
+    return 0
+
+
+def register_mod_package(
+    owner: str,
+    name: str,
+    version: str,
+    dlls: list[str],
+    source_url: str,
+) -> None:
+    registry = read_mods_registry()
+    package_id = f"{owner}/{name}"
+    packages = registry.get("packages", [])
+    entry = {
+        "id": package_id,
+        "owner": owner,
+        "name": name,
+        "version": version,
+        "dlls": sorted(set(dlls)),
+        "source_url": source_url,
+        "installed_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "latest_version": version,
+        "update_status": "up_to_date",
+    }
+    replaced = False
+    for idx, pkg in enumerate(packages):
+        if pkg.get("id") == package_id:
+            packages[idx] = entry
+            replaced = True
+            break
+    if not replaced:
+        packages.append(entry)
+    registry["packages"] = packages
+    write_mods_registry(registry)
+
+
+def find_package_for_dll(dll_name: str) -> dict | None:
+    for pkg in read_mods_registry().get("packages", []):
+        if dll_name in (pkg.get("dlls") or []):
+            return pkg
+    return None
+
+
+def remove_dll_from_registry(dll_name: str) -> None:
+    registry = read_mods_registry()
+    packages = registry.get("packages", [])
+    changed = False
+    for pkg in packages:
+        dlls = pkg.get("dlls") or []
+        if dll_name in dlls:
+            pkg["dlls"] = [d for d in dlls if d != dll_name]
+            changed = True
+    registry["packages"] = [p for p in packages if p.get("dlls")]
+    if changed:
+        write_mods_registry(registry)
+
+
+def check_mod_update_for_package(pkg: dict, use_cache: bool = True) -> dict:
+    owner = pkg.get("owner", "")
+    name = pkg.get("name", "")
+    cache_key = f"{owner}/{name}"
+    if use_cache and cache_key in _mod_update_cache:
+        cached_at, cached = _mod_update_cache[cache_key]
+        if time.time() - cached_at < MOD_UPDATE_CACHE_TTL:
+            return cached
+
+    try:
+        info = fetch_thunderstore_package_info(owner, name)
+    except HTTPException:
+        result = {
+            "update_status": "error",
+            "installed_version": pkg.get("version"),
+            "latest_version": pkg.get("latest_version"),
+            "update_available": False,
+        }
+        _mod_update_cache[cache_key] = (time.time(), result)
+        return result
+
+    installed = pkg.get("version") or ""
+    latest = info.get("latest_version") or ""
+    cmp = compare_versions(installed, latest) if installed and latest else (0 if installed == latest else -1)
+    update_available = cmp < 0
+    status = "update_available" if update_available else "up_to_date"
+    result = {
+        "update_status": status,
+        "installed_version": installed,
+        "latest_version": latest,
+        "update_available": update_available,
+        "download_url": info.get("download_url"),
+    }
+    _mod_update_cache[cache_key] = (time.time(), result)
+
+    registry = read_mods_registry()
+    for item in registry.get("packages", []):
+        if item.get("id") == pkg.get("id"):
+            item["latest_version"] = latest
+            item["update_status"] = status
+    write_mods_registry(registry)
+    return result
+
+
+def enrich_mod_entry(entry: dict) -> dict:
+    pkg = find_package_for_dll(entry["name"])
+    if not pkg:
+        entry.update({
+            "package_id": None,
+            "installed_version": None,
+            "latest_version": None,
+            "update_available": False,
+            "update_status": "unknown",
+        })
+        return entry
+    entry.update({
+        "package_id": pkg.get("id"),
+        "installed_version": pkg.get("version"),
+        "latest_version": pkg.get("latest_version") or pkg.get("version"),
+        "update_available": pkg.get("update_status") == "update_available",
+        "update_status": pkg.get("update_status", "unknown"),
+    })
+    return entry
+
+
+def list_mods_enriched() -> list[dict]:
+    return [enrich_mod_entry(m) for m in list_mods_data()]
+
+
 def get_logs(lines: int = 100) -> str:
     r = docker("logs", CONTAINER_NAME, "--tail", str(lines))
     return clean_docker_logs(r.stdout + r.stderr)
@@ -660,6 +954,80 @@ THUNDERSTORE_PAGE_DOWNLOAD_RE = re.compile(
     r"package/download/(?P<owner>[^/\"\\]+)/(?P<name>[^/\"\\]+)/(?P<version>[^/\"\\]+)/?",
     re.IGNORECASE,
 )
+GCdn_THUNDERSTORE_RE = re.compile(
+    r"^https?://gcdn\.thunderstore\.io/live/repository/packages/(?P<filename>[^/]+)\.zip/?$",
+    re.IGNORECASE,
+)
+GCDN_VERSION_SUFFIX_RE = re.compile(r"^(?P<prefix>.+)-(?P<version>\d+(?:\.\d+)+)$")
+
+_thunderstore_exists_cache: dict[str, bool] = {}
+
+
+def thunderstore_experimental_package_url(owner: str, name: str) -> str:
+    return f"https://thunderstore.io/api/experimental/package/{owner}/{name}/"
+
+
+def fetch_thunderstore_experimental_json(owner: str, name: str) -> dict:
+    import urllib.request
+
+    api_url = thunderstore_experimental_package_url(owner, name)
+    req = urllib.request.Request(
+        api_url,
+        headers={"User-Agent": "ValheimPanel/1.0", "Accept": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read())
+    except Exception as e:
+        raise HTTPException(400, f"Falha ao consultar Thunderstore: {e}") from e
+
+
+def thunderstore_package_exists(owner: str, name: str) -> bool:
+    cache_key = f"{owner}/{name}"
+    if cache_key in _thunderstore_exists_cache:
+        return _thunderstore_exists_cache[cache_key]
+    try:
+        fetch_thunderstore_experimental_json(owner, name)
+        _thunderstore_exists_cache[cache_key] = True
+        return True
+    except HTTPException:
+        _thunderstore_exists_cache[cache_key] = False
+        return False
+
+
+def parse_gcdn_thunderstore_url(url: str) -> tuple[str, str, str] | None:
+    raw = normalize_thunderstore_url(url)
+    match = GCdn_THUNDERSTORE_RE.match(raw)
+    if not match:
+        return None
+    stem_match = GCDN_VERSION_SUFFIX_RE.match(match.group("filename"))
+    if not stem_match:
+        return None
+    prefix = stem_match.group("prefix")
+    version = stem_match.group("version")
+    parts = prefix.split("-")
+    if len(parts) < 2:
+        return None
+    for i in range(1, len(parts)):
+        owner = "-".join(parts[:i])
+        pkg_name = "-".join(parts[i:])
+        if owner and pkg_name and thunderstore_package_exists(owner, pkg_name):
+            return owner, pkg_name, version
+    return parts[0], "-".join(parts[1:]), version
+
+
+def fetch_thunderstore_package_info(owner: str, name: str) -> dict:
+    data = fetch_thunderstore_experimental_json(owner, name)
+    latest = data.get("latest") or {}
+    version = latest.get("version_number") or ""
+    if not version:
+        raise HTTPException(400, f"Pacote Thunderstore sem versões: {owner}/{name}")
+    return {
+        "owner": owner,
+        "name": name,
+        "latest_version": version,
+        "download_url": latest.get("download_url") or thunderstore_download_url(owner, name, version),
+    }
 
 
 def thunderstore_download_url(owner: str, name: str, version: str) -> str:
@@ -687,30 +1055,18 @@ def scrape_thunderstore_download_from_page(owner: str, name: str) -> str:
 
 
 def fetch_thunderstore_latest_download(owner: str, name: str) -> str:
-    import urllib.request
-
-    api_url = f"https://thunderstore.io/c/{THUNDERSTORE_COMMUNITY}/api/v1/package/{owner}/{name}/"
-    req = urllib.request.Request(
-        api_url,
-        headers={"User-Agent": "ValheimPanel/1.0", "Accept": "application/json"},
-    )
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.loads(resp.read())
-        versions = data.get("versions") or []
-        for version in versions:
-            if version.get("is_active") and version.get("download_url"):
-                return version["download_url"]
-        if versions and versions[0].get("download_url"):
-            return versions[0]["download_url"]
-    except Exception:
+        info = fetch_thunderstore_package_info(owner, name)
+        if info.get("download_url"):
+            return info["download_url"]
+    except HTTPException:
         pass
 
     return scrape_thunderstore_download_from_page(owner, name)
 
 
 def resolve_mod_download_url(url: str) -> str:
-    raw = url.strip()
+    raw = normalize_thunderstore_url(url)
     if not raw:
         raise HTTPException(400, "URL vazia")
 
@@ -772,6 +1128,39 @@ def ensure_plugins_writable() -> None:
         )
 
     PLUGINS_DISABLED_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def remove_runtime_plugin(name: str) -> None:
+    for directory in (RUNTIME_PLUGINS_DIR, RUNTIME_PLUGINS_DISABLED_DIR):
+        path = directory / name
+        if path.exists():
+            path.unlink()
+
+
+def sync_plugins_to_runtime() -> None:
+    """Espelha config/bepinex/plugins no diretório que o container realmente carrega."""
+    if not PLUGINS_DIR.exists():
+        return
+    RUNTIME_PLUGINS_DIR.mkdir(parents=True, exist_ok=True)
+
+    for src_path in PLUGINS_DIR.rglob("*"):
+        rel = src_path.relative_to(PLUGINS_DIR)
+        dest_path = RUNTIME_PLUGINS_DIR / rel
+        if src_path.is_dir():
+            dest_path.mkdir(parents=True, exist_ok=True)
+        else:
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src_path, dest_path)
+
+    for dest_path in list(RUNTIME_PLUGINS_DIR.rglob("*")):
+        rel = dest_path.relative_to(RUNTIME_PLUGINS_DIR)
+        if not (PLUGINS_DIR / rel).exists():
+            if dest_path.is_file() or dest_path.is_symlink():
+                dest_path.unlink()
+
+    for dest_path in sorted(RUNTIME_PLUGINS_DIR.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+        if dest_path.is_dir() and not any(dest_path.iterdir()):
+            dest_path.rmdir()
 
 
 def extract_dlls_from_zip(data: bytes, dest: Path) -> list[str]:
@@ -1392,6 +1781,117 @@ def _collect_mod_entry(dll: Path, enabled: bool, cfg_map: dict[str, str]) -> dic
     }
 
 
+def resolve_thunderstore_ref(
+    url: str,
+    download_url: str | None = None,
+) -> tuple[str, str, Optional[str]] | None:
+    normalized = normalize_thunderstore_url(url)
+    ref = parse_thunderstore_package_ref(normalized)
+    if ref:
+        return ref
+    for candidate in (download_url, normalized):
+        if not candidate:
+            continue
+        ref = parse_thunderstore_from_download_url(candidate)
+        if ref:
+            return ref
+        gcdn = parse_gcdn_thunderstore_url(candidate)
+        if gcdn:
+            return gcdn
+    return None
+
+
+R2MODMAN_PROFILE_CREATE_URL = "https://thunderstore.io/api/experimental/legacyprofile/create/"
+R2MODMAN_CONFIG_EXTENSIONS = {".txt", ".json", ".yml", ".yaml", ".ini"}
+
+
+def get_export_profile_name() -> str:
+    return read_env().get("SERVER_NAME", "").strip() or "Valheim"
+
+
+def build_r2modman_export_mods() -> tuple[list[dict], int]:
+    registry = read_mods_registry()
+    mod_states = {m["name"]: m["enabled"] for m in list_mods_data()}
+    exported: list[dict] = []
+    linked_dlls: set[str] = set()
+    for pkg in registry.get("packages", []):
+        owner = pkg.get("owner", "")
+        name = pkg.get("name", "")
+        version = pkg.get("version", "")
+        if not owner or not name or not version:
+            continue
+        dlls = pkg.get("dlls") or []
+        linked_dlls.update(dlls)
+        enabled = any(mod_states.get(dll, True) for dll in dlls)
+        exported.append({
+            "name": f"{owner}-{name}",
+            "version": version,
+            "enabled": enabled,
+        })
+    skipped = sum(1 for m in list_mods_data() if m["name"] not in linked_dlls)
+    return exported, skipped
+
+
+def parse_version_triplet(version: str) -> tuple[int, int, int]:
+    parts = version.split(".")
+    if len(parts) < 3:
+        raise ValueError(f"Versão inválida para export r2modman: {version}")
+    return int(parts[0]), int(parts[1]), int(parts[2])
+
+
+def render_export_r2x(profile_name: str, mods: list[dict]) -> str:
+    lines = [f"profileName: {profile_name}", "mods:"]
+    for mod in mods:
+        major, minor, patch = parse_version_triplet(mod["version"])
+        lines.append(f"- name: {mod['name']}")
+        lines.append("  version:")
+        lines.append(f"    major: {major}")
+        lines.append(f"    minor: {minor}")
+        lines.append(f"    patch: {patch}")
+        lines.append(f"  enabled: {str(mod['enabled']).lower()}")
+    return "\n".join(lines) + "\n"
+
+
+def build_r2modman_zip_bytes() -> tuple[bytes, str, int, int]:
+    profile_name = get_export_profile_name()
+    mods, skipped = build_r2modman_export_mods()
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("export.r2x", render_export_r2x(profile_name, mods))
+        if BEPINEX_CFG_DIR.exists():
+            for cfg in sorted(BEPINEX_CFG_DIR.iterdir()):
+                if not cfg.is_file():
+                    continue
+                if cfg.name == "BepInEx.cfg":
+                    continue
+                if cfg.suffix == ".cfg" or cfg.suffix in R2MODMAN_CONFIG_EXTENSIONS:
+                    zf.write(cfg, f"config/{cfg.name}")
+    return buf.getvalue(), profile_name, len(mods), skipped
+
+
+def upload_r2modman_profile(payload: str) -> str:
+    import urllib.request
+
+    req = urllib.request.Request(
+        R2MODMAN_PROFILE_CREATE_URL,
+        data=payload.encode("utf-8"),
+        headers={
+            "User-Agent": "ValheimPanel/1.0",
+            "Content-Type": "application/octet-stream",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            data = json.loads(resp.read())
+    except Exception as e:
+        raise HTTPException(400, f"Falha ao publicar perfil r2modman: {e}") from e
+    code = data.get("key")
+    if not code:
+        raise HTTPException(400, "Resposta inválida ao publicar perfil r2modman")
+    return code
+
+
 def list_mods_data() -> list[dict]:
     mods: list[dict] = []
     cfg_map = {f.stem.lower(): f.name for f in BEPINEX_CFG_DIR.glob("*.cfg") if f.name != "BepInEx.cfg"}
@@ -1466,6 +1966,16 @@ class ModToggle(BaseModel):
 class MemoryLimitUpdate(BaseModel):
     gb: Optional[int] = None
     apply: bool = True
+
+
+class UpdateConfigUpdate(BaseModel):
+    values: dict[str, str] = {}
+    bepinex: Optional[bool] = None
+    restart: bool = False
+
+
+class ModLink(BaseModel):
+    url: str
 
 
 # ── Version ──────────────────────────────────────────────────────────────────
@@ -1677,7 +2187,34 @@ def api_put_serverlist(kind: str, body: ServerListUpdate):
 
 @app.get("/api/mods")
 def api_list_mods():
-    return {"mods": list_mods_data()}
+    return {"mods": list_mods_enriched()}
+
+
+@app.get("/api/mods/export-r2z")
+def api_export_r2z():
+    data, profile_name, mods_count, skipped = build_r2modman_zip_bytes()
+    timestamp = int(time.time() * 1000)
+    safe_name = re.sub(r"[^\w\-]+", "_", profile_name).strip("_") or "Valheim"
+    filename = f"{safe_name}_{timestamp}.r2z"
+    return Response(
+        content=data,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.post("/api/mods/export-code")
+def api_export_code():
+    data, profile_name, mods_count, skipped = build_r2modman_zip_bytes()
+    payload = "#r2modman\n" + base64.b64encode(data).decode("ascii")
+    code = upload_r2modman_profile(payload)
+    return {
+        "ok": True,
+        "code": code,
+        "profile_name": profile_name,
+        "mods_count": mods_count,
+        "skipped": skipped,
+    }
 
 
 @app.post("/api/mods/upload")
@@ -1710,12 +2247,27 @@ async def api_upload_mod(file: UploadFile = File(...)):
 @app.post("/api/mods/install-url")
 async def api_install_mod_url(body: ModUrlInstall):
     ensure_plugins_writable()
+    normalized = normalize_thunderstore_url(body.url)
     download_url = resolve_mod_download_url(body.url)
     data = download_mod_bytes(download_url)
 
     installed = extract_dlls_from_zip(data, PLUGINS_DIR)
     if not installed:
         raise HTTPException(400, "Nenhum .dll encontrado no pacote")
+
+    ref = resolve_thunderstore_ref(body.url, download_url)
+    if ref:
+        owner, name, version = ref
+        if not version:
+            dl_ref = parse_thunderstore_from_download_url(download_url) or parse_gcdn_thunderstore_url(download_url)
+            if dl_ref and dl_ref[0] == owner and dl_ref[1] == name and dl_ref[2]:
+                version = dl_ref[2]
+        if not version:
+            info = fetch_thunderstore_package_info(owner, name)
+            version = info["latest_version"]
+        source_url = normalized if THUNDERSTORE_PAGE_RE.match(normalized) else body.url.strip()
+        register_mod_package(owner, name, version, installed, source_url)
+
     return {"ok": True, "installed": installed}
 
 
@@ -1728,6 +2280,8 @@ def api_delete_mod(name: str):
         raise HTTPException(404, "Mod não encontrado")
     path, _ = found
     path.unlink()
+    remove_runtime_plugin(name)
+    remove_dll_from_registry(name)
     return {"ok": True, "deleted": name}
 
 
@@ -1750,10 +2304,96 @@ def api_toggle_mod(name: str, body: ModToggle):
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / name
     shutil.move(str(path), str(dest))
+    sync_plugins_to_runtime()
     return {
         "ok": True,
         "name": name,
         "enabled": body.enabled,
+        "message": "Mod atualizado. Reinicie o servidor para aplicar.",
+    }
+
+
+@app.post("/api/mods/{name}/link")
+def api_link_mod(name: str, body: ModLink):
+    if ".." in name or "/" in name:
+        raise HTTPException(400, "Nome inválido")
+    if not find_mod(name):
+        raise HTTPException(404, "Mod não encontrado")
+
+    normalized = normalize_thunderstore_url(body.url)
+    ref = resolve_thunderstore_ref(body.url, normalized)
+    if not ref:
+        raise HTTPException(400, "URL Thunderstore inválida")
+
+    owner, pkg_name, version = ref
+    if not version:
+        dl_ref = parse_thunderstore_from_download_url(normalized) or parse_gcdn_thunderstore_url(normalized)
+        if dl_ref and dl_ref[2]:
+            version = dl_ref[2]
+    if not version:
+        info = fetch_thunderstore_package_info(owner, pkg_name)
+        version = info["latest_version"]
+
+    pkg = find_package_for_dll(name)
+    dlls = sorted(set((pkg or {}).get("dlls") or []) | {name})
+    source_url = normalized if THUNDERSTORE_PAGE_RE.match(normalized) else body.url.strip()
+    register_mod_package(owner, pkg_name, version, dlls, source_url)
+    return {"ok": True, "package_id": f"{owner}/{pkg_name}", "version": version}
+
+
+@app.post("/api/mods/{name}/check-update")
+def api_check_mod_update(name: str):
+    if ".." in name or "/" in name:
+        raise HTTPException(400, "Nome inválido")
+    pkg = find_package_for_dll(name)
+    if not pkg:
+        raise HTTPException(404, "Mod sem vínculo Thunderstore. Use Vincular Thunderstore.")
+    result = check_mod_update_for_package(pkg, use_cache=False)
+    return {"ok": True, "name": name, **result}
+
+
+@app.post("/api/mods/{name}/update")
+def api_update_mod(name: str):
+    if ".." in name or "/" in name:
+        raise HTTPException(400, "Nome inválido")
+    pkg = find_package_for_dll(name)
+    if not pkg:
+        raise HTTPException(404, "Mod sem vínculo Thunderstore")
+
+    check = check_mod_update_for_package(pkg, use_cache=False)
+    if not check.get("update_available"):
+        return {"ok": True, "updated": False, "message": "Mod já está na versão mais recente"}
+
+    download_url = check.get("download_url")
+    if not download_url:
+        info = fetch_thunderstore_package_info(pkg["owner"], pkg["name"])
+        download_url = info["download_url"]
+
+    ensure_plugins_writable()
+    data = download_mod_bytes(download_url)
+    for dll in pkg.get("dlls") or []:
+        for enabled in (True, False):
+            path = mod_path(dll, enabled)
+            if path.exists():
+                path.unlink()
+
+    installed = extract_dlls_from_zip(data, PLUGINS_DIR)
+    if not installed:
+        raise HTTPException(400, "Nenhum .dll encontrado no pacote atualizado")
+
+    latest = check.get("latest_version") or pkg.get("version") or ""
+    register_mod_package(
+        pkg["owner"],
+        pkg["name"],
+        latest,
+        installed,
+        pkg.get("source_url") or "",
+    )
+    return {
+        "ok": True,
+        "updated": True,
+        "installed": installed,
+        "version": latest,
         "message": "Mod atualizado. Reinicie o servidor para aplicar.",
     }
 
@@ -2014,6 +2654,75 @@ def api_bepinex_configs():
                 "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
             })
     return {"configs": configs}
+
+
+# ── Updates (game + BepInEx mode) ────────────────────────────────────────────
+
+@app.get("/api/updates/config")
+def api_get_updates_config():
+    cfg = update_config()
+    bepinex = read_bepinex_compose()
+    game = read_game_version()
+    mods_count = len(list_mods_data())
+    suggest_disable_auto = mods_count > 0 and cfg.get("UPDATE_AUTO") == "true"
+    return {
+        "values": cfg,
+        "defaults": {**UPDATE_DEFAULTS, "UPDATE_AUTO": "true"},
+        "bepinex": bepinex,
+        "modded": bepinex,
+        "game_version": game,
+        "mods_count": mods_count,
+        "suggest_disable_auto": suggest_disable_auto,
+    }
+
+
+@app.put("/api/updates/config")
+def api_put_updates_config(body: UpdateConfigUpdate):
+    bepinex_changed = False
+    if body.bepinex is not None:
+        current = read_bepinex_compose()
+        if current != body.bepinex:
+            write_bepinex_compose(body.bepinex)
+            bepinex_changed = True
+
+    if body.values:
+        allowed = {k: v for k, v in body.values.items() if k in ("UPDATE_AUTO", "UPDATE_IF_IDLE", "UPDATE_CRON")}
+        write_update_config(allowed)
+
+    if body.restart or bepinex_changed:
+        r = recreate_container()
+        if r.returncode != 0:
+            raise HTTPException(500, r.stderr or r.stdout or "Erro ao recriar container")
+
+    return {
+        "ok": True,
+        "values": update_config(),
+        "bepinex": read_bepinex_compose(),
+        "recreated": body.restart or bepinex_changed,
+    }
+
+
+@app.get("/api/updates/status")
+def api_updates_status():
+    sup = supervisor_status()
+    mods_count = len(list_mods_data())
+    bepinex = read_bepinex_compose()
+    cfg = update_config()
+    return {
+        "game_version": read_game_version(),
+        "updater_state": sup.get("valheim-updater", "UNKNOWN"),
+        "auto_updates": cfg.get("UPDATE_AUTO") == "true",
+        "update_if_idle": cfg.get("UPDATE_IF_IDLE") == "true",
+        "bepinex_enabled": bepinex,
+        "mods_count": mods_count,
+        "mods_warning": mods_count > 0 or bepinex,
+    }
+
+
+@app.post("/api/updates/check")
+def api_updates_check():
+    output = trigger_game_update_check()
+    return {"ok": True, "message": "Verificação de atualização solicitada", "output": output}
 
 
 # ── Backups ──────────────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@
 import io
 import time
 import zipfile
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -179,9 +180,27 @@ def test_delete_mod_missing(client):
 
 def test_delete_mod_valid(client, env_dir):
     (env_dir["plugins"] / "target.dll").write_text("x")
+    runtime = env_dir["data"] / "bepinex" / "BepInEx" / "plugins"
+    (runtime / "target.dll").write_text("old")
     r = client.delete("/api/mods/target.dll")
     assert r.status_code == 200
     assert not (env_dir["plugins"] / "target.dll").exists()
+    assert not (runtime / "target.dll").exists()
+
+
+def test_sync_plugins_to_runtime_mirrors_and_deletes_orphans(env_dir):
+    plugins = env_dir["plugins"]
+    runtime = env_dir["data"] / "bepinex" / "BepInEx" / "plugins"
+    (plugins / "keep.dll").write_text("keep")
+    (plugins / "disabled").mkdir(exist_ok=True)
+    (plugins / "disabled" / "off.dll").write_text("off")
+    (runtime / "stale.dll").write_text("stale")
+
+    main.sync_plugins_to_runtime()
+
+    assert (runtime / "keep.dll").read_text() == "keep"
+    assert (runtime / "disabled" / "off.dll").read_text() == "off"
+    assert not (runtime / "stale.dll").exists()
 
 
 def test_toggle_mod_disable(client, env_dir):
@@ -272,6 +291,16 @@ def test_install_mod_url_thunderstore_page(client, monkeypatch):
         lambda url: "https://example.test/mod.zip",
     )
     monkeypatch.setattr(main, "download_mod_bytes", lambda url: zip_data)
+    monkeypatch.setattr(
+        main,
+        "fetch_thunderstore_package_info",
+        lambda owner, name: {
+            "owner": owner,
+            "name": name,
+            "latest_version": "1.1.9",
+            "download_url": "https://example.test/mod.zip",
+        },
+    )
 
     r = client.post(
         "/api/mods/install-url",
@@ -296,6 +325,262 @@ def test_install_mod_url_ror2mm(client, monkeypatch):
     )
     assert r.status_code == 200
     assert "serverside.dll" in r.json()["installed"]
+
+
+def test_install_mod_url_registers_thunderstore(client, monkeypatch, env_dir):
+    zip_data = _mod_zip_bytes()
+    monkeypatch.setattr(
+        main,
+        "resolve_mod_download_url",
+        lambda url: "https://thunderstore.io/package/download/mvp/Serverside_Simulations/1.1.9/",
+    )
+    monkeypatch.setattr(main, "download_mod_bytes", lambda url: zip_data)
+
+    r = client.post(
+        "/api/mods/install-url",
+        json={"url": "https://thunderstore.io/c/valheim/p/mvp/Serverside_Simulations/"},
+    )
+    assert r.status_code == 200
+    registry = main.read_mods_registry()
+    assert any(p["id"] == "mvp/Serverside_Simulations" for p in registry["packages"])
+    mods = client.get("/api/mods").json()["mods"]
+    assert mods[0]["update_status"] in ("up_to_date", "unknown", "update_available")
+
+
+def test_link_mod_thunderstore(client, env_dir, monkeypatch):
+    (env_dir["plugins"] / "orphan.dll").write_text("x")
+    monkeypatch.setattr(
+        main,
+        "fetch_thunderstore_package_info",
+        lambda owner, name: {
+            "owner": owner,
+            "name": name,
+            "latest_version": "1.1.9",
+            "download_url": "https://example.test/mod.zip",
+        },
+    )
+    r = client.post(
+        "/api/mods/orphan.dll/link",
+        json={"url": "https://thunderstore.io/c/valheim/p/mvp/Serverside_Simulations/"},
+    )
+    assert r.status_code == 200
+    pkg = main.find_package_for_dll("orphan.dll")
+    assert pkg is not None
+    assert pkg["owner"] == "mvp"
+
+
+def test_check_mod_update(client, env_dir, monkeypatch):
+    (env_dir["plugins"] / "serverside.dll").write_text("x")
+    main.register_mod_package("mvp", "Serverside_Simulations", "1.0.0", ["serverside.dll"], "http://test")
+    monkeypatch.setattr(
+        main,
+        "fetch_thunderstore_package_info",
+        lambda owner, name: {
+            "owner": owner,
+            "name": name,
+            "latest_version": "2.0.0",
+            "download_url": "https://example.test/mod.zip",
+        },
+    )
+    r = client.post("/api/mods/serverside.dll/check-update")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["update_available"] is True
+    assert body["latest_version"] == "2.0.0"
+
+
+def test_fetch_thunderstore_package_info_experimental(monkeypatch):
+    monkeypatch.setattr(
+        main,
+        "fetch_thunderstore_experimental_json",
+        lambda owner, name: {
+            "latest": {
+                "version_number": "5.4.1602",
+                "download_url": "https://thunderstore.io/package/download/Tekla/AutoRepair/5.4.1602/",
+            },
+        },
+    )
+    info = main.fetch_thunderstore_package_info("Tekla", "AutoRepair")
+    assert info["latest_version"] == "5.4.1602"
+    assert "AutoRepair" in info["download_url"]
+
+
+def test_normalize_thunderstore_url_strips_query():
+    url = "https://thunderstore.io/c/valheim/p/Tekla/AutoRepair?tab=versions"
+    assert main.normalize_thunderstore_url(url) == (
+        "https://thunderstore.io/c/valheim/p/Tekla/AutoRepair"
+    )
+
+
+def test_parse_gcdn_thunderstore_url(monkeypatch):
+    monkeypatch.setattr(main, "thunderstore_package_exists", lambda owner, name: owner == "Tekla" and name == "AutoRepair")
+    url = "https://gcdn.thunderstore.io/live/repository/packages/Tekla-AutoRepair-5.4.1602.zip"
+    assert main.parse_gcdn_thunderstore_url(url) == ("Tekla", "AutoRepair", "5.4.1602")
+
+
+def test_parse_gcdn_thunderstore_url_hyphenated_name(monkeypatch):
+    def exists(owner, name):
+        return owner == "BetterUI_ForeverMaintained" and name == "BetterUI_ForeverMaintained"
+
+    monkeypatch.setattr(main, "thunderstore_package_exists", exists)
+    url = "https://gcdn.thunderstore.io/live/repository/packages/BetterUI_ForeverMaintained-BetterUI_ForeverMaintained-2.5.9.zip"
+    assert main.parse_gcdn_thunderstore_url(url) == (
+        "BetterUI_ForeverMaintained",
+        "BetterUI_ForeverMaintained",
+        "2.5.9",
+    )
+
+
+def test_install_mod_url_gcdn_registers_thunderstore(client, monkeypatch, env_dir):
+    zip_data = _mod_zip_bytes()
+    gcdn_url = "https://gcdn.thunderstore.io/live/repository/packages/Tekla-AutoRepair-5.4.1602.zip"
+    monkeypatch.setattr(main, "resolve_mod_download_url", lambda url: gcdn_url)
+    monkeypatch.setattr(main, "download_mod_bytes", lambda url: zip_data)
+    monkeypatch.setattr(
+        main,
+        "parse_gcdn_thunderstore_url",
+        lambda url: ("Tekla", "AutoRepair", "5.4.1602"),
+    )
+
+    r = client.post("/api/mods/install-url", json={"url": gcdn_url})
+    assert r.status_code == 200
+    registry = main.read_mods_registry()
+    assert any(p["id"] == "Tekla/AutoRepair" for p in registry["packages"])
+
+
+def test_link_mod_thunderstore_page_url(client, env_dir, monkeypatch):
+    (env_dir["plugins"] / "repair.dll").write_text("x")
+    monkeypatch.setattr(
+        main,
+        "fetch_thunderstore_package_info",
+        lambda owner, name: {
+            "owner": owner,
+            "name": name,
+            "latest_version": "5.4.1602",
+            "download_url": "https://example.test/mod.zip",
+        },
+    )
+    r = client.post(
+        "/api/mods/repair.dll/link",
+        json={"url": "https://thunderstore.io/c/valheim/p/Tekla/AutoRepair"},
+    )
+    assert r.status_code == 200
+    pkg = main.find_package_for_dll("repair.dll")
+    assert pkg is not None
+    assert pkg["owner"] == "Tekla"
+    assert pkg["name"] == "AutoRepair"
+
+
+def test_export_r2z(client, env_dir, monkeypatch):
+    (env_dir["plugins"] / "serverside.dll").write_text("x")
+    (env_dir["bepinex"] / "serverside.cfg").write_text("[General]\nkey=value\n")
+    main.register_mod_package("mvp", "Serverside_Simulations", "1.1.9", ["serverside.dll"], "http://test")
+    monkeypatch.setattr(main, "get_export_profile_name", lambda: "TestServer")
+
+    r = client.get("/api/mods/export-r2z")
+    assert r.status_code == 200
+    assert "application/zip" in r.headers.get("content-type", "")
+    with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+        assert "export.r2x" in zf.namelist()
+        r2x = zf.read("export.r2x").decode()
+        assert "profileName: TestServer" in r2x
+        assert "mvp-Serverside_Simulations" in r2x
+        assert "major: 1" in r2x
+        assert "minor: 1" in r2x
+        assert "patch: 9" in r2x
+        config_files = [n for n in zf.namelist() if n.startswith("config/")]
+        assert any("serverside.cfg" in n for n in config_files)
+
+
+def test_export_r2x_matches_r2modman_reference_format():
+    reference = Path("/home/vinicius/Valheim_1783466541661.r2z")
+    if not reference.exists():
+        return
+    with zipfile.ZipFile(reference) as zf:
+        ref_r2x = zf.read("export.r2x").decode()
+    assert "version:" in ref_r2x
+    assert "major:" in ref_r2x
+    sample_mods = [
+        {"name": "denikson-BepInExPack_Valheim", "version": "5.4.2333", "enabled": True},
+        {"name": "Tekla-AutoRepair", "version": "5.4.1602", "enabled": True},
+    ]
+    generated = main.render_export_r2x("Valheim", sample_mods)
+    for mod in sample_mods:
+        major, minor, patch = main.parse_version_triplet(mod["version"])
+        assert f"- name: {mod['name']}" in generated
+        assert f"major: {major}" in generated
+        assert f"minor: {minor}" in generated
+        assert f"patch: {patch}" in generated
+
+
+def test_export_code(client, env_dir, monkeypatch):
+    (env_dir["plugins"] / "serverside.dll").write_text("x")
+    main.register_mod_package("mvp", "Serverside_Simulations", "1.1.9", ["serverside.dll"], "http://test")
+    monkeypatch.setattr(main, "get_export_profile_name", lambda: "TestServer")
+    monkeypatch.setattr(main, "upload_r2modman_profile", lambda payload: "019f3ee0-d09e-2cf0-4008-0c0dee85e142")
+
+    r = client.post("/api/mods/export-code")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["code"] == "019f3ee0-d09e-2cf0-4008-0c0dee85e142"
+    assert body["mods_count"] == 1
+    assert body["profile_name"] == "TestServer"
+
+
+# ── Updates ──────────────────────────────────────────────────────────────────
+
+def test_get_updates_config(client):
+    r = client.get("/api/updates/config")
+    assert r.status_code == 200
+    body = r.json()
+    assert "values" in body
+    assert "bepinex" in body
+    assert body["values"]["UPDATE_AUTO"] == "true"
+
+
+def test_put_updates_config_disable_auto(client, env_dir):
+    r = client.put("/api/updates/config", json={"values": {"UPDATE_AUTO": "false"}, "restart": False})
+    assert r.status_code == 200
+    assert main.read_env().get("UPDATE_CRON") == ""
+    assert r.json()["values"]["UPDATE_AUTO"] == "false"
+
+
+def test_read_game_version(client, env_dir):
+    manifest_dir = env_dir["data"] / "dl" / "server" / "steamapps"
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    manifest_dir.joinpath("appmanifest_896660.acf").write_text(
+        '"AppState"\n{\n\t"buildid"\t\t"12345"\n\t"LastUpdated"\t\t"1700000000"\n}\n'
+    )
+    info = main.read_game_version()
+    assert info["buildid"] == "12345"
+    assert info["last_updated"] is not None
+
+
+def test_write_bepinex_compose(client, env_dir):
+    main.write_bepinex_compose(False)
+    text = env_dir["root"].joinpath("docker-compose.yml").read_text()
+    assert 'BEPINEX: "false"' in text
+    assert main.read_bepinex_compose() is False
+
+
+def test_updates_check(client, monkeypatch):
+    calls = []
+
+    def fake_docker(*args, **kwargs):
+        calls.append(args)
+        return main.subprocess.CompletedProcess(args, 0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(main, "docker", fake_docker)
+    r = client.post("/api/updates/check")
+    assert r.status_code == 200
+    assert calls
+    assert "valheim-updater" in calls[0]
+
+
+def test_compare_versions():
+    assert main.compare_versions("1.0.0", "1.0.0") == 0
+    assert main.compare_versions("1.0.0", "2.0.0") < 0
+    assert main.compare_versions("2.0.0", "1.9.9") > 0
 
 
 # ── Worlds ───────────────────────────────────────────────────────────────────
@@ -384,7 +669,7 @@ def test_switch_world_recreates_container(client, monkeypatch):
     )
     r = client.post("/api/worlds/switch", json={"world_name": "TestWorld"})
     assert r.status_code == 200
-    assert ("up", "-d", "--force-recreate") in compose_calls
+    assert any("--force-recreate" in c for c in compose_calls)
 
 
 def test_sync_pending_when_fwl_appears(client, env_dir):

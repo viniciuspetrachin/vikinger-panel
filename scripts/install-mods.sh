@@ -13,7 +13,6 @@ declare -A MODS=(
   ["AutoRepair"]="https://gcdn.thunderstore.io/live/repository/packages/Tekla-AutoRepair-5.4.1602.zip"
   ["YamlDotNet"]="https://gcdn.thunderstore.io/live/repository/packages/ValheimModding-YamlDotNet-16.3.1.zip"
   ["ExtraSlots"]="https://gcdn.thunderstore.io/live/repository/packages/shudnal-ExtraSlots-1.1.18.zip"
-  ["TrashItems"]="https://gcdn.thunderstore.io/live/repository/packages/virtuaCode-TrashItems-1.2.8.zip"
   ["BetterUI"]="https://gcdn.thunderstore.io/live/repository/packages/BetterUI_ForeverMaintained-BetterUI_ForeverMaintained-2.5.9.zip"
   ["ServerSideMap"]="https://gcdn.thunderstore.io/live/repository/packages/Mydayyy-ServerSideMap-1.3.13.zip"
 )

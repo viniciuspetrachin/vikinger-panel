@@ -5,6 +5,7 @@ import { resources } from "./state/resources.js";
 import { server } from "./state/server.js";
 import { worlds } from "./state/worlds.js";
 import { mods } from "./state/mods.js";
+import { updates } from "./state/updates.js";
 import { backups } from "./state/backups.js";
 import { files } from "./state/files.js";
 import { logs } from "./state/logs.js";
@@ -101,9 +102,32 @@ function panel() {
         window.PanelEditor?.destroy("list-permitted");
       }
     },
+
+    async withBusy(key, fn) {
+      if (this.actionPending) return;
+      this.actionPending = key;
+      try {
+        return await fn.call(this);
+      } finally {
+        this.actionPending = null;
+      }
+    },
+
+    isBusy(key) {
+      return this.actionPending === key;
+    },
+
+    isBusyGroup(...keys) {
+      return keys.includes(this.actionPending);
+    },
+
+    isBusyPrefix(prefix) {
+      const k = this.actionPending;
+      return !!k && k.startsWith(prefix);
+    },
   };
 
-  const panelData = Object.assign(
+  return Object.assign(
     {},
     helpers,
     nav,
@@ -112,6 +136,7 @@ function panel() {
     server,
     worlds,
     mods,
+    updates,
     backups,
     files,
     logs,
@@ -121,22 +146,6 @@ function panel() {
     about,
     core,
   );
-
-  panelData.withBusy = async function (key, fn) {
-    if (panelData.actionPending) return;
-    panelData.actionPending = key;
-    try {
-      return await fn.call(panelData);
-    } finally {
-      panelData.actionPending = null;
-    }
-  };
-
-  panelData.isBusy = function (key) {
-    return panelData.actionPending === key;
-  };
-
-  return panelData;
 }
 
 window.panel = panel;

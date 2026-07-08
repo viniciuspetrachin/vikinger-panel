@@ -17,7 +17,7 @@ backups, métricas, logs e muito mais, tudo em uma interface única.
 | **Visão Geral** | Status do servidor, jogadores online, console ao vivo, controles rápidos |
 | **Servidor** | Nome, senha, porta, listas admin/ban/permitidos, argumentos extra (`-crossplay`) |
 | **Mundos** | Criar, trocar, presets (Fácil → Hardcore), editor de `.fwl`, importar mundos |
-| **Mods e Configs** | Instalar via Thunderstore/URL/upload, ativar/desativar, editar `.cfg` BepInEx |
+| **Mods e Configs** | Instalar via Thunderstore/URL/upload, ativar/desativar, editar `.cfg` BepInEx, atualizações do jogo e por mod |
 | **Backups** | Agendamento cron, backup manual, download e restauração |
 | **Recursos** *(avançado)* | Limite de RAM do container, gráficos de CPU/rede em tempo real |
 | **Arquivos** *(avançado)* | Navegador de arquivos com editor CodeMirror |
@@ -59,6 +59,10 @@ Abra **http://localhost:8080** (ou a porta definida em `PANEL_PORT`).
 | `HOST_PROJECT_DIR` | Caminho absoluto do projeto no host |
 | `DOCKER_GID` | GID do grupo `docker` no host (`getent group docker`) |
 | `PANEL_PORT` | Porta HTTP do painel (padrão `8080`) |
+| `UPDATE_CRON` | Cron de verificação de updates do jogo (vazio = desligado) |
+| `UPDATE_IF_IDLE` | Só atualizar quando não houver jogadores (`true`/`false`) |
+
+Na aba **Mods**, configure auto-atualização do jogo, modo vanilla/modded (BepInEx) e updates individuais de mods Thunderstore.
 
 ### Primeira subida
 
@@ -97,6 +101,17 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt
 
 npm install && npm run build            # rebuild CSS/JS
 ```
+
+### Aplicar mudanças no painel em execução (Docker)
+
+O container serve os arquivos **embarcados na imagem** (`/app/static/`). Depois de alterar código:
+
+```bash
+./scripts/reload-panel.sh           # rebuild + restart do container panel
+./scripts/reload-panel.sh --tests   # pytest unit + e2e antes, depois deploy
+```
+
+No navegador, use **Ctrl+Shift+R** se a interface ainda parecer antiga (cache).
 
 Veja [CONTRIBUTING.md](CONTRIBUTING.md) para o fluxo completo de contribuição.
 
