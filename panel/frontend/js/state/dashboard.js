@@ -150,7 +150,7 @@ export const dashboard = {
     if (this.metricsInterval) return;
     this.metricsLoading = true;
     this.metricsPollCount = 0;
-    this.loadMetrics(true);
+    this.loadMetrics(false);
     this.metricsInterval = setInterval(() => {
       if (!this.metricsActive()) return;
       this.metricsPollCount += 1;
@@ -230,7 +230,12 @@ export const dashboard = {
   async loadMetrics(light = true) {
     try {
       const url = light ? "/api/metrics?light=1" : "/api/metrics";
-      this.metrics = await this.api("GET", url);
+      const prevDisk = this.metrics.disk;
+      const data = await this.api("GET", url);
+      if (light && data.disk?.total_bytes == null && prevDisk?.total_bytes != null) {
+        data.disk = prevDisk;
+      }
+      this.metrics = data;
       this.metricsLoading = false;
       if (!this.metricsActive()) return;
       if (this.metricsChartExpanded) {

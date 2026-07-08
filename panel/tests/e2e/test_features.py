@@ -237,6 +237,17 @@ def test_dashboard_metrics_section(page: Page, base_url: str) -> None:
     expect(page.locator("canvas")).to_be_visible()
 
 
+def test_dashboard_disk_usage(page: Page, base_url: str) -> None:
+    _boot(page, base_url)
+    perf = page.locator(".bg-valheim-800").filter(has=page.get_by_role("heading", name="Desempenho", exact=True))
+    disk_card = perf.locator(".bg-valheim-900").filter(has=page.get_by_text("Disco (Valheim)", exact=True)).first
+    expect(disk_card.locator(".text-lg.font-bold")).not_to_have_text("—", timeout=8000)
+    expect(disk_card.get_by_text("jogo:", exact=False)).to_be_visible()
+    expect(disk_card.get_by_text("mods:", exact=False)).to_be_visible()
+    expect(disk_card.get_by_text("mundos:", exact=False)).to_be_visible()
+    expect(disk_card.get_by_text("backups:", exact=False)).to_be_visible()
+
+
 def test_dashboard_cpu_valheim_only(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     perf = page.locator(".bg-valheim-800").filter(has=page.get_by_role("heading", name="Desempenho", exact=True))

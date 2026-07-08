@@ -135,8 +135,10 @@
                 <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Disco (Valheim)</p>
                 <p class="text-lg font-bold" x-text="metrics.disk?.total_bytes != null ? formatBytes(metrics.disk?.total_bytes) : '—'"></p>
                 <p class="text-xs text-gray-500 mt-1" x-show="metrics.disk?.total_bytes != null">
-                  config: <span x-text="formatBytes(metrics.disk?.config_bytes)"></span>
-                  · data: <span x-text="formatBytes(metrics.disk?.data_bytes)"></span>
+                  jogo: <span x-text="formatBytes(metrics.disk?.game_bytes)"></span>
+                  · mods: <span x-text="formatBytes(metrics.disk?.mods_bytes)"></span>
+                  · mundos: <span x-text="formatBytes(metrics.disk?.worlds_bytes)"></span>
+                  · backups: <span x-text="formatBytes(metrics.disk?.backups_bytes)"></span>
                 </p>
               </div>
               <div class="bg-valheim-900 rounded-lg p-4 border border-valheim-700">

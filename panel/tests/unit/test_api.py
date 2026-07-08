@@ -1262,6 +1262,7 @@ def test_set_memory_limit_invalid(client):
 
 def test_metrics_light(client, monkeypatch):
     main._metrics_prev = None
+    main._disk_usage_cache = None
     monkeypatch.setattr(main, "get_container_metrics_raw", lambda: {
         "running": True,
         "cpu_percent": 10.0,
@@ -1278,7 +1279,10 @@ def test_metrics_light(client, monkeypatch):
 
     def fake_disk(force_refresh=False):
         called["full"] += 1
-        return {"config_bytes": 1, "data_bytes": 2, "total_bytes": 3}
+        return {
+            "config_bytes": 1, "data_bytes": 2, "total_bytes": 3,
+            "game_bytes": 0, "mods_bytes": 0, "worlds_bytes": 0, "backups_bytes": 0,
+        }
 
     def fake_cached():
         called["cached"] += 1
@@ -1289,9 +1293,71 @@ def test_metrics_light(client, monkeypatch):
 
     r = client.get("/api/metrics?light=1")
     assert r.status_code == 200
-    assert r.json()["disk"]["total_bytes"] is None
-    assert called["full"] == 0
+    assert r.json()["disk"]["total_bytes"] == 3
+    assert called["full"] == 1
     assert called["cached"] == 1
+
+
+def test_metrics_light_cached(client, monkeypatch):
+    main._metrics_prev = None
+    main._disk_usage_cache = None
+    monkeypatch.setattr(main, "get_container_metrics_raw", lambda: {
+        "running": True,
+        "cpu_percent": 10.0,
+        "memory_used_bytes": 100,
+        "memory_limit_bytes": 1000,
+        "memory_percent": 10.0,
+        "net_rx_bytes": 0,
+        "net_tx_bytes": 0,
+        "block_read_bytes": 0,
+        "block_write_bytes": 0,
+    })
+    monkeypatch.setattr(main, "read_memory_limit_gb", lambda: None)
+    called = {"full": 0}
+
+    def fake_disk(force_refresh=False):
+        called["full"] += 1
+        return {
+            "config_bytes": 10, "data_bytes": 20, "total_bytes": 30,
+            "game_bytes": 5, "mods_bytes": 3, "worlds_bytes": 2, "backups_bytes": 1,
+        }
+
+    monkeypatch.setattr(main, "get_valheim_disk_usage", fake_disk)
+    main._disk_usage_cache = {
+        "config_bytes": 10, "data_bytes": 20, "total_bytes": 30,
+        "game_bytes": 5, "mods_bytes": 3, "worlds_bytes": 2, "backups_bytes": 1,
+    }
+
+    r = client.get("/api/metrics?light=1")
+    assert r.status_code == 200
+    assert r.json()["disk"]["total_bytes"] == 30
+    assert r.json()["disk"]["game_bytes"] == 5
+    assert called["full"] == 0
+
+
+def test_get_valheim_disk_usage_breakdown(env_dir, monkeypatch):
+    main._disk_usage_cache = None
+    sizes = {
+        env_dir["config"]: 1000,
+        env_dir["data"]: 5000,
+        env_dir["fwl_backups"]: 200,
+        env_dir["data"] / "dl": 4000,
+        env_dir["plugins"]: 300,
+        env_dir["data"] / "bepinex" / "BepInEx" / "plugins": 150,
+        env_dir["worlds"]: 450,
+        env_dir["backups"]: 100,
+    }
+
+    def fake_dir_size(path):
+        return sizes.get(path, 0)
+
+    monkeypatch.setattr(main, "dir_size_bytes", fake_dir_size)
+    result = main.get_valheim_disk_usage(force_refresh=True)
+    assert result["game_bytes"] == 4000
+    assert result["mods_bytes"] == 450
+    assert result["worlds_bytes"] == 450
+    assert result["backups_bytes"] == 300
+    assert result["total_bytes"] == 6200
 
 
 def test_get_capacity(client):

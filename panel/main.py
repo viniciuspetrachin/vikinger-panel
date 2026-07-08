@@ -430,10 +430,19 @@ def get_valheim_disk_usage(force_refresh: bool = False) -> dict:
         return _disk_usage_cache
     config_bytes = dir_size_bytes(CONFIG_DIR)
     data_bytes = dir_size_bytes(DATA_DIR)
+    fwl_backup_bytes = dir_size_bytes(FWL_BACKUP_DIR)
+    game_bytes = dir_size_bytes(DATA_DIR / "dl")
+    mods_bytes = dir_size_bytes(PLUGINS_DIR) + dir_size_bytes(RUNTIME_PLUGINS_DIR)
+    worlds_bytes = dir_size_bytes(WORLDS_DIR)
+    backups_bytes = dir_size_bytes(BACKUPS_DIR) + fwl_backup_bytes
     result = {
         "config_bytes": config_bytes,
         "data_bytes": data_bytes,
-        "total_bytes": config_bytes + data_bytes,
+        "game_bytes": game_bytes,
+        "mods_bytes": mods_bytes,
+        "worlds_bytes": worlds_bytes,
+        "backups_bytes": backups_bytes,
+        "total_bytes": config_bytes + data_bytes + fwl_backup_bytes,
     }
     _disk_usage_cache = result
     _disk_usage_cache_ts = now
@@ -441,10 +450,8 @@ def get_valheim_disk_usage(force_refresh: bool = False) -> dict:
 
 
 def get_valheim_disk_usage_cached() -> Optional[dict]:
-    """Retorna cache de disco sem recalcular (para métricas light)."""
-    if _disk_usage_cache is not None:
-        return _disk_usage_cache
-    return None
+    """Retorna último valor conhecido de disco sem recalcular (stale-while-revalidate)."""
+    return _disk_usage_cache
 
 
 def get_cpu_count() -> int:
@@ -2267,11 +2274,9 @@ def api_metrics(light: bool = Query(False)):
     now = time.time()
     raw = get_container_metrics_raw()
     if light:
-        disk = get_valheim_disk_usage_cached() or {
-            "config_bytes": None,
-            "data_bytes": None,
-            "total_bytes": None,
-        }
+        disk = get_valheim_disk_usage_cached()
+        if disk is None:
+            disk = get_valheim_disk_usage()
     else:
         disk = get_valheim_disk_usage()
     compose_limit_gb = read_memory_limit_gb()
