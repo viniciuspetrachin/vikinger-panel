@@ -1,0 +1,2 @@
+vinicius ALL=(ALL) NOPASSWD: /home/vinicius/vikinger-panel/scripts/fix-plugins-permissions.sh
+vinicius ALL=(ALL) NOPASSWD: /home/vinicius/vikinger-panel/scripts/fix-worlds-permissions.sh

@@ -1,0 +1,30 @@
+# Fallback standalone — sobe APENAS o servidor Valheim (sem o painel).
+#
+# O compose principal (servidor + painel) fica na raiz do repositorio:
+#   docker compose up -d
+#
+# Para usar este standalone, rode a partir da raiz do repositorio apontando
+# o project-directory para a raiz (para os volumes ./config e ./data baterem):
+#   docker compose --project-directory . -f server/docker-compose.standalone.yml up -d
+
+services:
+  valheim:
+    image: lloesche/valheim-server:latest
+    container_name: valheim-server
+    restart: unless-stopped
+    cap_add:
+      - sys_nice
+    stop_grace_period: 120s
+    ports:
+      - "2456-2458:2456-2458/udp"
+    volumes:
+      - ./config:/config
+      - ./data:/opt/valheim
+    env_file:
+      - .env
+    environment:
+      BEPINEX: "true"
+      SERVER_PORT: "2456"
+      TZ: America/Sao_Paulo
+      PUID: "1000"
+      PGID: "1000"
