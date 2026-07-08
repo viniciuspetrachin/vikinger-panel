@@ -62,7 +62,8 @@ export const help = {
       id: "recursos",
       label: "Recursos e desempenho",
       items: [
-        { q: "Quanta RAM o servidor precisa?", a: "Um servidor Valheim costuma usar de 2 a 4 GB, subindo com mais jogadores/mods. Ajuste o teto na aba <b>Recursos</b> (modo avançado)." },
+        { q: "Quanta RAM o servidor precisa?", a: "Um servidor Valheim costuma usar de 2 a 4 GB, subindo com mais jogadores/mods. Ajuste o teto na aba <b>Servidor</b>, em <b>Capacidade do servidor</b>. Métricas em tempo real ficam na <b>Visão Geral</b>." },
+        { q: "Como defino o limite de jogadores?", a: "Na aba <b>Servidor</b>, em <b>Capacidade do servidor</b>. O vanilla aceita até 10 jogadores; acima disso é preciso um mod (Valheim Plus ou MaxPlayerCount). O painel sincroniza o valor no .cfg do mod, se instalado." },
         { q: "Alterar o limite de RAM derruba os jogadores?", a: "Sim — aplicar um novo limite recria o container e desconecta quem estiver online. Faça isso em horários tranquilos." },
       ],
     },
@@ -79,7 +80,7 @@ export const help = {
       id: "problemas",
       label: "Solução de problemas",
       items: [
-        { q: "Onde vejo o que está acontecendo?", a: "Ative o <b>Modo avançado</b> (rodapé da barra lateral) e abra <b>Logs</b> (docker/BepInEx). A aba <b>Auditoria</b> mostra todas as ações feitas pelo painel." },
+        { q: "Onde vejo o que está acontecendo?", a: "Abra <b>Logs</b> (docker/BepInEx) na seção Ferramentas. A aba <b>Auditoria</b> mostra todas as ações feitas pelo painel. CPU e RAM em tempo real ficam na <b>Visão Geral</b>." },
         { q: "O painel está sem responder / com erro 500.", a: "Verifique os Logs e a Auditoria. Confirme que o Docker está rodando e que o container <code>valheim-server</code> existe." },
         { q: "Uma alteração não aplicou.", a: "Muitas mudanças (mods, listas, config de mundo em execução) só valem após reiniciar o servidor." },
       ],

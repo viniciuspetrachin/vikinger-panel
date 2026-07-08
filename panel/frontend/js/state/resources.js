@@ -1,47 +1,42 @@
-// Recursos (avançado): limite de RAM do container + métricas detalhadas.
+// Recursos: helpers compartilhados (métricas na Visão Geral, RAM na aba Servidor).
 
 export const resources = {
-  memoryConfig: { gb: null, unlimited: true },
-  memoryGb: 4,
-  memoryUnlimited: true,
+  memoryConfig: { gb: null, unlimited: true, slider_max: 29 },
+  memoryGb: 29,
+
+  memorySliderLabel() {
+    if (this.memoryGb >= (this.memoryConfig.slider_max || 29)) return "Sem limite";
+    return `${this.memoryGb} GB`;
+  },
 
   memoryLimitLabel() {
     if (this.memoryConfig.unlimited && !this.metrics.memory?.limit_gb) {
-      return this.formatBytes(this.metrics.memory?.limit_bytes) + " (host)";
+      const host = this.formatBytes(this.metrics.memory?.limit_bytes);
+      return host ? `${host} (host)` : "Sem limite";
     }
     const gb = this.metrics.memory?.limit_gb ?? this.memoryConfig.gb;
-    if (gb) return gb + " GB";
-    return this.formatBytes(this.metrics.memory?.limit_bytes);
+    if (gb) return `${gb} GB`;
+    return this.formatBytes(this.metrics.memory?.limit_bytes) || "Sem limite";
+  },
+
+  memoryGbForApi() {
+    const max = this.memoryConfig.slider_max || 29;
+    return this.memoryGb >= max ? null : this.memoryGb;
+  },
+
+  syncMemorySliderFromConfig() {
+    if (this.memoryConfig.unlimited) {
+      this.memoryGb = this.memoryConfig.slider_max || 29;
+    } else if (this.memoryConfig.gb) {
+      this.memoryGb = this.memoryConfig.gb;
+    }
   },
 
   async loadMemoryConfig() {
     try {
       const data = await this.api("GET", "/api/resources/memory");
       this.memoryConfig = data;
-      this.memoryUnlimited = data.unlimited;
-      if (data.gb) this.memoryGb = data.gb;
-      else if (data.memory_used_bytes) {
-        this.memoryGb = Math.max(2, Math.ceil(data.memory_used_bytes / (1024 ** 3)) + 1);
-      }
+      this.syncMemorySliderFromConfig();
     } catch (e) { /* silencioso */ }
-  },
-
-  async applyMemoryLimit() {
-    const gb = this.memoryUnlimited ? null : this.memoryGb;
-    const msg = gb
-      ? `Definir limite de RAM para ${gb} GB? O container será recriado e jogadores desconectados.`
-      : "Remover limite de RAM? O container será recriado e jogadores desconectados.";
-    if (!confirm(msg)) return;
-
-    return this.withBusy("applyMemory", async () => {
-      try {
-        const data = await this.api("PUT", "/api/resources/memory", { gb, apply: true });
-        if (data.warning) this.toast(data.warning, "error");
-        this.toast(data.message || "Limite aplicado");
-        await this.loadMemoryConfig();
-        await this.refreshStatus();
-        setTimeout(() => this.loadMetrics(), 3000);
-      } catch (e) { this.toast(e.message, "error"); }
-    });
   },
 };

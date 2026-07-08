@@ -56,6 +56,7 @@ function panel() {
       await this.loadDashboardData();
       await this.loadMemoryConfig();
       await this.loadVersion();
+      if (this.page === "dashboard") this.startMetricsPolling();
       setInterval(() => { if (this.page === "dashboard") { this.refreshStatus(); this.loadPlayers(); this.loadPlayerLists(); } }, 10000);
       setInterval(() => { if (this.page === "dashboard") this.loadDashLogs(); }, 5000);
       setInterval(() => { if (this.page === "logs" && this.logAutoRefresh) this.loadLogs(); }, 5000);
@@ -77,10 +78,6 @@ function panel() {
       if (this.page === "mods") await this.loadModsPage();
       if (this.page === "worlds") await this.loadWorldsPage();
       if (this.page === "backups") await this.loadBackups();
-      if (this.page === "resources") {
-        await this.loadMemoryConfig();
-        this.$nextTick(() => this.startMetricsPolling());
-      }
       if (this.page === "files") {
         await this.loadFileTree();
         this.$nextTick(() => {

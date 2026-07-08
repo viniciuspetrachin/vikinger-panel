@@ -5,27 +5,18 @@ from playwright.sync_api import Page, expect
 
 pytestmark = pytest.mark.e2e
 
-TAB_LABELS_DEFAULT = [
+TAB_LABELS = [
     "Visão Geral",
     "Servidor",
     "Mundos",
     "Mods e Configs",
     "Backups",
-    "Ajuda",
-    "Sobre",
-]
-
-TAB_LABELS_ADVANCED = [
-    "Recursos",
     "Arquivos",
     "Logs",
     "Auditoria",
+    "Ajuda",
+    "Sobre",
 ]
-
-
-def enable_advanced_mode(page: Page) -> None:
-    page.locator("label").filter(has_text="Modo avançado").click()
-    page.wait_for_timeout(400)
 
 
 def goto_tab(page: Page, label: str) -> None:
@@ -37,21 +28,11 @@ def assert_no_error_toast(page: Page) -> None:
     expect(page.locator(".bg-red-900\\/90")).to_have_count(0)
 
 
-def test_all_default_tabs_load_without_500(page: Page, base_url: str) -> None:
+def test_all_tabs_load_without_500(page: Page, base_url: str) -> None:
     page.goto(base_url)
     page.wait_for_selector("[x-cloak]", state="detached")
 
-    for label in TAB_LABELS_DEFAULT:
-        goto_tab(page, label)
-        assert_no_error_toast(page)
-
-
-def test_advanced_tabs_load_without_500(page: Page, base_url: str) -> None:
-    page.goto(base_url)
-    page.wait_for_selector("[x-cloak]", state="detached")
-    enable_advanced_mode(page)
-
-    for label in TAB_LABELS_ADVANCED:
+    for label in TAB_LABELS:
         goto_tab(page, label)
         assert_no_error_toast(page)
 
@@ -88,7 +69,6 @@ def test_dashboard_connect_block(page: Page, base_url: str) -> None:
 def test_files_all_scopes(page: Page, base_url: str) -> None:
     page.goto(base_url)
     page.wait_for_selector("[x-cloak]", state="detached")
-    enable_advanced_mode(page)
     goto_tab(page, "Arquivos")
 
     for scope in ("config", "data", "root"):
@@ -100,7 +80,6 @@ def test_files_all_scopes(page: Page, base_url: str) -> None:
 def test_logs_sources(page: Page, base_url: str) -> None:
     page.goto(base_url)
     page.wait_for_selector("[x-cloak]", state="detached")
-    enable_advanced_mode(page)
     goto_tab(page, "Logs")
 
     for source in ("Docker", "BepInEx"):

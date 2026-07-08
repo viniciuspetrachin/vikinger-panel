@@ -52,9 +52,15 @@ CONTAINER_NAME = "valheim-server"
 COMPOSE_SERVICE = "valheim"
 MEMORY_MIN_GB = 1
 MEMORY_MAX_GB = 28
+MEMORY_UNLIMITED_SLIDER = 29
+VANILLA_MAX_PLAYERS = 10
+DISK_USAGE_CACHE_TTL = 60
+
 ALLOWED_EXTENSIONS = {".cfg", ".txt", ".json", ".md", ".env", ".yml", ".yaml", ".ini", ".log", ".sh", ".xml", ".prefs"}
 
 _metrics_prev: Optional[dict] = None
+_disk_usage_cache: Optional[dict] = None
+_disk_usage_cache_ts: float = 0.0
 _mod_update_cache: dict[str, tuple[float, dict]] = {}
 MOD_UPDATE_CACHE_TTL = 300
 
@@ -413,14 +419,32 @@ def dir_size_bytes(path: Path) -> int:
     return int(r.stdout.split()[0])
 
 
-def get_valheim_disk_usage() -> dict:
+def get_valheim_disk_usage(force_refresh: bool = False) -> dict:
+    global _disk_usage_cache, _disk_usage_cache_ts
+    now = time.time()
+    if (
+        not force_refresh
+        and _disk_usage_cache is not None
+        and now - _disk_usage_cache_ts < DISK_USAGE_CACHE_TTL
+    ):
+        return _disk_usage_cache
     config_bytes = dir_size_bytes(CONFIG_DIR)
     data_bytes = dir_size_bytes(DATA_DIR)
-    return {
+    result = {
         "config_bytes": config_bytes,
         "data_bytes": data_bytes,
         "total_bytes": config_bytes + data_bytes,
     }
+    _disk_usage_cache = result
+    _disk_usage_cache_ts = now
+    return result
+
+
+def get_valheim_disk_usage_cached() -> Optional[dict]:
+    """Retorna cache de disco sem recalcular (para métricas light)."""
+    if _disk_usage_cache is not None:
+        return _disk_usage_cache
+    return None
 
 
 def get_cpu_count() -> int:
@@ -580,6 +604,204 @@ def write_memory_limit_gb(gb: Optional[int]) -> None:
             )
 
     COMPOSE_FILE.write_text(text, encoding="utf-8")
+
+
+VALHEIM_PLUS_CFG = BEPINEX_CFG_DIR / "valheim_plus.cfg"
+MAX_PLAYER_COUNT_CFG = BEPINEX_CFG_DIR / "Azumatt.MaxPlayerCount.cfg"
+
+RAM_SUGGESTIONS = [
+    {"players_min": 1, "players_max": 2, "ram_gb": 2, "notes": "Mundo novo ~1,8–2,4 GB (wiki Valheim)"},
+    {"players_min": 3, "players_max": 5, "ram_gb": 4, "notes": "Grupo pequeno vanilla"},
+    {"players_min": 6, "players_max": 10, "ram_gb": 8, "notes": "Teto vanilla (10 jogadores)"},
+    {"players_min": 11, "players_max": 20, "ram_gb": 12, "notes": "Requer mod; +1–2 GB se crossplay"},
+    {"players_min": 21, "players_max": 999, "ram_gb": 16, "notes": "Alto risco de lag; não recomendado"},
+]
+
+
+def suggested_ram_gb_for_players(count: int) -> int:
+    for row in RAM_SUGGESTIONS:
+        if row["players_min"] <= count <= row["players_max"]:
+            return row["ram_gb"]
+    return RAM_SUGGESTIONS[-1]["ram_gb"]
+
+
+def _cfg_section_enabled(text: str, section: str) -> bool:
+    m = re.search(
+        rf"^\[{re.escape(section)}\]\s*$([\s\S]*?)(?=^\[|\Z)",
+        text,
+        re.MULTILINE,
+    )
+    if not m:
+        return False
+    block = m.group(1)
+    em = re.search(r"^\s*enabled\s*=\s*(\w+)", block, re.MULTILINE | re.IGNORECASE)
+    return em is not None and em.group(1).lower() in ("true", "1", "yes")
+
+
+def _read_cfg_key(text: str, key: str, section: Optional[str] = None) -> Optional[str]:
+    if section:
+        m = re.search(
+            rf"^\[{re.escape(section)}\]\s*$([\s\S]*?)(?=^\[|\Z)",
+            text,
+            re.MULTILINE,
+        )
+        if not m:
+            return None
+        scope = m.group(1)
+    else:
+        scope = text
+    km = re.search(rf"^\s*{re.escape(key)}\s*=\s*(\S+)", scope, re.MULTILINE | re.IGNORECASE)
+    return km.group(1) if km else None
+
+
+def _write_cfg_key(text: str, section: str, key: str, value: str, enable_section: bool = False) -> str:
+    sec_re = rf"^\[{re.escape(section)}\]\s*$"
+    if re.search(sec_re, text, re.MULTILINE):
+        block_m = re.search(
+            rf"({sec_re})([\s\S]*?)(?=^\[|\Z)",
+            text,
+            re.MULTILINE,
+        )
+        assert block_m
+        header, block = block_m.group(1), block_m.group(2)
+        if enable_section and not re.search(r"^\s*enabled\s*=", block, re.MULTILINE | re.IGNORECASE):
+            block = "\nenabled=true" + block
+        elif enable_section:
+            block = re.sub(
+                r"^\s*enabled\s*=\s*\S+",
+                "enabled=true",
+                block,
+                count=1,
+                flags=re.MULTILINE | re.IGNORECASE,
+            )
+        if re.search(rf"^\s*{re.escape(key)}\s*=", block, re.MULTILINE | re.IGNORECASE):
+            block = re.sub(
+                rf"^\s*{re.escape(key)}\s*=\s*\S+",
+                f"{key}={value}",
+                block,
+                count=1,
+                flags=re.MULTILINE | re.IGNORECASE,
+            )
+        else:
+            block = block.rstrip() + f"\n{key}={value}\n"
+        return text[: block_m.start()] + header + block + text[block_m.end() :]
+    insert = f"\n[{section}]\n"
+    if enable_section:
+        insert += "enabled=true\n"
+    insert += f"{key}={value}\n"
+    return text.rstrip() + insert
+
+
+def detect_player_mod() -> dict:
+    """Detecta mod que permite >10 jogadores."""
+    if MAX_PLAYER_COUNT_CFG.exists():
+        return {"source": "MaxPlayerCount", "cap": 64, "cfg": MAX_PLAYER_COUNT_CFG}
+    if VALHEIM_PLUS_CFG.exists():
+        return {"source": "ValheimPlus", "cap": 64, "cfg": VALHEIM_PLUS_CFG}
+    if PLUGINS_DIR.exists():
+        for dll in PLUGINS_DIR.glob("*.dll"):
+            low = dll.name.lower()
+            if "maxplayercount" in low:
+                return {"source": "MaxPlayerCount", "cap": 64, "cfg": MAX_PLAYER_COUNT_CFG}
+            if "valheimplus" in low or "valheim_plus" in low:
+                return {"source": "ValheimPlus", "cap": 64, "cfg": VALHEIM_PLUS_CFG}
+    return {"source": None, "cap": VANILLA_MAX_PLAYERS, "cfg": None}
+
+
+def read_max_players() -> dict:
+    mod = detect_player_mod()
+    env = read_env()
+    env_val = env.get("MAX_PLAYERS", "").strip()
+    count = VANILLA_MAX_PLAYERS
+    if env_val.isdigit():
+        count = int(env_val)
+    cfg_path = mod.get("cfg")
+    if cfg_path and Path(cfg_path).exists():
+        text = Path(cfg_path).read_text(encoding="utf-8", errors="replace")
+        if mod["source"] == "ValheimPlus":
+            raw = _read_cfg_key(text, "maxPlayers", "Server")
+        else:
+            raw = _read_cfg_key(text, "maxPlayers") or _read_cfg_key(text, "MaxPlayers")
+        if raw and raw.isdigit():
+            count = int(raw)
+    count = max(1, min(count, mod["cap"]))
+    return {
+        "max_players": count,
+        "max_players_cap": mod["cap"],
+        "mod_source": mod["source"],
+        "requires_mod": count > VANILLA_MAX_PLAYERS,
+    }
+
+
+def write_max_players(count: int) -> dict:
+    if count < 1:
+        raise HTTPException(400, "Limite de jogadores deve ser pelo menos 1")
+    mod = detect_player_mod()
+    if count > VANILLA_MAX_PLAYERS and not mod["source"]:
+        raise HTTPException(
+            400,
+            "Acima de 10 jogadores é preciso instalar Valheim Plus ou o mod MaxPlayerCount (BepInEx).",
+        )
+    if count > mod["cap"]:
+        raise HTTPException(400, f"Limite máximo permitido: {mod['cap']} jogadores")
+
+    write_env({"MAX_PLAYERS": str(count)})
+
+    cfg_path = mod.get("cfg")
+    if mod["source"] == "ValheimPlus":
+        path = VALHEIM_PLUS_CFG
+        text = path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
+        text = _write_cfg_key(text, "Server", "maxPlayers", str(count), enable_section=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+    elif mod["source"] == "MaxPlayerCount":
+        path = MAX_PLAYER_COUNT_CFG
+        text = path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
+        text = _write_cfg_key(text, "General", "maxPlayers", str(count))
+        if "maxPlayers" not in text and "MaxPlayers" not in text:
+            text = _write_cfg_key(text, "General", "MaxPlayers", str(count))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+    return read_max_players()
+
+
+def capacity_ram_warning(memory_gb: Optional[int], max_players: int) -> Optional[str]:
+    suggested = suggested_ram_gb_for_players(max_players)
+    if memory_gb is None:
+        return None
+    if memory_gb < suggested:
+        return (
+            f"Para {max_players} jogador(es), recomenda-se pelo menos {suggested} GB de RAM "
+            f"(configurado: {memory_gb} GB)."
+        )
+    return None
+
+
+def build_capacity_response() -> dict:
+    gb = read_memory_limit_gb()
+    players = read_max_players()
+    suggested = suggested_ram_gb_for_players(players["max_players"])
+    warning = capacity_ram_warning(gb, players["max_players"])
+    env = read_env()
+    crossplay = "-crossplay" in env.get("SERVER_ARGS", "").lower()
+    if crossplay and players["max_players"] >= 6:
+        suggested = min(MEMORY_MAX_GB, suggested + 2)
+    return {
+        "memory_gb": gb,
+        "memory_unlimited": gb is None,
+        "memory_min_gb": MEMORY_MIN_GB,
+        "memory_max_gb": MEMORY_MAX_GB,
+        "memory_slider_max": MEMORY_UNLIMITED_SLIDER,
+        "max_players": players["max_players"],
+        "max_players_cap": players["max_players_cap"],
+        "mod_source": players["mod_source"],
+        "requires_mod": players["requires_mod"],
+        "suggested_ram_gb": suggested,
+        "warning": warning,
+        "suggestions": RAM_SUGGESTIONS,
+        "crossplay": crossplay,
+    }
 
 
 UPDATE_DEFAULT_CRON = "*/15 * * * *"
@@ -1979,6 +2201,12 @@ class MemoryLimitUpdate(BaseModel):
     apply: bool = True
 
 
+class CapacityUpdate(BaseModel):
+    memory_gb: Optional[int] = None
+    max_players: Optional[int] = None
+    apply_memory: bool = False
+
+
 class UpdateConfigUpdate(BaseModel):
     values: dict[str, str] = {}
     bepinex: Optional[bool] = None
@@ -2034,11 +2262,18 @@ def api_players():
 
 
 @app.get("/api/metrics")
-def api_metrics():
+def api_metrics(light: bool = Query(False)):
     global _metrics_prev
     now = time.time()
     raw = get_container_metrics_raw()
-    disk = get_valheim_disk_usage()
+    if light:
+        disk = get_valheim_disk_usage_cached() or {
+            "config_bytes": None,
+            "data_bytes": None,
+            "total_bytes": None,
+        }
+    else:
+        disk = get_valheim_disk_usage()
     compose_limit_gb = read_memory_limit_gb()
 
     rates = {"rx_bps": 0, "tx_bps": 0, "disk_read_bps": 0, "disk_write_bps": 0}
@@ -2090,13 +2325,12 @@ def api_metrics():
 @app.get("/api/resources/memory")
 def api_get_memory_limit():
     gb = read_memory_limit_gb()
-    raw = get_container_metrics_raw()
     return {
         "gb": gb,
         "unlimited": gb is None,
-        "memory_used_bytes": raw["memory_used_bytes"],
         "min_gb": MEMORY_MIN_GB,
         "max_gb": MEMORY_MAX_GB,
+        "slider_max": MEMORY_UNLIMITED_SLIDER,
     }
 
 
@@ -2130,6 +2364,50 @@ def api_set_memory_limit(body: MemoryLimitUpdate):
         "warning": warning,
         "message": "Limite de RAM atualizado. Container recriado." if body.apply else "Limite salvo no compose.",
     }
+
+
+@app.get("/api/config/capacity")
+def api_get_capacity():
+    return build_capacity_response()
+
+
+@app.put("/api/config/capacity")
+def api_set_capacity(body: CapacityUpdate):
+    result = build_capacity_response()
+    memory_warning = None
+
+    if body.memory_gb is not None or body.apply_memory:
+        gb = body.memory_gb
+        if gb is not None and gb == MEMORY_UNLIMITED_SLIDER:
+            gb = None
+        if gb is not None and (gb < MEMORY_MIN_GB or gb > MEMORY_MAX_GB):
+            raise HTTPException(
+                400,
+                f"Limite deve estar entre {MEMORY_MIN_GB} e {MEMORY_MAX_GB} GB, ou {MEMORY_UNLIMITED_SLIDER} para sem limite",
+            )
+        if body.apply_memory:
+            raw = get_container_metrics_raw()
+            if gb is not None and raw["memory_used_bytes"] > gb * 1024**3 * 0.85:
+                memory_warning = (
+                    f"Uso atual ({raw['memory_used_bytes'] // (1024 ** 2)} MB) está próximo ou acima "
+                    f"do limite solicitado ({gb} GB). O container pode ser encerrado pelo Docker."
+                )
+            write_memory_limit_gb(gb)
+            r = recreate_container()
+            if r.returncode != 0:
+                raise HTTPException(500, r.stderr or r.stdout or "Erro ao recriar container")
+
+    if body.max_players is not None:
+        write_max_players(body.max_players)
+
+    result = build_capacity_response()
+    if memory_warning:
+        result["memory_warning"] = memory_warning
+    if body.apply_memory:
+        result["message"] = "Limite de RAM atualizado. Container recriado."
+    elif body.max_players is not None:
+        result["message"] = "Limite de jogadores atualizado."
+    return result
 
 
 @app.post("/api/server/backup")

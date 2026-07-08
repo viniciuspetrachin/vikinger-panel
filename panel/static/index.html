@@ -46,10 +46,6 @@
         </template>
       </nav>
       <div class="p-4 border-t border-valheim-700 space-y-3 shrink-0">
-        <label class="flex items-center justify-between gap-2 cursor-pointer" @click.prevent="toggleAdvanced()">
-          <span class="text-xs text-gray-500">Modo avançado</span>
-          <input type="checkbox" :checked="advancedMode" class="rounded border-valheim-600 accent-valheim-gold pointer-events-none" />
-        </label>
         <div class="flex items-center gap-2 text-xs">
           <span class="w-2 h-2 rounded-full status-dot"
                 :class="status.container === 'running' ? 'bg-green-400' : 'bg-red-400'"></span>
@@ -101,6 +97,68 @@
             <div class="bg-valheim-800 rounded-xl p-5 border border-valheim-700">
               <p class="text-xs text-gray-500 uppercase tracking-wider">Porta</p>
               <p class="text-2xl font-bold mt-1" x-text="status.config?.server_port || '2456'"></p>
+            </div>
+          </div>
+
+          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-5">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-display text-sm font-semibold text-valheim-gold">Desempenho</h3>
+              <span class="flex items-center gap-2 text-xs text-gray-500">
+                <span class="w-2 h-2 rounded-full bg-green-400 status-dot" x-show="!metricsLoading"></span>
+                <span class="w-2 h-2 rounded-full bg-gray-500 animate-pulse" x-show="metricsLoading"></span>
+                <span x-text="metricsLoading ? 'Carregando...' : 'Tempo real'"></span>
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div class="bg-valheim-900 rounded-lg p-4 border border-valheim-700">
+                <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">CPU</p>
+                <p class="text-lg font-bold" x-text="metricsLoading && !metrics.cpu ? '—' : cpuPercent().toFixed(1) + '%'"></p>
+                <div class="metric-bar mt-2">
+                  <div class="metric-bar-fill" :class="pctBarClass(cpuPercent())"
+                       :style="'width:' + Math.min(cpuPercent(), 100) + '%'"></div>
+                </div>
+              </div>
+              <div class="bg-valheim-900 rounded-lg p-4 border border-valheim-700">
+                <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">RAM</p>
+                <p class="text-lg font-bold">
+                  <span x-text="metricsLoading && !metrics.memory ? '—' : formatBytes(metrics.memory?.used_bytes)"></span>
+                  <span class="text-sm text-gray-500 font-normal"> / </span>
+                  <span class="text-sm text-gray-400" x-text="memoryLimitLabel()"></span>
+                </p>
+                <div class="metric-bar mt-2">
+                  <div class="metric-bar-fill" :class="pctBarClass(metrics.memory?.percent)"
+                       :style="'width:' + Math.min(metrics.memory?.percent ?? 0, 100) + '%'"></div>
+                </div>
+              </div>
+              <div class="bg-valheim-900 rounded-lg p-4 border border-valheim-700">
+                <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Disco (Valheim)</p>
+                <p class="text-lg font-bold" x-text="metrics.disk?.total_bytes != null ? formatBytes(metrics.disk?.total_bytes) : '—'"></p>
+                <p class="text-xs text-gray-500 mt-1" x-show="metrics.disk?.total_bytes != null">
+                  config: <span x-text="formatBytes(metrics.disk?.config_bytes)"></span>
+                  · data: <span x-text="formatBytes(metrics.disk?.data_bytes)"></span>
+                </p>
+              </div>
+              <div class="bg-valheim-900 rounded-lg p-4 border border-valheim-700">
+                <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Rede</p>
+                <p class="text-sm">
+                  <span class="text-green-400">↓</span>
+                  <span class="font-bold" x-text="formatRate(metrics.network?.rx_bps)"></span>
+                  <span class="text-gray-500 mx-1">·</span>
+                  <span class="text-amber-400">↑</span>
+                  <span class="font-bold" x-text="formatRate(metrics.network?.tx_bps)"></span>
+                </p>
+              </div>
+            </div>
+
+            <button @click="onMetricsChartToggle()" class="w-full flex items-center justify-between text-left mt-4 pt-3 border-t border-valheim-700">
+              <span class="text-xs text-gray-500 uppercase tracking-wider">Tráfego de rede (gráfico)</span>
+              <span class="text-xs text-gray-500" x-text="metricsChartExpanded ? '▲' : '▼'"></span>
+            </button>
+            <div x-show="metricsChartExpanded" class="mt-3">
+              <div class="relative h-48 w-full bg-valheim-900 rounded-lg border border-valheim-700 p-3">
+                <canvas x-ref="netChartCanvas" class="w-full h-full"></canvas>
+              </div>
             </div>
           </div>
 
@@ -250,6 +308,78 @@
                 <span x-show="actionPending !== 'saveEnvRestart'">Salvar e Reiniciar</span>
                 <span x-show="actionPending === 'saveEnvRestart'">Reiniciando...</span>
               </button>
+            </div>
+          </div>
+
+          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-5">
+            <div>
+              <h3 class="font-display text-sm font-semibold text-valheim-gold">Capacidade do servidor</h3>
+              <p class="text-xs text-gray-500 mt-1">
+                Limite de RAM do container e quantidade máxima de jogadores.
+                <a href="https://valheim.fandom.com/wiki/Dedicated_servers" target="_blank" rel="noopener" class="text-valheim-gold-light hover:underline">Guia da wiki</a>
+              </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <label class="text-xs text-gray-500 uppercase tracking-wider">Limite de RAM</label>
+                  <span class="text-sm font-medium text-valheim-gold" x-text="memorySliderLabel()"></span>
+                </div>
+                <input type="range" min="1" :max="memoryConfig.slider_max || 29" step="1" x-model.number="memoryGb"
+                       class="w-full accent-valheim-gold" />
+                <p class="text-xs text-gray-600">Atual: <span class="text-valheim-gold" x-text="memoryLimitLabel()"></span></p>
+                <button @click="applyMemoryLimit()" :disabled="isBusy('applyMemory')" class="btn btn-primary">
+                  <span x-show="actionPending === 'applyMemory'" class="spinner"></span>
+                  <span x-show="actionPending !== 'applyMemory'">Aplicar limite de RAM</span>
+                  <span x-show="actionPending === 'applyMemory'">Aplicando...</span>
+                </button>
+                <p class="text-xs text-amber-500/80">Aplicar recria o container — jogadores conectados serão desconectados.</p>
+              </div>
+
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <label class="text-xs text-gray-500 uppercase tracking-wider">Limite de jogadores</label>
+                  <span class="text-xs text-gray-600" x-show="capacity.mod_source" x-text="'Mod: ' + capacity.mod_source"></span>
+                  <span class="text-xs text-gray-600" x-show="!capacity.mod_source">Vanilla (máx. 10)</span>
+                </div>
+                <input type="range" min="1" :max="capacity.max_players_cap || 10" step="1" x-model.number="maxPlayers"
+                       class="w-full accent-valheim-gold" />
+                <p class="text-sm text-valheim-gold font-medium"><span x-text="maxPlayers"></span> jogador(es)</p>
+                <p class="text-xs text-amber-500/80" x-show="maxPlayers > 10 && !capacity.mod_source">
+                  Acima de 10 jogadores é preciso instalar Valheim Plus ou MaxPlayerCount na aba Mods.
+                </p>
+                <button @click="saveMaxPlayers()" :disabled="isBusy('saveMaxPlayers')" class="btn btn-primary">
+                  <span x-show="actionPending === 'saveMaxPlayers'" class="spinner"></span>
+                  <span x-show="actionPending !== 'saveMaxPlayers'">Salvar limite de jogadores</span>
+                  <span x-show="actionPending === 'saveMaxPlayers'">Salvando...</span>
+                </button>
+              </div>
+            </div>
+
+            <div x-show="capacity.warning" class="rounded-lg border border-amber-600/40 bg-amber-950/30 px-4 py-3 text-sm text-amber-200" x-text="capacity.warning"></div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm text-left">
+                <thead>
+                  <tr class="text-xs text-gray-500 uppercase tracking-wider border-b border-valheim-700">
+                    <th class="py-2 pr-4">Jogadores</th>
+                    <th class="py-2 pr-4">RAM sugerida</th>
+                    <th class="py-2">Notas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="row in capacity.suggestions || []" :key="row.players_min + '-' + row.players_max">
+                    <tr class="border-b border-valheim-800/80"
+                        :class="isSuggestionActive(row) ? 'bg-valheim-gold/10' : ''">
+                      <td class="py-2 pr-4 whitespace-nowrap"
+                          x-text="row.players_max >= 999 ? row.players_min + '+' : row.players_min + '–' + row.players_max"></td>
+                      <td class="py-2 pr-4 font-medium text-valheim-gold-light" x-text="row.ram_gb + ' GB'"></td>
+                      <td class="py-2 text-gray-500 text-xs" x-text="row.notes"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -898,112 +1028,6 @@
           <div x-ref="logConsole" class="log-viewer bg-valheim-900 border border-valheim-700 rounded-xl p-4 max-h-[600px] overflow-y-auto" x-html="formatLogHtml(logs, 'Nenhum log disponível.')"></div>
         </section>
 
-
-        <!-- RECURSOS -->
-        <section x-show="page === 'resources'" class="space-y-6">
-          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-6">
-            <div class="flex items-center justify-between">
-              <h3 class="font-display text-sm font-semibold text-valheim-gold">Recursos do Valheim</h3>
-              <span class="flex items-center gap-2 text-xs text-gray-500">
-                <span class="w-2 h-2 rounded-full bg-green-400 status-dot"></span> Tempo real
-              </span>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div class="bg-valheim-900 rounded-lg p-4 border border-valheim-700">
-                <p class="text-xs text-gray-500 uppercase tracking-wider mb-2">CPU</p>
-                <p class="text-xl font-bold" x-text="cpuPercent().toFixed(1) + '%'"></p>
-                <div class="metric-bar mt-3">
-                  <div class="metric-bar-fill" :class="pctBarClass(cpuPercent())"
-                       :style="'width:' + Math.min(cpuPercent(), 100) + '%'"></div>
-                </div>
-                <p class="text-xs text-gray-500 mt-1">Uso do container Valheim (servidor + serviços relacionados)</p>
-              </div>
-              <div class="bg-valheim-900 rounded-lg p-4 border border-valheim-700">
-                <p class="text-xs text-gray-500 uppercase tracking-wider mb-2">RAM</p>
-                <p class="text-xl font-bold">
-                  <span x-text="formatBytes(metrics.memory?.used_bytes)"></span>
-                  <span class="text-sm text-gray-500 font-normal"> / </span>
-                  <span class="text-sm text-gray-400" x-text="memoryLimitLabel()"></span>
-                </p>
-                <div class="metric-bar mt-3">
-                  <div class="metric-bar-fill" :class="pctBarClass(metrics.memory?.percent)"
-                       :style="'width:' + Math.min(metrics.memory?.percent ?? 0, 100) + '%'"></div>
-                </div>
-                <p class="text-xs text-gray-500 mt-1" x-text="(metrics.memory?.percent ?? 0).toFixed(1) + '%'"></p>
-              </div>
-              <div class="bg-valheim-900 rounded-lg p-4 border border-valheim-700">
-                <p class="text-xs text-gray-500 uppercase tracking-wider mb-2">Disco (Valheim)</p>
-                <p class="text-xl font-bold" x-text="formatBytes(metrics.disk?.total_bytes)"></p>
-                <p class="text-xs text-gray-500 mt-2">
-                  config: <span x-text="formatBytes(metrics.disk?.config_bytes)"></span>
-                  · data: <span x-text="formatBytes(metrics.disk?.data_bytes)"></span>
-                </p>
-                <p class="text-xs text-gray-500 mt-1" x-show="metrics.block_io?.write_bps > 0 || metrics.block_io?.read_bps > 0">
-                  I/O: ↓<span x-text="formatRate(metrics.block_io?.read_bps)"></span>
-                  ↑<span x-text="formatRate(metrics.block_io?.write_bps)"></span>
-                </p>
-              </div>
-              <div class="bg-valheim-900 rounded-lg p-4 border border-valheim-700">
-                <p class="text-xs text-gray-500 uppercase tracking-wider mb-2">Rede</p>
-                <p class="text-sm">
-                  <span class="text-green-400">↓</span>
-                  <span class="font-bold" x-text="formatRate(metrics.network?.rx_bps)"></span>
-                  <span class="text-gray-500 mx-1">·</span>
-                  <span class="text-amber-400">↑</span>
-                  <span class="font-bold" x-text="formatRate(metrics.network?.tx_bps)"></span>
-                </p>
-                <p class="text-xs text-gray-500 mt-2">
-                  Total ↓<span x-text="formatBytes(metrics.network?.rx_bytes_total)"></span>
-                  ↑<span x-text="formatBytes(metrics.network?.tx_bytes_total)"></span>
-                </p>
-              </div>
-            </div>
-
-            <div class="bg-valheim-900 rounded-lg border border-valheim-700 p-4">
-              <p class="text-xs text-gray-500 uppercase tracking-wider mb-3">Tráfego de rede (Valheim)</p>
-              <div class="relative h-48 w-full">
-                <canvas x-ref="netChartCanvas" class="w-full h-full"></canvas>
-              </div>
-            </div>
-
-            <div class="bg-valheim-900 rounded-lg border border-valheim-700 p-4 space-y-4">
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p class="text-xs text-gray-500 uppercase tracking-wider">Limite de RAM do container</p>
-                  <p class="text-sm text-gray-400 mt-1">
-                    Atual:
-                    <span class="text-valheim-gold font-medium" x-text="memoryLimitLabel()"></span>
-                    <span class="text-gray-600 ml-2" x-show="memoryConfig.unlimited">(sem teto — usa RAM do host conforme necessário)</span>
-                  </p>
-                </div>
-              </div>
-              <div class="flex flex-wrap items-end gap-4">
-                <div class="flex-1 min-w-[200px]">
-                  <label class="block text-xs text-gray-500 mb-1">Novo limite (GB)</label>
-                  <input type="range" min="1" max="28" step="1" x-model.number="memoryGb"
-                         class="w-full accent-valheim-gold" :disabled="memoryUnlimited" />
-                  <div class="flex items-center gap-3 mt-2">
-                    <input type="number" min="1" max="28" x-model.number="memoryGb"
-                           class="w-20 bg-valheim-950 border border-valheim-700 rounded px-2 py-1 text-sm"
-                           :disabled="memoryUnlimited" />
-                    <span class="text-sm text-gray-500">GB</span>
-                    <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-                      <input type="checkbox" x-model="memoryUnlimited" class="rounded border-valheim-600" />
-                      Sem limite
-                    </label>
-                  </div>
-                </div>
-                <button @click="applyMemoryLimit()" :disabled="isBusy('applyMemory')" class="btn btn-primary">
-                  <span x-show="actionPending === 'applyMemory'" class="spinner"></span>
-                  <span x-show="actionPending !== 'applyMemory'">Aplicar limite de RAM</span>
-                <span x-show="actionPending === 'applyMemory'">Aplicando...</span>
-                </button>
-              </div>
-              <p class="text-xs text-amber-500/80">Aplicar recria o container — jogadores conectados serão desconectados.</p>
-            </div>
-          </div>
-        </section>
 
         <!-- AJUDA -->
         <section x-show="page === 'help'" class="space-y-6">

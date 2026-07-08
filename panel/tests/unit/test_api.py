@@ -1260,6 +1260,78 @@ def test_set_memory_limit_invalid(client):
     assert r.status_code == 400
 
 
+def test_metrics_light(client, monkeypatch):
+    main._metrics_prev = None
+    monkeypatch.setattr(main, "get_container_metrics_raw", lambda: {
+        "running": True,
+        "cpu_percent": 10.0,
+        "memory_used_bytes": 100,
+        "memory_limit_bytes": 1000,
+        "memory_percent": 10.0,
+        "net_rx_bytes": 0,
+        "net_tx_bytes": 0,
+        "block_read_bytes": 0,
+        "block_write_bytes": 0,
+    })
+    monkeypatch.setattr(main, "read_memory_limit_gb", lambda: None)
+    called = {"full": 0, "cached": 0}
+
+    def fake_disk(force_refresh=False):
+        called["full"] += 1
+        return {"config_bytes": 1, "data_bytes": 2, "total_bytes": 3}
+
+    def fake_cached():
+        called["cached"] += 1
+        return None
+
+    monkeypatch.setattr(main, "get_valheim_disk_usage", fake_disk)
+    monkeypatch.setattr(main, "get_valheim_disk_usage_cached", fake_cached)
+
+    r = client.get("/api/metrics?light=1")
+    assert r.status_code == 200
+    assert r.json()["disk"]["total_bytes"] is None
+    assert called["full"] == 0
+    assert called["cached"] == 1
+
+
+def test_get_capacity(client):
+    r = client.get("/api/config/capacity")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["max_players"] == 10
+    assert body["max_players_cap"] == 10
+    assert body["memory_unlimited"] is True
+    assert len(body["suggestions"]) >= 4
+    assert body["suggested_ram_gb"] >= 2
+
+
+def test_set_max_players_vanilla(client, env_dir):
+    r = client.put("/api/config/capacity", json={"max_players": 8})
+    assert r.status_code == 200
+    assert r.json()["max_players"] == 8
+    from dotenv import dotenv_values
+    env = dotenv_values(env_dir["root"].joinpath(".env"))
+    assert env.get("MAX_PLAYERS") == "8"
+
+
+def test_set_max_players_above_vanilla_without_mod(client):
+    r = client.put("/api/config/capacity", json={"max_players": 15})
+    assert r.status_code == 400
+
+
+def test_set_capacity_memory_slider_unlimited(client, env_dir, monkeypatch):
+    monkeypatch.setattr(main, "recreate_container", lambda: FakeCompleted(0))
+    monkeypatch.setattr(main, "get_container_metrics_raw", lambda: {
+        "memory_used_bytes": 100,
+    })
+    client.put("/api/config/capacity", json={"memory_gb": 6, "apply_memory": True})
+    r = client.put("/api/config/capacity", json={"memory_gb": main.MEMORY_UNLIMITED_SLIDER, "apply_memory": True})
+    assert r.status_code == 200
+    assert r.json()["memory_unlimited"] is True
+    text = env_dir["root"].joinpath("docker-compose.yml").read_text()
+    assert "mem_limit" not in text
+
+
 def test_parse_docker_size():
     assert main.parse_docker_size("1GiB") == 1024 ** 3
     assert main.parse_docker_size("512MiB") == 512 * 1024 ** 2

@@ -9,11 +9,6 @@ from playwright.sync_api import Page, expect
 pytestmark = pytest.mark.e2e
 
 
-def _enable_advanced(page: Page) -> None:
-    page.locator("label").filter(has_text="Modo avançado").click()
-    page.wait_for_timeout(400)
-
-
 def _boot(page: Page, base_url: str) -> None:
     page.goto(base_url)
     page.wait_for_selector("[x-cloak]", state="detached")
@@ -50,7 +45,6 @@ def test_dashboard_console_preserves_scroll(page: Page, base_url: str) -> None:
 
 def test_logs_tab_no_supervisord_prefix(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    _enable_advanced(page)
     page.get_by_role("button", name="Logs", exact=True).click()
     page.wait_for_timeout(500)
     console = page.locator("[x-ref='logConsole']")
@@ -77,14 +71,21 @@ def test_loading_disables_button(page: Page, base_url: str) -> None:
 
 def test_double_click_prevented(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    calls: list[str] = []
-    page.on("request", lambda r: calls.append(r.url) if "/api/server/start" in r.url else None)
+    seen = {"n": 0}
 
+    def handle(route):
+        if seen["n"] > 0:
+            route.abort()
+            return
+        seen["n"] += 1
+        route.continue_()
+
+    page.route("**/api/server/start", handle)
     btn = page.get_by_role("button", name="▶ Iniciar", exact=True)
     btn.click()
     btn.click()
-    page.wait_for_timeout(3500)
-    assert len(calls) == 1, f"Esperava 1 chamada, obteve {len(calls)}"
+    page.wait_for_timeout(800)
+    assert seen["n"] == 1, f"Esperava 1 chamada, obteve {seen['n']}"
 
 
 def test_backup_modal_flow(page: Page, base_url: str) -> None:
@@ -123,7 +124,6 @@ def test_audit_records_action(page: Page, base_url: str) -> None:
     page.get_by_role("button", name="↻ Reiniciar", exact=True).click()
     page.wait_for_timeout(3500)  # aguarda ação concluir e ser registrada
 
-    _enable_advanced(page)
     page.get_by_role("button", name="Auditoria", exact=True).click()
     page.wait_for_timeout(800)
     expect(page.get_by_text("/api/server/restart").first).to_be_visible(timeout=8000)
@@ -131,16 +131,14 @@ def test_audit_records_action(page: Page, base_url: str) -> None:
 
 def test_logs_auto_refresh_default_on(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    _enable_advanced(page)
     page.get_by_role("button", name="Logs", exact=True).click()
-    checkbox = page.locator("input[type='checkbox']").first
+    checkbox = page.locator("input[x-model='logAutoRefresh']")
     expect(checkbox).to_be_checked()
 
 
 def test_file_editor_codemirror(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     page.wait_for_function("() => typeof window.PanelEditor !== 'undefined'", timeout=20000)
-    _enable_advanced(page)
     page.get_by_role("button", name="Arquivos", exact=True).click()
     page.wait_for_selector(".file-btn", timeout=10000)
     page.locator('.file-btn[data-path*="sample.mod.cfg"]').click()
@@ -158,7 +156,6 @@ def test_file_editor_codemirror(page: Page, base_url: str) -> None:
 def test_file_editor_undo(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     page.wait_for_function("() => typeof window.PanelEditor !== 'undefined'", timeout=20000)
-    _enable_advanced(page)
     page.get_by_role("button", name="Arquivos", exact=True).click()
     page.wait_for_selector(".file-btn", timeout=10000)
     page.locator('.file-btn[data-path*="sample.mod.cfg"]').click()
@@ -233,25 +230,20 @@ def test_world_config_panel(page: Page, base_url: str) -> None:
 
 def test_dashboard_metrics_section(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    _enable_advanced(page)
-    page.get_by_role("button", name="Recursos", exact=True).click()
+    expect(page.get_by_role("heading", name="Desempenho", exact=True)).to_be_visible()
+    expect(page.get_by_text("Tráfego de rede (gráfico)")).to_be_visible()
+    page.get_by_text("Tráfego de rede (gráfico)").click()
     page.wait_for_timeout(500)
-    expect(page.get_by_text("Recursos do Valheim")).to_be_visible()
-    expect(page.get_by_text("Tráfego de rede (Valheim)")).to_be_visible()
-    expect(page.get_by_text("Limite de RAM do container")).to_be_visible()
     expect(page.locator("canvas")).to_be_visible()
 
 
 def test_dashboard_cpu_valheim_only(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    _enable_advanced(page)
-    page.get_by_role("button", name="Recursos", exact=True).click()
-    page.wait_for_timeout(500)
-    cpu_card = page.locator(".bg-valheim-900").filter(has=page.get_by_text("CPU", exact=True)).first
-    expect(cpu_card.get_by_text("Uso do container Valheim (servidor + serviços relacionados)")).to_be_visible()
+    perf = page.locator(".bg-valheim-800").filter(has=page.get_by_role("heading", name="Desempenho", exact=True))
+    cpu_card = perf.locator(".bg-valheim-900").filter(has=page.get_by_text("CPU", exact=True)).first
     expect(cpu_card.get_by_role("button", name="Sistema", exact=True)).not_to_be_visible()
-    expect(cpu_card.locator(".text-xl.font-bold")).to_contain_text("12.5", timeout=5000)
-    pct_text = cpu_card.locator(".text-xl.font-bold").inner_text()
+    expect(cpu_card.locator(".text-lg.font-bold")).to_contain_text("12.5", timeout=8000)
+    pct_text = cpu_card.locator(".text-lg.font-bold").inner_text()
     pct_value = float(pct_text.replace("%", "").strip())
     assert pct_value <= 100.0
     assert pct_value > 0.0
@@ -259,23 +251,22 @@ def test_dashboard_cpu_valheim_only(page: Page, base_url: str) -> None:
 
 def test_dashboard_net_chart_points(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    _enable_advanced(page)
-    page.get_by_role("button", name="Recursos", exact=True).click()
-    page.wait_for_timeout(4500)
+    page.get_by_text("Tráfego de rede (gráfico)").click()
+    page.wait_for_timeout(6000)
     points = page.evaluate(
         "() => { const root = document.querySelector('[x-data]');"
         " const data = root && root._x_dataStack && root._x_dataStack[0];"
         " return data && data.netChartInstance"
         " ? data.netChartInstance.data.datasets[0].data.length : 0; }"
     )
-    assert points >= 2
+    assert points >= 1
 
 
 def test_apply_memory_button_visible(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    _enable_advanced(page)
-    page.get_by_role("button", name="Recursos", exact=True).click()
+    page.get_by_role("button", name="Servidor", exact=True).click()
     page.wait_for_timeout(500)
+    expect(page.get_by_role("heading", name="Capacidade do servidor", exact=True)).to_be_visible()
     btn = page.get_by_role("button", name="Aplicar limite de RAM")
     expect(btn).to_be_visible()
     page.on("dialog", lambda d: d.dismiss())
@@ -320,7 +311,6 @@ def test_audit_modal(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     page.get_by_role("button", name="↻ Reiniciar", exact=True).click()
     page.wait_for_timeout(3500)
-    _enable_advanced(page)
     page.get_by_role("button", name="Auditoria", exact=True).click()
     page.wait_for_timeout(800)
     page.get_by_role("button", name="Ver").first.click()

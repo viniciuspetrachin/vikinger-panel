@@ -6,6 +6,9 @@ export const dashboard = {
   players: { count: 0, players: [], online: false },
   playerLists: { admin: [], banned: [], permitted: [] },
   playersExpanded: false,
+  metricsChartExpanded: false,
+  metricsLoading: false,
+  metricsPollCount: 0,
   dashLogs: "",
   actionPending: null,
   netChartInstance: null,
@@ -139,23 +142,37 @@ export const dashboard = {
     });
   },
 
-  // ── Metrics + chart (Recursos only in UI v2) ──
   metricsActive() {
-    return this.page === "resources";
+    return this.page === "dashboard";
   },
 
   startMetricsPolling() {
     if (this.metricsInterval) return;
-    this.loadMetrics();
+    this.metricsLoading = true;
+    this.metricsPollCount = 0;
+    this.loadMetrics(true);
     this.metricsInterval = setInterval(() => {
-      if (this.metricsActive()) this.loadMetrics();
-    }, 2000);
+      if (!this.metricsActive()) return;
+      this.metricsPollCount += 1;
+      const full = this.metricsChartExpanded || this.metricsPollCount % 6 === 0;
+      this.loadMetrics(!full);
+    }, 5000);
   },
 
   stopMetricsPolling() {
     if (this.metricsInterval) {
       clearInterval(this.metricsInterval);
       this.metricsInterval = null;
+    }
+  },
+
+  onMetricsChartToggle() {
+    this.metricsChartExpanded = !this.metricsChartExpanded;
+    if (this.metricsChartExpanded) {
+      this.$nextTick(() => {
+        this.ensureNetChart();
+        this.loadMetrics(false);
+      });
     }
   },
 
@@ -210,15 +227,21 @@ export const dashboard = {
     this.netChartInstance.update("none");
   },
 
-  async loadMetrics() {
+  async loadMetrics(light = true) {
     try {
-      this.metrics = await this.api("GET", "/api/metrics");
+      const url = light ? "/api/metrics?light=1" : "/api/metrics";
+      this.metrics = await this.api("GET", url);
+      this.metricsLoading = false;
       if (!this.metricsActive()) return;
-      await this.$nextTick();
-      if (this.ensureNetChart()) {
-        this.pushNetChartPoint(this.metrics.network?.rx_bps, this.metrics.network?.tx_bps);
-        this.netChartInstance.resize();
+      if (this.metricsChartExpanded) {
+        await this.$nextTick();
+        if (this.ensureNetChart()) {
+          this.pushNetChartPoint(this.metrics.network?.rx_bps, this.metrics.network?.tx_bps);
+          this.netChartInstance.resize();
+        }
       }
-    } catch (e) { /* silencioso */ }
+    } catch (e) {
+      this.metricsLoading = false;
+    }
   },
 };
