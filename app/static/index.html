@@ -117,16 +117,34 @@
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-5">
             <button @click="playersExpanded = !playersExpanded" class="w-full flex items-center justify-between text-left">
               <h3 class="font-display text-sm font-semibold text-valheim-gold">Jogadores Conectados</h3>
-              <span class="text-xs text-gray-500" x-text="playersExpanded ? '▲' : '▼'"></span>
+              <span class="text-xs text-gray-500">
+                <span x-text="(players.players || []).length || players.count || 0"></span>
+                <span class="ml-2" x-text="playersExpanded ? '▲' : '▼'"></span>
+              </span>
             </button>
             <div x-show="playersExpanded" class="mt-4">
               <p x-show="!(players.players || []).length" class="text-sm text-gray-500">Nenhum jogador conectado no momento.</p>
               <ul x-show="(players.players || []).length" class="space-y-2">
                 <template x-for="p in players.players" :key="p.steam_id">
-                  <li class="flex items-center gap-3 bg-valheim-900 rounded-lg px-4 py-2 text-sm">
-                    <span class="w-2 h-2 rounded-full bg-green-400"></span>
+                  <li class="flex flex-wrap items-center gap-2 sm:gap-3 bg-valheim-900 rounded-lg px-4 py-2 text-sm">
+                    <span class="w-2 h-2 rounded-full bg-green-400 shrink-0"></span>
                     <span class="font-medium" x-text="p.name"></span>
-                    <span class="text-xs text-gray-600 font-mono ml-auto" x-text="p.steam_id"></span>
+                    <span x-show="isPlayerAdmin(p.steam_id)" class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-valheim-gold/20 text-valheim-gold">Admin</span>
+                    <span x-show="isPlayerBanned(p.steam_id)" class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-900/40 text-red-400">Banido</span>
+                    <span class="text-xs text-gray-500 font-mono truncate max-w-[140px] sm:max-w-none" x-text="p.steam_id" :title="p.steam_id"></span>
+                    <div class="flex flex-wrap gap-1 ml-auto">
+                      <button type="button"
+                        @click.stop="togglePlayerAdmin(p.steam_id)"
+                        :disabled="actionPending === 'playerAdmin:' + p.steam_id"
+                        class="btn btn-sm btn-ghost"
+                        x-text="isPlayerAdmin(p.steam_id) ? 'Remover admin' : 'Tornar admin'"></button>
+                      <button type="button"
+                        @click.stop="togglePlayerBan(p.steam_id, p.name)"
+                        :disabled="actionPending === 'playerBan:' + p.steam_id"
+                        class="btn btn-sm"
+                        :class="isPlayerBanned(p.steam_id) ? 'btn-ghost' : 'btn-danger'"
+                        x-text="isPlayerBanned(p.steam_id) ? 'Desbanir' : 'Banir'"></button>
+                    </div>
                   </li>
                 </template>
               </ul>

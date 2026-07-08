@@ -87,7 +87,7 @@ def env_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "docker_compose", lambda *a, **k: FakeCompleted(0, "ok", ""))
     monkeypatch.setattr(main, "get_logs", lambda lines=100: (
         "Got connection SteamID 76561198273697711\n"
-        "Got character ZDOID from TestPlayer : 1125091549:3\n"
+        "Got character ZDOID from TestPlayer : -337208827:1\n"
         "Connections 1 ZDOS:19178  sent:0 recv:91\n"
     ))
     monkeypatch.setattr(main, "bepinex_log", lambda lines=80: "bepinex log line\n")

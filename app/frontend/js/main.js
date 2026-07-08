@@ -56,7 +56,7 @@ function panel() {
       await this.loadDashboardData();
       await this.loadMemoryConfig();
       await this.loadVersion();
-      setInterval(() => { if (this.page === "dashboard") { this.refreshStatus(); this.loadPlayers(); } }, 10000);
+      setInterval(() => { if (this.page === "dashboard") { this.refreshStatus(); this.loadPlayers(); this.loadPlayerLists(); } }, 10000);
       setInterval(() => { if (this.page === "dashboard") this.loadDashLogs(); }, 5000);
       setInterval(() => { if (this.page === "logs" && this.logAutoRefresh) this.loadLogs(); }, 5000);
       setInterval(() => { if (this.page === "audit" && this.auditAutoRefresh) this.loadAudit(); }, 5000);

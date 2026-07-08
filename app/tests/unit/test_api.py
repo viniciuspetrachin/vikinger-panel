@@ -34,7 +34,49 @@ def test_players(client):
     body = r.json()
     assert body["count"] == 1
     assert body["players"][0]["name"] == "TestPlayer"
+    assert body["players"][0]["steam_id"] == "76561198273697711"
     assert body["online"] is True
+
+
+def test_parse_players_negative_zdoid():
+    logs = (
+        "Got connection SteamID 76561198273697711\n"
+        "Got character ZDOID from Exforgant : -337208827:1\n"
+        "Got connection SteamID 76561198080651267\n"
+        "Got character ZDOID from Marcelo : -661513034:1\n"
+        "Connections 2 ZDOS:72459  sent:527 recv:40\n"
+    )
+    result = main.parse_players_from_logs(logs)
+    assert result["count"] == 2
+    assert result["online"] is True
+    names = {p["name"] for p in result["players"]}
+    assert names == {"Exforgant", "Marcelo"}
+    steam_ids = {p["steam_id"] for p in result["players"]}
+    assert steam_ids == {"76561198273697711", "76561198080651267"}
+
+
+def test_parse_players_pending_connection_without_character():
+    logs = (
+        "Got connection SteamID 76561198273697711\n"
+        "Connections 1 ZDOS:72459  sent:0 recv:0\n"
+    )
+    result = main.parse_players_from_logs(logs)
+    assert result["count"] == 1
+    assert result["players"][0]["steam_id"] == "76561198273697711"
+    assert result["players"][0]["name"] == "76561198273697711"
+
+
+def test_parse_players_closing_removes_player():
+    logs = (
+        "Got connection SteamID 76561198273697711\n"
+        "Got character ZDOID from Exforgant : -337208827:1\n"
+        "Closing socket 76561198273697711\n"
+        "Connections 0 ZDOS:72459  sent:0 recv:0\n"
+    )
+    result = main.parse_players_from_logs(logs)
+    assert result["count"] == 0
+    assert result["players"] == []
+    assert result["online"] is False
 
 
 @pytest.mark.parametrize("action", ["start", "stop", "restart", "pause", "resume"])

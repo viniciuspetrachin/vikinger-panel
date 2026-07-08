@@ -10,6 +10,23 @@ backups, métricas, logs e muito mais, tudo em uma interface única.
 
 ---
 
+## Estrutura do projeto (workspace)
+
+**Inicie o agente Cursor em `/home/vinicius/valheim-panel`.** Este repositório contém o código do painel, Docker Compose e testes.
+
+Os dados persistentes do servidor (mundos, mods, configs) ficam em `../valheim-server/`:
+
+```
+valheim-panel/          ← código, painel web, docker compose principal
+  config → ../valheim-server/config
+  data   → ../valheim-server/data
+valheim-server/         ← runtime: config/, data/, scripts auxiliares
+```
+
+O `docker-compose.yml` em `valheim-server/` é um fallback standalone; o compose principal que sobe **servidor + painel** é o de `valheim-panel/`.
+
+---
+
 ## Funcionalidades
 
 | Área | O que você pode fazer |

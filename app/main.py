@@ -1710,7 +1710,7 @@ def build_worlds_list(reconcile: bool = True) -> tuple[list[dict], str, str, dic
 # ── Player tracking from logs ────────────────────────────────────────────────
 
 _RE_CONNECTION = re.compile(r"Got connection SteamID (\d+)")
-_RE_CHARACTER = re.compile(r"Got character ZDOID from (.+?) : (\d+):(\d+)")
+_RE_CHARACTER = re.compile(r"Got character ZDOID from (.+?) : (-?\d+):(\d+)")
 _RE_CLOSING = re.compile(r"Closing socket (\d+)")
 _RE_CONNECTIONS = re.compile(r"Connections (\d+) ZDOS:")
 
@@ -1718,6 +1718,7 @@ _RE_CONNECTIONS = re.compile(r"Connections (\d+) ZDOS:")
 def parse_players_from_logs(log_text: str) -> dict:
     steam_to_name: dict[str, str] = {}
     active_steam: set[str] = set()
+    pending_steam: set[str] = set()
     last_connection: Optional[str] = None
     last_count = 0
 
@@ -1728,7 +1729,9 @@ def parse_players_from_logs(log_text: str) -> dict:
 
         m = _RE_CONNECTION.search(line)
         if m:
-            last_connection = m.group(1)
+            steam_id = m.group(1)
+            last_connection = steam_id
+            pending_steam.add(steam_id)
             continue
 
         m = _RE_CHARACTER.search(line)
@@ -1740,13 +1743,21 @@ def parse_players_from_logs(log_text: str) -> dict:
             if steam_id:
                 steam_to_name[steam_id] = name
                 active_steam.add(steam_id)
+                pending_steam.discard(steam_id)
             last_connection = None
             continue
 
         m = _RE_CLOSING.search(line)
         if m:
-            active_steam.discard(m.group(1))
-            last_connection = None
+            sid = m.group(1)
+            active_steam.discard(sid)
+            pending_steam.discard(sid)
+            if last_connection == sid:
+                last_connection = None
+
+    for sid in pending_steam:
+        if sid not in active_steam:
+            active_steam.add(sid)
 
     players = [
         {"name": steam_to_name.get(sid, sid), "steam_id": sid}

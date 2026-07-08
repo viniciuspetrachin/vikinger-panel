@@ -311,6 +311,9 @@ def test_dashboard_players_card(page: Page, base_url: str) -> None:
     expect(page.get_by_text("Jogadores Conectados", exact=True)).to_be_visible()
     players_block = page.locator(".bg-valheim-800").filter(has=page.get_by_text("Jogadores Conectados", exact=True))
     expect(players_block.locator("ul .font-medium", has_text="TestPlayer")).to_be_visible()
+    expect(players_block.get_by_text("76561198273697711")).to_be_visible()
+    expect(players_block.get_by_role("button", name="Tornar admin")).to_be_visible()
+    expect(players_block.get_by_role("button", name="Banir")).to_be_visible()
 
 
 def test_audit_modal(page: Page, base_url: str) -> None:

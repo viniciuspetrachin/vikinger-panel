@@ -4,6 +4,7 @@ export const dashboard = {
   status: {},
   metrics: {},
   players: { count: 0, players: [], online: false },
+  playerLists: { admin: [], banned: [], permitted: [] },
   playersExpanded: false,
   dashLogs: "",
   actionPending: null,
@@ -12,7 +13,7 @@ export const dashboard = {
 
   async loadDashboardData() {
     await this.refreshStatus();
-    await this.loadPlayers();
+    await Promise.all([this.loadPlayers(), this.loadPlayerLists()]);
     await this.loadDashLogs();
   },
 
@@ -24,11 +25,74 @@ export const dashboard = {
     });
   },
 
+  async loadPlayerLists() {
+    try {
+      this.playerLists = await this.api("GET", "/api/config/serverlists");
+    } catch (e) { /* silencioso no dashboard */ }
+  },
+
   async loadPlayers() {
     try {
       this.players = await this.api("GET", "/api/players");
-      this.playersExpanded = (this.players.players || []).length > 0;
+      const count = this.players.count ?? 0;
+      const listLen = (this.players.players || []).length;
+      this.playersExpanded = count > 0 || listLen > 0;
     } catch (e) { /* silencioso no dashboard */ }
+  },
+
+  isPlayerAdmin(steamId) {
+    return (this.playerLists.admin || []).includes(String(steamId));
+  },
+
+  isPlayerBanned(steamId) {
+    return (this.playerLists.banned || []).includes(String(steamId));
+  },
+
+  async updatePlayerList(kind, ids) {
+    await this.api("PUT", `/api/config/serverlists/${kind}`, { ids });
+    this.playerLists[kind] = ids;
+  },
+
+  async togglePlayerAdmin(steamId) {
+    const sid = String(steamId);
+    return this.withBusy(`playerAdmin:${sid}`, async () => {
+      try {
+        const ids = [...(this.playerLists.admin || [])];
+        const idx = ids.indexOf(sid);
+        if (idx >= 0) {
+          ids.splice(idx, 1);
+          await this.updatePlayerList("admin", ids);
+          this.toast(`${sid} removido de administradores`);
+        } else {
+          ids.push(sid);
+          await this.updatePlayerList("admin", ids);
+          this.toast(`${sid} promovido a administrador`);
+        }
+      } catch (e) { this.toast(e.message, "error"); }
+    });
+  },
+
+  async togglePlayerBan(steamId, name) {
+    const sid = String(steamId);
+    const label = name && name !== sid ? name : sid;
+    if (this.isPlayerBanned(sid)) {
+      return this.withBusy(`playerBan:${sid}`, async () => {
+        try {
+          const ids = (this.playerLists.banned || []).filter((id) => id !== sid);
+          await this.updatePlayerList("banned", ids);
+          this.toast(`${label} desbanido`);
+        } catch (e) { this.toast(e.message, "error"); }
+      });
+    }
+    if (!confirm(`Banir ${label} (${sid})? O jogador será desconectado na próxima reinicialização.`)) return;
+    return this.withBusy(`playerBan:${sid}`, async () => {
+      try {
+        const ids = [...(this.playerLists.banned || [])];
+        if (!ids.includes(sid)) ids.push(sid);
+        await this.updatePlayerList("banned", ids);
+        this.toast(`${label} banido`);
+      } catch (e) { this.toast(e.message, "error"); }
+    });
   },
 
   async serverAction(action) {
