@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Rebuild e reinício do container valheim-panel após mudanças em app/.
+# Rebuild e reinício do container do painel após mudanças em panel/.
 #
 # O painel serve arquivos de /app/static/ DENTRO da imagem Docker.
 # F5 no navegador não basta — é preciso reconstruir a imagem.
@@ -41,12 +41,12 @@ fi
 
 if $RUN_TESTS; then
   echo "==> Testes (unit + e2e)..."
-  if [[ ! -x app/.venv/bin/pytest ]]; then
-    echo "Erro: app/.venv/bin/pytest não encontrado. Rode: cd app && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt" >&2
+  if [[ ! -x panel/.venv/bin/pytest ]]; then
+    echo "Erro: panel/.venv/bin/pytest não encontrado. Rode: cd panel && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt" >&2
     exit 1
   fi
-  (cd app && .venv/bin/pytest tests/unit -q)
-  (cd app && .venv/bin/pytest tests/e2e -q)
+  (cd panel && .venv/bin/pytest tests/unit -q)
+  (cd panel && .venv/bin/pytest tests/e2e -q)
 fi
 
 if $SKIP_BUILD; then

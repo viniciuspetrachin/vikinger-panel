@@ -1,11 +1,11 @@
 # ── Frontend build ────────────────────────────────────────────────────────────
 FROM node:22-alpine AS frontend
 WORKDIR /build
-COPY app/package.json app/package-lock.json* ./
+COPY panel/package.json panel/package-lock.json* ./
 RUN npm install --omit=dev=false 2>/dev/null || npm install
-COPY app/tailwind.config.js app/build.mjs app/editor-src.js ./
-COPY app/frontend ./frontend
-COPY app/static/index.html app/static/vendor ./static/
+COPY panel/tailwind.config.js panel/build.mjs panel/editor-src.js ./
+COPY panel/frontend ./frontend
+COPY panel/static/index.html panel/static/vendor ./static/
 RUN npm run build
 
 # ── Python runtime ────────────────────────────────────────────────────────────
@@ -21,10 +21,10 @@ RUN apt-get update \
     && useradd -u 1000 -g panel -m -s /bin/bash panel
 
 WORKDIR /app
-COPY app/requirements.txt .
+COPY panel/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app/ .
+COPY panel/ .
 COPY --from=frontend /build/static/app.css ./static/app.css
 COPY --from=frontend /build/static/app.bundle.js ./static/app.bundle.js
 COPY --from=frontend /build/static/editor.bundle.js ./static/editor.bundle.js

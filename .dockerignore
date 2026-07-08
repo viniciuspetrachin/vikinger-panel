@@ -8,7 +8,7 @@ data
 **/.pytest_cache
 **/.venv
 **/node_modules
-app/node_modules
+panel/node_modules
 docs/screenshots
 *.md
-!app/requirements.txt
+!panel/requirements.txt

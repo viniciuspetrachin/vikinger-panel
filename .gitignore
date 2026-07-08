@@ -9,7 +9,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 node_modules/
-app/node_modules/
-app/logs/
-app/.venv/
+panel/node_modules/
+panel/logs/
+panel/.venv/
 *.log
