@@ -1,4 +1,4 @@
-"""Fonte única de verdade da versão do Valheim Panel."""
+"""Fonte única de verdade da versão do Vikinger Panel."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ import subprocess
 from functools import lru_cache
 from pathlib import Path
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 
-REPO_URL = "https://github.com/viniciuspetrachin/valheim-panel"
+REPO_URL = "https://github.com/viniciuspetrachin/vikinger-panel"
 LICENSE = "Polyform Shield 1.0.0"
 LICENSE_URL = "https://polyformproject.org/licenses/shield/1.0.0"
 

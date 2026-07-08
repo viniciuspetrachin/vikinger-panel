@@ -1,29 +1,38 @@
-# Valheim Panel
+# Vikinger Panel
 
 Painel web moderno para gerenciar servidores **Valheim** dockerizados — mundos, mods BepInEx,
 backups, métricas, logs e muito mais, tudo em uma interface única.
 
 [![License: Polyform Shield](https://img.shields.io/badge/License-Polyform%20Shield-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.0.0-gold.svg)](https://github.com/viniciuspetrachin/valheim-panel)
+[![Version](https://img.shields.io/badge/version-2.1.0-gold.svg)](https://github.com/viniciuspetrachin/vikinger-panel)
 
 > Interface em português · 100% dockerizado · Testes unitários e E2E · Sem CDN externo
 
 ---
 
-## Estrutura do projeto (workspace)
+## Monorepo: uma pasta, dois containers
 
-**Inicie o agente Cursor em `/home/vinicius/valheim-panel`.** Este repositório contém o código do painel, Docker Compose e testes.
+Todo o projeto vive em **uma única pasta**. O `docker compose` sobe **dois containers separados**:
 
-Os dados persistentes do servidor (mundos, mods, configs) ficam em `../valheim-server/`:
+```mermaid
+flowchart LR
+  browser["Navegador :8080"] --> panel["container vikinger-panel (FastAPI)"]
+  panel -->|docker.sock| daemon["Docker do host"]
+  panel -->|config/ + data/| vol["Volumes do projeto"]
+  daemon --> srv["container valheim-server (UDP 2456-2458)"]
+```
 
 ```
-valheim-panel/          ← código, painel web, docker compose principal
-  config → ../valheim-server/config
-  data   → ../valheim-server/data
-valheim-server/         ← runtime: config/, data/, scripts auxiliares
+vikinger-panel/
+├─ panel/                     # painel web (FastAPI + Alpine.js) — todo o código-fonte
+├─ server/                    # infra do servidor de jogo (compose standalone)
+├─ scripts/                   # dev.sh, reload-panel.sh, entrypoint.sh, install-mods.sh
+├─ docker-compose.yml         # PRODUÇÃO: sobe valheim-server + vikinger-panel
+├─ docker-compose.dev.yml     # DEV: hot-reload sem rebuild
+├─ config/                    # config do servidor (gitignored)
+├─ data/                      # dados do jogo: mundos, steamapps (gitignored)
+└─ panel-data/                # dados do painel: auditoria, registry de mods (gitignored)
 ```
-
-O `docker-compose.yml` em `valheim-server/` é um fallback standalone; o compose principal que sobe **servidor + painel** é o de `valheim-panel/`.
 
 ---
 
@@ -57,8 +66,8 @@ administradores experientes.
 ## Instalação rápida
 
 ```bash
-git clone https://github.com/viniciuspetrachin/valheim-panel.git
-cd valheim-panel
+git clone https://github.com/viniciuspetrachin/vikinger-panel.git
+cd vikinger-panel
 cp .env.example .env
 # Edite .env: SERVER_NAME, WORLD_NAME, SERVER_PASS, HOST_PROJECT_DIR, DOCKER_GID
 docker compose up -d --build
@@ -86,31 +95,42 @@ Na aba **Mods**, configure auto-atualização do jogo, modo vanilla/modded (BepI
 Na primeira execução o container do Valheim baixa o jogo e instala o BepInEx — pode levar
 vários minutos. Acompanhe na aba **Visão Geral** (console ao vivo).
 
----
+### Rodar só o servidor (sem painel)
 
-## Arquitetura
-
+```bash
+docker compose --project-directory . -f server/docker-compose.standalone.yml up -d
 ```
-┌─────────────────────────────────────────────────────────┐
-│  Navegador  →  :8080  →  valheim-panel (FastAPI)        │
-│                              │                          │
-│                              ├─ docker.sock             │
-│                              └─ volumes config/data     │
-└─────────────────────────────────────────────────────────┘
-                               │
-                               ▼
-                    valheim-server (lloesche/valheim-server)
-                    UDP 2456-2458 · BepInEx · mundos/mods
-```
-
-**Stack:** FastAPI · Alpine.js · Tailwind CSS · Chart.js · CodeMirror · Docker Compose
 
 ---
 
 ## Desenvolvimento
 
+### Modo dev com hot-reload (recomendado para debug)
+
 ```bash
-cd app
+./scripts/dev.sh
+```
+
+- **Backend:** `uvicorn --reload` — editar `panel/*.py` recarrega sozinho.
+- **Frontend:** watcher Tailwind + esbuild — editar `panel/frontend/**` regenera os bundles.
+- Basta **F5** no navegador; **não precisa rebuild** da imagem.
+
+Sob o capô, `docker-compose.dev.yml` monta `panel/` por cima de `/app` e sobe um container
+`assets` (Node) rodando o watcher.
+
+### Deploy de produção (imagem embarcada)
+
+Fora do modo dev, o painel serve arquivos **embarcados na imagem**. Após alterar código:
+
+```bash
+./scripts/reload-panel.sh           # rebuild + restart do container
+./scripts/reload-panel.sh --tests   # pytest unit + e2e antes, depois deploy
+```
+
+### Testes e build manual
+
+```bash
+cd panel
 python -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/pytest tests/unit -q          # unitários
 .venv/bin/playwright install chromium
@@ -119,18 +139,13 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt
 npm install && npm run build            # rebuild CSS/JS
 ```
 
-### Aplicar mudanças no painel em execução (Docker)
-
-O container serve os arquivos **embarcados na imagem** (`/app/static/`). Depois de alterar código:
-
-```bash
-./scripts/reload-panel.sh           # rebuild + restart do container panel
-./scripts/reload-panel.sh --tests   # pytest unit + e2e antes, depois deploy
-```
-
-No navegador, use **Ctrl+Shift+R** se a interface ainda parecer antiga (cache).
-
 Veja [CONTRIBUTING.md](CONTRIBUTING.md) para o fluxo completo de contribuição.
+
+---
+
+## Stack
+
+FastAPI · Alpine.js · Tailwind CSS · Chart.js · CodeMirror · Docker Compose
 
 ---
 
@@ -139,18 +154,18 @@ Veja [CONTRIBUTING.md](CONTRIBUTING.md) para o fluxo completo de contribuição.
 Este projeto usa a **[Polyform Shield 1.0.0](LICENSE)** — licença *source-available* pensada
 para projetos que querem comunidade aberta **sem permitir revenda**.
 
-### Uso gratuito ✅
+### Uso gratuito para quem auto-hospeda
 
 - Rodar no **seu próprio** servidor Valheim (casa, VPS, comunidade)
 - Modificar o código para uso pessoal
 - Contribuir com PRs, issues e documentação
 - Distribuir forks mantendo os termos da licença
 
-### Requer licença comercial 💼
+### Licença paga para empresas de hospedagem
 
 - Provedores de **hospedagem** que oferecem o painel aos clientes
 - **Revenda** ou white-label como produto pago
-- Qualquer serviço que concorra com o Valheim Panel como oferta comercial
+- Qualquer serviço que concorra com o Vikinger Panel como oferta comercial
 
 Detalhes, planos e contato: **[COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md)**
 
@@ -158,10 +173,8 @@ Detalhes, planos e contato: **[COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md)**
 
 ## Doações
 
-O desenvolvimento é mantido de forma independente. Se o painel te ajuda, considere apoiar:
-
-- Aba **Doações** dentro do painel (links configuráveis)
-- Variáveis de ambiente no `.env`:
+O desenvolvimento é mantido de forma independente. Se o painel te ajuda, considere apoiar
+pela aba **Doações** dentro do painel. Configure os links no `.env`:
 
 ```bash
 PANEL_DONATION_GITHUB=https://github.com/sponsors/seu-usuario
@@ -174,19 +187,9 @@ PANEL_COMMERCIAL_EMAIL=licensing@seudominio.com
 
 ---
 
-## Roadmap
-
-- [ ] Publicar repositório como open source
-- [ ] Definir preços da licença comercial para provedores
-- [ ] Internacionalização (EN)
-- [ ] Autenticação no painel (opcional)
-
----
-
 ## Créditos
 
-- [lloesche/valheim-server-docker](https://github.com/lloesche/valheim-server-docker) —
-  imagem base do servidor
+- [lloesche/valheim-server-docker](https://github.com/lloesche/valheim-server-docker) — imagem base do servidor
 - [Thunderstore Valheim](https://thunderstore.io/c/valheim/) — mods
 - Comunidade Valheim BR
 
@@ -194,7 +197,7 @@ PANEL_COMMERCIAL_EMAIL=licensing@seudominio.com
 
 ## Suporte
 
-- **Bugs e features:** [GitHub Issues](https://github.com/viniciuspetrachin/valheim-panel/issues)
+- **Bugs e features:** [GitHub Issues](https://github.com/viniciuspetrachin/vikinger-panel/issues)
 - **Licenciamento comercial:** veja [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md)
 - **Ajuda no painel:** aba **Ajuda** (FAQ integrado)
 

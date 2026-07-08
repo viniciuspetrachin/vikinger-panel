@@ -71,7 +71,7 @@ def test_about_version(page: Page, base_url: str) -> None:
     page.wait_for_selector("[x-cloak]", state="detached")
     goto_tab(page, "Sobre")
 
-    expect(page.get_by_role("main").get_by_role("heading", name="Valheim Panel")).to_be_visible()
+    expect(page.get_by_role("main").get_by_role("heading", name="Vikinger Panel")).to_be_visible()
     expect(page.get_by_text("Novidades")).to_be_visible()
     expect(page.get_by_role("main").get_by_text("v2.0.0")).to_be_visible()
 

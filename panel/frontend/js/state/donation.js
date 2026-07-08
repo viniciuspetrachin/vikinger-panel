@@ -11,7 +11,7 @@ export const donation = {
   },
 
   donationPitch:
-    "O Valheim Panel é gratuito para uso pessoal e aceita contribuições da comunidade. " +
+    "O Vikinger Panel é gratuito para uso pessoal e aceita contribuições da comunidade. " +
     "Doações voluntárias ajudam a manter o desenvolvimento. " +
     "Provedores de hospedagem precisam de licença comercial — veja abaixo.",
 

@@ -1,6 +1,6 @@
-# Licença Comercial — Valheim Panel
+# Licença Comercial — Vikinger Panel
 
-O **Valheim Panel** é distribuído sob a [Polyform Shield 1.0.0](LICENSE), que permite uso,
+O **Vikinger Panel** é distribuído sob a [Polyform Shield 1.0.0](LICENSE), que permite uso,
 modificação e contribuição gratuitos, mas **proíbe revenda** e o oferecimento do painel
 como produto ou serviço concorrente sem autorização.
 
@@ -21,7 +21,7 @@ outras empresas que desejam oferecer o painel aos seus clientes.
 
 A licença comercial autoriza provedores de hospedagem e empresas a:
 
-- Incluir o Valheim Panel em planos de hospedagem de servidores Valheim
+- Incluir o Vikinger Panel em planos de hospedagem de servidores Valheim
 - Oferecer o painel como recurso gerenciado aos clientes finais
 - Usar marca própria na interface (white-label), mediante acordo
 - Receber suporte prioritário e atualizações garantidas (conforme plano)
@@ -71,4 +71,4 @@ não autorizado pode resultar em rescisão da licença e medidas legais.
 
 ---
 
-© 2026 Vinicius Petrachin — [github.com/viniciuspetrachin/valheim-panel](https://github.com/viniciuspetrachin/valheim-panel)
+© 2026 Vinicius Petrachin — [github.com/viniciuspetrachin/vikinger-panel](https://github.com/viniciuspetrachin/vikinger-panel)

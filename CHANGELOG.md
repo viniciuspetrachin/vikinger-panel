@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0]
+
+### Changed
+
+- **Monorepo único:** `valheim-panel` e `valheim-server` consolidados em uma só pasta/repositório (`vikinger-panel`). `config/`, `data/` e `.mod-cache/` agora vivem dentro do projeto (sem symlinks).
+- Código do painel movido de `app/` para `panel/`; infra do servidor em `server/`.
+- Rebrand para **Vikinger Panel** (interface, docs e metadados).
+- `docker-compose.yml` único sobe os 2 containers (`valheim-server` + `vikinger-panel`) com paths relativos.
+
+### Added
+
+- **Modo dev com hot-reload:** `docker-compose.dev.yml` + `scripts/dev.sh` (uvicorn `--reload` + watcher Tailwind/esbuild). Editar `panel/**` reflete no navegador com F5, sem rebuild.
+- `server/docker-compose.standalone.yml` para rodar só o servidor.
+
 ## [Unreleased]
 
 ### Added

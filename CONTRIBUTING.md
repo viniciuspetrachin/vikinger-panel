@@ -1,4 +1,4 @@
-# Contribuindo com o Valheim Panel
+# Contribuindo com o Vikinger Panel
 
 Obrigado por considerar contribuir! Este projeto é aberto para a comunidade sob a
 [Polyform Shield 1.0.0](LICENSE).
@@ -25,10 +25,19 @@ Obrigado por considerar contribuir! Este projeto é aberto para a comunidade sob
 - Python 3.12+
 - Node.js 22+ (para rebuild do frontend)
 
+### Dev com hot-reload (recomendado)
+
+```bash
+./scripts/dev.sh
+```
+
+Sobe o painel com `uvicorn --reload` e um watcher de frontend. Editar `panel/**` reflete
+no navegador com F5, sem rebuild da imagem.
+
 ### Testes (obrigatório para features de API/UI)
 
 ```bash
-cd app
+cd panel
 python -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/playwright install chromium
@@ -43,14 +52,16 @@ python -m venv .venv
 ### Frontend
 
 ```bash
-cd app
+cd panel
 npm install
 npm run build   # gera app.css, app.bundle.js, editor.bundle.js
+npm run watch   # modo watch (usado pelo dev.sh)
 ```
 
-### Deploy local (Docker)
+### Deploy de produção (Docker)
 
-Após mudanças em `app/`, reconstrua o container — **F5 no navegador não basta**:
+Fora do modo dev, o painel serve arquivos embarcados na imagem. Após mudanças em `panel/`,
+reconstrua o container — **F5 no navegador não basta**:
 
 ```bash
 ./scripts/reload-panel.sh           # docker compose build panel && up -d

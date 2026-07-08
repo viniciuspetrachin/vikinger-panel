@@ -1,8 +1,8 @@
 {
-  "name": "valheim-panel-frontend",
-  "version": "2.0.0",
+  "name": "vikinger-panel-frontend",
+  "version": "2.1.0",
   "private": true,
-  "description": "Frontend build (Tailwind + esbuild) do Valheim Panel",
+  "description": "Frontend build (Tailwind + esbuild) do Vikinger Panel",
   "type": "module",
   "scripts": {
     "build:css": "tailwindcss -c tailwind.config.js -i frontend/input.css -o static/app.css --minify",

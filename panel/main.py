@@ -26,7 +26,7 @@ from fwl_io import WorldConfig, WorldMeta, config_summary_from_meta, read_fwl, w
 from log_utils import clean_docker_logs
 from version import __version__, version_info
 
-logger = logging.getLogger("valheim-panel")
+logger = logging.getLogger("vikinger-panel")
 logging.basicConfig(level=logging.INFO)
 
 ROOT = Path(os.environ.get("VALHEIM_PANEL_ROOT", Path(__file__).resolve().parent.parent)).resolve()
@@ -79,7 +79,7 @@ AUDIT_MAX_BYTES = 5 * 1024 * 1024
 AUDIT_BODY_MAX = 8192
 AUDIT_SENSITIVE = ("pass", "secret", "token", "key")
 
-app = FastAPI(title="Valheim Panel", version=__version__)
+app = FastAPI(title="Vikinger Panel", version=__version__)
 
 app.add_middleware(
     CORSMiddleware,
