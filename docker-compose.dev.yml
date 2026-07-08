@@ -1,0 +1,35 @@
+# Override de DESENVOLVIMENTO — hot-reload sem rebuild da imagem.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+#   (ou simplesmente: ./scripts/dev.sh)
+#
+# O que muda em relacao ao compose de producao:
+#   panel  -> monta ./panel por cima de /app e roda uvicorn --reload
+#   assets -> container node que roda o watcher Tailwind + esbuild
+
+services:
+  panel:
+    volumes:
+      # Codigo-fonte montado por cima da imagem: editar panel/** reflete na hora.
+      - ./panel:/app
+    environment:
+      PANEL_DEV: "1"
+    command:
+      - uvicorn
+      - main:app
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8080"
+      - --reload
+      - --reload-dir
+      - /app
+
+  assets:
+    image: node:22-alpine
+    container_name: vikinger-panel-assets
+    working_dir: /build
+    volumes:
+      - ./panel:/build
+    command: sh -c "npm install && npm run watch"
+    restart: unless-stopped

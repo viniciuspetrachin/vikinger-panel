@@ -9,6 +9,7 @@
     "build:js": "node build.mjs",
     "build:editor": "esbuild editor-src.js --bundle --format=esm --outfile=static/editor.bundle.js --minify",
     "build": "npm run build:css && npm run build:js && npm run build:editor",
+    "watch": "node build.mjs --watch",
     "watch:css": "tailwindcss -c tailwind.config.js -i frontend/input.css -o static/app.css --watch"
   },
   "keywords": [
