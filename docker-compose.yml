@@ -1,3 +1,9 @@
+# Compose principal do Vikinger Panel — sobe 2 containers:
+#   valheim-server  (o servidor de jogo)
+#   vikinger-panel  (o painel web que gerencia o servidor)
+#
+# Para rodar apenas o servidor (sem painel) use server/docker-compose.standalone.yml.
+
 services:
   valheim:
     image: lloesche/valheim-server:latest
@@ -22,7 +28,8 @@ services:
 
   panel:
     build: .
-    container_name: valheim-panel
+    image: vikinger-panel:latest
+    container_name: vikinger-panel
     restart: unless-stopped
     group_add:
       - "${DOCKER_GID:-999}"
@@ -30,10 +37,10 @@ services:
       - "${PANEL_PORT:-8080}:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      # Bind-mount do projeto no MESMO path absoluto do host. Assim o painel roda
+      # `docker compose` contra o docker.sock e os paths relativos (./config, ./data)
+      # resolvem para diretorios reais do host. config/ e data/ ja fazem parte da arvore.
       - ${HOST_PROJECT_DIR:-.}:${HOST_PROJECT_DIR:-.}
-      # Sobrepõe symlinks do host — dados reais do mundo ficam acessíveis no container
-      - /home/vinicius/valheim-server/config:${HOST_PROJECT_DIR:-.}/config
-      - /home/vinicius/valheim-server/data:${HOST_PROJECT_DIR:-.}/data
     environment:
       VALHEIM_PANEL_ROOT: ${HOST_PROJECT_DIR:-.}
       PANEL_UID: "1000"

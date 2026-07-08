@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="${VALHEIM_PANEL_ROOT:-/home/vinicius/valheim-panel}"
+ROOT="${VALHEIM_PANEL_ROOT:-/home/vinicius/vikinger-panel}"
 PANEL_UID="${PANEL_UID:-1000}"
 PANEL_GID="${PANEL_GID:-1000}"
 DOCKER_GID="${DOCKER_GID:-999}"

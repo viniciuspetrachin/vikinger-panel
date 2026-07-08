@@ -36,7 +36,7 @@ RUN chmod +x /entrypoint.sh \
 
 USER root
 EXPOSE 8080
-ENV VALHEIM_PANEL_ROOT=/home/vinicius/valheim-panel
+ENV VALHEIM_PANEL_ROOT=/home/vinicius/vikinger-panel
 ENV PANEL_UID=1000
 ENV PANEL_GID=1000
 ENTRYPOINT ["/entrypoint.sh"]
