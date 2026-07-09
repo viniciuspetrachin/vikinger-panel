@@ -27,7 +27,7 @@ BUNDLED_MODS: dict[str, dict] = {
     RCON_PLUGIN_NAME: {
         "label": "ValheimRcon",
         "version": "1.5.1",
-        "description": "Console RCON e moderação (kick, ban, admin) — integrado ao painel",
+        "description": "RCON console and moderation (kick, ban, admin) — bundled with the panel",
     },
 }
 
@@ -209,7 +209,7 @@ def _recv_exact(sock: socket.socket, size: int) -> bytes:
     while remaining > 0:
         chunk = sock.recv(remaining)
         if not chunk:
-            raise RconError("Conexão RCON fechada inesperadamente")
+            raise RconError("RCON connection closed unexpectedly")
         chunks.append(chunk)
         remaining -= len(chunk)
     return b"".join(chunks)
@@ -219,7 +219,7 @@ def _recv_packet(sock: socket.socket) -> tuple[int, int, str]:
     raw_size = _recv_exact(sock, 4)
     size = struct.unpack("<i", raw_size)[0]
     if size < 10:
-        raise RconError("Pacote RCON inválido")
+        raise RconError("Invalid RCON packet")
     data = _recv_exact(sock, size)
     req_id, req_type = struct.unpack("<ii", data[:8])
     body = data[8:-2].decode("utf-8", errors="replace")
@@ -267,7 +267,7 @@ def _read_command_response(
         if resp_type == SERVERDATA_RESPONSE_VALUE and resp_id == cmd_id and not body:
             break
 
-    return "\n".join(parts).strip() or "(sem resposta)"
+    return "\n".join(parts).strip() or "(no response)"
 
 
 def rcon_command(
@@ -282,7 +282,7 @@ def rcon_command(
 ) -> str:
     command = command.strip()
     if not command:
-        raise RconError("Comando vazio")
+        raise RconError("Empty command")
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     authenticated = False
@@ -303,10 +303,10 @@ def rcon_command(
                 resp_type == SERVERDATA_EXECCOMMAND and body and resp_id != -1
             ):
                 if resp_id == -1:
-                    raise RconError("Autenticação RCON falhou — verifique a senha")
+                    raise RconError("RCON authentication failed — check the password")
                 authenticated = True
                 break
-            raise RconError("Autenticação RCON falhou — resposta inesperada do servidor")
+            raise RconError("RCON authentication failed — unexpected server response")
 
         cmd_id = 2
         sock.sendall(_pack_packet(cmd_id, SERVERDATA_EXECCOMMAND, command))
@@ -319,14 +319,14 @@ def rcon_command(
     except socket.timeout as e:
         if authenticated:
             raise RconError(
-                "Timeout aguardando resposta RCON — comandos como list podem demorar; "
-                "tente novamente ou aguarde o servidor terminar de processar"
+                "Timeout waiting for RCON response — commands like list can be slow; "
+                "try again or wait for the server to finish processing"
             ) from e
         raise RconError(
-            "Timeout ao conectar no RCON — o servidor está rodando com ValheimRcon?"
+            "Timeout connecting to RCON — is the server running with ValheimRcon?"
         ) from e
     except OSError as e:
-        raise RconError(f"Não foi possível conectar ao RCON ({host}:{port}): {e}") from e
+        raise RconError(f"Could not connect to RCON ({host}:{port}): {e}") from e
     finally:
         sock.close()
 
@@ -344,7 +344,7 @@ def execute_rcon(
 ) -> str:
     if not is_mod_enabled(plugins_dir, disabled_dir):
         raise RconError(
-            "ValheimRcon desativado — habilite o mod integrado para usar console e moderação"
+            "ValheimRcon disabled — enable the bundled mod to use console and moderation"
         )
     cfg = get_rcon_config(
         bepinex_cfg_dir=bepinex_cfg_dir,
@@ -352,7 +352,7 @@ def execute_rcon(
         read_env_fn=read_env_fn,
     )
     if not cfg:
-        raise RconError("RCON não configurado — defina a senha em config/bepinex/org.tristan.rcon.cfg")
+        raise RconError("RCON not configured — set the password in config/bepinex/org.tristan.rcon.cfg")
     slow_idle = float(os.environ.get("PANEL_RCON_IDLE_SLOW", "3"))
     idle = slow_idle if timeout >= float(os.environ.get("PANEL_RCON_TIMEOUT_SLOW", "90")) else idle_timeout
     return rcon_command(

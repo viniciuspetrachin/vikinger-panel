@@ -37,7 +37,7 @@ export const console = {
     const command = (this.consoleInput || "").trim();
     if (!command || this.consoleSending) return;
     if (!this.rconStatus.available) {
-      this.toast(this.consoleStatusHint() || "RCON indisponível", "error");
+      this.toast(this.consoleStatusHint() || "RCON unavailable", "error");
       return;
     }
     this.consoleInput = "";
@@ -115,17 +115,17 @@ export const console = {
   consoleStatusHint() {
     if (this.rconStatus.available) return "";
     if (!this.rconStatus.bepinex_enabled) {
-      return "Console RCON só funciona com BepInEx ativo — escolha Com mods na aba Servidor.";
+      return "RCON console only works with BepInEx active — choose Modded on the Server tab.";
     }
     if (!this.rconStatus.mod_enabled) {
-      return "Habilite o mod ValheimRcon na aba Mods e Configs para usar console e moderação.";
+      return "Enable the ValheimRcon mod on Mods & Config to use console and moderation.";
     }
     if (!this.rconStatus.configured) {
-      return "Aguardando configuração RCON — reinicie o painel ou o servidor Valheim.";
+      return "Waiting for RCON configuration — restart the panel or Valheim server.";
     }
     if (!this.rconStatus.container_running) {
-      return "Inicie o servidor para usar o console interativo.";
+      return "Start the server to use the interactive console.";
     }
-    return "RCON indisponível no momento.";
+    return "RCON unavailable at the moment.";
   },
 };

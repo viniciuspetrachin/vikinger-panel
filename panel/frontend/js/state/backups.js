@@ -17,16 +17,16 @@ export const backups = {
   backupDetailsLoading: false,
   hideCheckpoints: true,
   backupTypes: [
-    { id: "world", label: "Mundo ativo (rápido)", desc: "Apenas o mundo em uso (.fwl + .db)." },
-    { id: "full", label: "Completo", desc: "Mundos + configs BepInEx + mods + listas + .env." },
-    { id: "configs", label: "Somente configs", desc: "Configs BepInEx + listas de jogadores + .env." },
+    { id: "world", label: "Active world (quick)", desc: "Only the world in use (.fwl + .db)." },
+    { id: "full", label: "Full", desc: "Worlds + BepInEx configs + mods + lists + .env." },
+    { id: "configs", label: "Configs only", desc: "BepInEx configs + player lists + .env." },
   ],
   backupIntervalPresets: [
-    { id: "hourly", label: "A cada hora", cron: "0 * * * *" },
-    { id: "6h", label: "A cada 6 horas", cron: "0 */6 * * *" },
-    { id: "12h", label: "A cada 12 horas", cron: "0 */12 * * *" },
-    { id: "daily", label: "Diário (00:00)", cron: "0 0 * * *" },
-    { id: "custom", label: "Personalizado", cron: "" },
+    { id: "hourly", label: "Every hour", cron: "0 * * * *" },
+    { id: "6h", label: "Every 6 hours", cron: "0 */6 * * *" },
+    { id: "12h", label: "Every 12 hours", cron: "0 */12 * * *" },
+    { id: "daily", label: "Daily (00:00)", cron: "0 0 * * *" },
+    { id: "custom", label: "Custom", cron: "" },
   ],
 
   cronFromPreset() {
@@ -52,8 +52,8 @@ export const backups = {
 
   backupIdleLabel() {
     return this.backupConfig.BACKUPS_IF_IDLE === "false"
-      ? "Só com jogadores online"
-      : "Sim — mesmo sem jogadores";
+      ? "Only when players are online"
+      : "Yes — even with no players";
   },
 
   async loadBackups() {
@@ -80,7 +80,7 @@ export const backups = {
     return this.withBusy("saveBackupConfig", async () => {
       try {
         await this.api("PUT", "/api/backups/config", { values: this.backupConfigPayload(), restart: true });
-        this.toast("Configuração aplicada e container reiniciado!");
+        this.toast("Configuration applied and container restarted!");
         await this.loadBackups();
       } catch (e) { this.toast(e.message, "error"); }
     });
@@ -150,16 +150,16 @@ export const backups = {
     if (!contents) return "";
     if (contents.includes_mods_dlls) return "";
     if (this.backupDetails?.mods_count > 0) {
-      return "Este backup não inclui os arquivos (.dll) dos mods — a lista abaixo reflete o estado do servidor na hora do backup.";
+      return "This backup does not include mod files (.dll) — the list below reflects the server state at backup time.";
     }
-    return "Este backup contém apenas o mundo/configs — mods não foram incluídos. Use backup Manual — completo para snapshot com DLLs.";
+    return "This backup contains only world/configs — mods were not included. Use Manual backup — Full for a snapshot with DLLs.";
   },
 
   async createBackup(type) {
     return this.withBusy(`createBackup:${type}`, async () => {
       try {
         const data = await this.api("POST", "/api/backups/create", { type });
-        this.toast(`Backup criado: ${data.name}`);
+        this.toast(`Backup created: ${data.name}`);
         this.backupModalOpen = false;
         if (this.page === "backups") await this.loadBackups();
       } catch (e) { this.toast(e.message, "error"); }
@@ -170,7 +170,7 @@ export const backups = {
     return this.withBusy("triggerBackup", async () => {
       try {
         await this.api("POST", "/api/backups/trigger");
-        this.toast("Backup agendado executado — aguarde alguns segundos.");
+        this.toast("Scheduled backup triggered — wait a few seconds.");
         setTimeout(() => this.loadBackups(), 3000);
       } catch (e) { this.toast(e.message, "error"); }
     });
@@ -182,7 +182,7 @@ export const backups = {
     return this.withBusy(`restoreBackup:${name}`, async () => {
       try {
         await this.api("POST", `/api/backups/${encodeURIComponent(name)}/restore`);
-        this.toast(`Backup "${name}" restaurado — servidor reiniciando.`);
+        this.toast(`Backup "${name}" restored — server restarting.`);
         this.closeRestoreModal();
         await this.loadBackups();
         await this.refreshStatus();
@@ -191,11 +191,11 @@ export const backups = {
   },
 
   async restoreLatestBackup() {
-    if (!confirm("Restaurar o backup mais recente? O servidor será reiniciado.")) return;
+    if (!confirm("Restore the latest backup? The server will restart.")) return;
     return this.withBusy("restoreLatest", async () => {
       try {
         const data = await this.api("POST", "/api/backups/restore-latest");
-        this.toast(`Backup "${data.active}" restaurado — servidor reiniciando.`);
+        this.toast(`Backup "${data.active}" restored — server restarting.`);
         await this.loadBackups();
         await this.refreshStatus();
       } catch (e) { this.toast(e.message, "error"); }
@@ -203,11 +203,11 @@ export const backups = {
   },
 
   async restoreUndoBackup() {
-    if (!confirm("Desfazer a última restauração? O servidor voltará ao estado anterior.")) return;
+    if (!confirm("Undo the last restore? The server will return to the previous state.")) return;
     return this.withBusy("restoreUndo", async () => {
       try {
         const data = await this.api("POST", "/api/backups/restore-undo");
-        this.toast(`Restauração desfeita — "${data.active}" ativo.`);
+        this.toast(`Restore undone — "${data.active}" is active.`);
         await this.loadBackups();
         await this.refreshStatus();
       } catch (e) { this.toast(e.message, "error"); }
@@ -220,7 +220,7 @@ export const backups = {
     return this.withBusy(`deleteBackup:${name}`, async () => {
       try {
         await this.api("DELETE", `/api/backups/${encodeURIComponent(name)}`);
-        this.toast(`Backup "${name}" apagado`);
+        this.toast(`Backup "${name}" deleted`);
         this.closeDeleteBackupModal();
         await this.loadBackups();
       } catch (e) { this.toast(e.message, "error"); }

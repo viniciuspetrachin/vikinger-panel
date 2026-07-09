@@ -64,7 +64,7 @@ export const files = {
     void _expanded;
     void _selected;
     if (!items?.length) {
-      return depth === 0 ? '<p class="file-tree-empty">Pasta vazia</p>' : "";
+      return depth === 0 ? '<p class="file-tree-empty">Empty folder</p>' : "";
     }
     const cls = depth === 0 ? "file-tree" : "file-tree-children";
     let html = `<div class="${cls}">`;
@@ -98,7 +98,7 @@ export const files = {
       return (
         `<div class="file-tree-row file-tree-broken" style="--file-depth:${pad}px">` +
         `<span class="file-tree-chevron file-tree-chevron-spacer"></span>` +
-        `<span class="file-tree-name text-red-400">${name} (${this.escapeHtml(item.error || "inacessível")})</span>` +
+        `<span class="file-tree-name text-red-400">${name} (${this.escapeHtml(item.error || "inaccessible")})</span>` +
         `</div>`
       );
     }
@@ -221,7 +221,7 @@ export const files = {
         editor?.setContent(content, { markSaved: true });
         this.fileEditorDirty = false;
         this.fileEditorDraftPending = false;
-        this.toast("Arquivo salvo!");
+        this.toast("File saved!");
       } catch (e) {
         this.toast(e.message, "error");
       }
