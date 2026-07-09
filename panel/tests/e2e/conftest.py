@@ -1,5 +1,6 @@
 """Fixtures E2E: sobe um painel hermético (docker falso) ou usa PANEL_URL externo."""
 
+import json
 import os
 import socket
 import subprocess
@@ -102,12 +103,19 @@ def _seed_root(root: Path) -> None:
     (root / ".env").write_text("SERVER_NAME=TestPanel\nWORLD_NAME=TestWorld\nSERVER_PORT=2456\nSERVER_PUBLIC=true\n")
     (root / "docker-compose.yml").write_text(
         "services:\n  valheim:\n    image: test\n    container_name: valheim-server\n    stop_grace_period: 120s\n"
+        "    environment:\n      BEPINEX: \"true\"\n"
     )
     write_fwl(worlds / "TestWorld.fwl", "TestWorld", WorldConfig(), backup=False)
     (worlds / "TestWorld.db").write_text("db")
     (bepinex / "sample.mod.cfg").write_text("[General]\nEnabled = true\n")
     (config / "adminlist.txt").write_text("// admins\n76561198000000000\n")
     (bepinex / "org.tristan.rcon.cfg").write_text("[General]\nPort = 2458\nPassword = e2e-rcon-secret\n")
+    panel_data = root / "panel-data"
+    panel_data.mkdir(parents=True, exist_ok=True)
+    (panel_data / "setup.json").write_text(
+        json.dumps({"completed": True, "mode": "bepinex", "migrated": True}, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _wait_up(url: str, timeout: float = 30.0) -> None:
