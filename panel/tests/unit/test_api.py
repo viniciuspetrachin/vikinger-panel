@@ -178,14 +178,16 @@ def test_put_serverlist_invalid_kind(client):
 
 # ── Console RCON ─────────────────────────────────────────────────────────────
 
-def test_console_status_unavailable(client):
+def test_console_status_unavailable(client, monkeypatch):
+    monkeypatch.setattr(main, "container_running", lambda: False)
     r = client.get("/api/console/status")
     assert r.status_code == 200
     data = r.json()
     assert data["available"] is False
     assert data["plugin_installed"] is True
     assert data["mod_enabled"] is True
-    assert data["configured"] is False
+    assert data["configured"] is True
+    assert data["container_running"] is False
 
 
 def test_console_status_available(rcon_ready, client):
