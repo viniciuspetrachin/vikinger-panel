@@ -7,7 +7,7 @@ import subprocess
 from functools import lru_cache
 from pathlib import Path
 
-__version__ = "2.1.1"
+__version__ = "2.1.2"
 
 REPO_URL = "https://github.com/viniciuspetrachin/vikinger-panel"
 LICENSE = "Polyform Shield 1.0.0"
