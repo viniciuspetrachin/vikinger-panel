@@ -30,12 +30,17 @@ export const helpers = {
   },
 
   formatLogLine(line) {
-    const match = line.match(/^(\[[^\]]+\])\s+(\[[^\]]+\])\s+(.*)$/);
+    const legacy = line.match(/^(\[[^\]]+\])\s+(\[[^\]]+\])\s+(.*)$/);
+    if (legacy) {
+      const msgCls = this.logMessageClass(legacy[3]);
+      return `<span class="log-ts">${this.escapeHtml(legacy[1])}</span> `
+        + `<span class="log-msg ${msgCls}">${this.escapeHtml(legacy[3])}</span>`;
+    }
+    const match = line.match(/^(\[[^\]]+\])\s+(.*)$/);
     if (match) {
-      const msgCls = this.logMessageClass(match[3]);
+      const msgCls = this.logMessageClass(match[2]);
       return `<span class="log-ts">${this.escapeHtml(match[1])}</span> `
-        + `<span class="log-proc">${this.escapeHtml(match[2])}</span> `
-        + `<span class="log-msg ${msgCls}">${this.escapeHtml(match[3])}</span>`;
+        + `<span class="log-msg ${msgCls}">${this.escapeHtml(match[2])}</span>`;
     }
     const msgCls = this.logMessageClass(line);
     return `<span class="log-msg ${msgCls}">${this.escapeHtml(line)}</span>`;
@@ -66,6 +71,17 @@ export const helpers = {
     let i = 0;
     while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
     return (i ? v.toFixed(1) : Math.round(v)) + " " + units[i];
+  },
+
+  formatDate(iso) {
+    if (!iso) return "—";
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso;
+      return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    } catch {
+      return iso;
+    }
   },
 
   formatRate(bps) {

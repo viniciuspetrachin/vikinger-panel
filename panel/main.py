@@ -24,6 +24,19 @@ from pydantic import BaseModel
 
 from fwl_io import WorldConfig, WorldMeta, config_summary_from_meta, read_fwl, world_config_details, write_fwl
 from log_utils import clean_docker_logs
+from rcon_client import (
+    RconError,
+    STEAM_ID_RE,
+    BUNDLED_MODS,
+    RCON_PLUGIN_NAME,
+    ensure_bundled_mods,
+    ensure_rcon_config,
+    execute_rcon,
+    get_rcon_config,
+    is_mod_enabled,
+    is_plugin_installed,
+    is_protected_mod,
+)
 from version import __version__, version_info
 
 logger = logging.getLogger("vikinger-panel")
@@ -42,10 +55,12 @@ RUNTIME_PLUGINS_DIR = DATA_DIR / "bepinex" / "BepInEx" / "plugins"
 RUNTIME_PLUGINS_DISABLED_DIR = RUNTIME_PLUGINS_DIR / "disabled"
 FIX_PLUGINS_SCRIPT = ROOT / "scripts" / "fix-plugins-permissions.sh"
 BEPINEX_CFG_DIR = CONFIG_DIR / "bepinex"
+BUNDLED_MODS_DIR = PANEL_DIR / "bundled-mods"
 WORLDS_DIR = CONFIG_DIR / "worlds_local"
 WORLDS_PENDING_FILE = CONFIG_DIR / "worlds_pending.json"
 WORLDS_CONFIG_FILE = CONFIG_DIR / "worlds_config.json"
 BACKUPS_DIR = CONFIG_DIR / "backups"
+BACKUP_STATE_FILE = PANEL_DATA_DIR / "backup_state.json"
 ENV_FILE = ROOT / ".env"
 COMPOSE_FILE = ROOT / "docker-compose.yml"
 CONTAINER_NAME = "valheim-server"
@@ -79,6 +94,7 @@ _SIZE_UNIT = {
 
 LOGS_DIR = PANEL_DATA_DIR / "logs"
 MODS_REGISTRY_FILE = PANEL_DATA_DIR / "mods-registry.json"
+SETUP_FILE = PANEL_DATA_DIR / "setup.json"
 APP_MANIFEST_PATH = DATA_DIR / "dl" / "server" / "steamapps" / "appmanifest_896660.acf"
 AUDIT_FILE = LOGS_DIR / "audit.jsonl"
 AUDIT_MAX_BYTES = 5 * 1024 * 1024
@@ -107,6 +123,21 @@ def ensure_panel_data_dirs() -> None:
 @app.on_event("startup")
 def _on_startup() -> None:
     ensure_panel_data_dirs()
+    try:
+        copied = ensure_bundled_mods(
+            bundled_dir=BUNDLED_MODS_DIR,
+            plugins_dir=PLUGINS_DIR,
+            disabled_dir=PLUGINS_DISABLED_DIR,
+        )
+        if copied:
+            logger.info("Mods embarcados instalados/atualizados: %s", ", ".join(copied))
+            sync_plugins_to_runtime()
+    except OSError as e:
+        logger.warning("Não foi possível instalar mods embarcados: %s", e)
+    try:
+        maybe_ensure_rcon_password()
+    except OSError as e:
+        logger.warning("Não foi possível garantir senha RCON: %s", e)
 
 
 @app.exception_handler(Exception)
@@ -874,6 +905,127 @@ def write_bepinex_compose(enabled: bool) -> None:
     COMPOSE_FILE.write_text(text, encoding="utf-8")
 
 
+def _set_mod_enabled(name: str, enabled: bool) -> bool:
+    """Move mod entre plugins/ e plugins/disabled/. Retorna True se houve alteração."""
+    found = find_mod(name)
+    if not found:
+        return False
+    path, currently_enabled = found
+    if currently_enabled == enabled:
+        return False
+    dest_dir = PLUGINS_DIR if enabled else PLUGINS_DISABLED_DIR
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(path), str(dest_dir / name))
+    return True
+
+
+def _disable_all_mods() -> int:
+    """Desabilita todas as DLLs em plugins/."""
+    ensure_plugins_writable()
+    PLUGINS_DISABLED_DIR.mkdir(parents=True, exist_ok=True)
+    count = 0
+    if PLUGINS_DIR.exists():
+        for dll in list(PLUGINS_DIR.glob("*.dll")):
+            shutil.move(str(dll), str(PLUGINS_DISABLED_DIR / dll.name))
+            count += 1
+    return count
+
+
+def _enable_bundled_mods() -> list[str]:
+    """Habilita apenas mods embarcados (ValheimRcon)."""
+    ensure_plugins_writable()
+    PLUGINS_DISABLED_DIR.mkdir(parents=True, exist_ok=True)
+    enabled: list[str] = []
+    for dll_name in BUNDLED_MODS:
+        src = BUNDLED_MODS_DIR / dll_name
+        if not src.exists() and not find_mod(dll_name):
+            continue
+        if _set_mod_enabled(dll_name, True):
+            enabled.append(dll_name)
+        elif not find_mod(dll_name) and src.exists():
+            shutil.copy2(src, PLUGINS_DIR / dll_name)
+            enabled.append(dll_name)
+    return enabled
+
+
+def apply_server_mode(bepinex: bool) -> dict:
+    """Aplica modo vanilla (BepInEx off, todos mods disabled) ou modded (BepInEx on, bundled on)."""
+    if read_bepinex_compose() != bepinex:
+        write_bepinex_compose(bepinex)
+
+    rcon_result = {"created": False, "password": None}
+    if bepinex:
+        mods_enabled = _enable_bundled_mods()
+        mods_disabled = 0
+        env = read_env()
+        server_port = int(env.get("SERVER_PORT", "2456") or 2456)
+        rcon_result = ensure_rcon_config(cfg_dir=BEPINEX_CFG_DIR, server_port=server_port)
+    else:
+        mods_enabled = []
+        mods_disabled = _disable_all_mods()
+
+    sync_plugins_to_runtime()
+    return {
+        "bepinex": bepinex,
+        "mods_disabled": mods_disabled,
+        "mods_enabled": mods_enabled,
+        "rcon": rcon_result,
+    }
+
+
+def read_setup() -> dict:
+    if not SETUP_FILE.exists():
+        return {}
+    try:
+        return json.loads(SETUP_FILE.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+
+
+def write_setup(data: dict) -> None:
+    PANEL_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    SETUP_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _has_worlds() -> bool:
+    if not WORLDS_DIR.exists():
+        return False
+    return any(WORLDS_DIR.glob("*.fwl"))
+
+
+def migrate_setup_if_needed() -> dict:
+    """Marca setup como concluído em instalações existentes (mundos já criados)."""
+    setup = read_setup()
+    if setup.get("completed"):
+        return setup
+    if _has_worlds():
+        mode = "bepinex" if read_bepinex_compose() else "vanilla"
+        setup = {
+            "completed": True,
+            "mode": mode,
+            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "migrated": True,
+        }
+        write_setup(setup)
+        if mode == "bepinex":
+            maybe_ensure_rcon_password()
+    return setup
+
+
+def maybe_ensure_rcon_password() -> dict:
+    """Gera senha RCON automaticamente quando BepInEx e ValheimRcon estão ativos."""
+    if not read_bepinex_compose():
+        return {"created": False, "password": None}
+    if not is_mod_enabled(PLUGINS_DIR, PLUGINS_DISABLED_DIR):
+        return {"created": False, "password": None}
+    env = read_env()
+    server_port = int(env.get("SERVER_PORT", "2456") or 2456)
+    result = ensure_rcon_config(cfg_dir=BEPINEX_CFG_DIR, server_port=server_port)
+    if result.get("created"):
+        logger.info("Senha RCON gerada automaticamente em %s", BEPINEX_CFG_DIR / "org.tristan.rcon.cfg")
+    return result
+
+
 def read_game_version() -> dict:
     if not APP_MANIFEST_PATH.exists():
         return {"buildid": None, "last_updated": None}
@@ -1130,6 +1282,107 @@ def write_serverlist(kind: str, ids: list[str]) -> None:
     lines = [f"// List {kind} players ID  ONE per line"]
     lines.extend(i.strip() for i in ids if i.strip())
     path.write_text("\n".join(lines) + "\n")
+
+
+def mutate_serverlist(kind: str, steam_id: str, add: bool) -> list[str]:
+    """Adiciona ou remove um Steam ID de uma lista e persiste no disco."""
+    sid = steam_id.strip()
+    lists = list_serverlists()
+    ids = list(lists.get(kind, []))
+    if add:
+        if sid not in ids:
+            ids.append(sid)
+    else:
+        ids = [i for i in ids if i != sid]
+    write_serverlist(kind, ids)
+    return ids
+
+
+def _rcon_settings() -> Optional[dict]:
+    return get_rcon_config(
+        bepinex_cfg_dir=BEPINEX_CFG_DIR,
+        env_file=ENV_FILE,
+        read_env_fn=read_env,
+    )
+
+
+def _require_rcon() -> dict:
+    if not container_running():
+        raise HTTPException(503, "Container do Valheim não está rodando")
+    if not is_plugin_installed(PLUGINS_DIR, PLUGINS_DISABLED_DIR):
+        raise HTTPException(
+            503,
+            "ValheimRcon não encontrado — reinicie o painel para reinstalar o mod integrado",
+        )
+    if not is_mod_enabled(PLUGINS_DIR, PLUGINS_DISABLED_DIR):
+        raise HTTPException(
+            503,
+            "ValheimRcon está desativado — habilite o mod integrado na aba Mods e Configs",
+        )
+    cfg = _rcon_settings()
+    if not cfg:
+        raise HTTPException(
+            503,
+            "RCON não configurado — defina a senha em config/bepinex/org.tristan.rcon.cfg",
+        )
+    return cfg
+
+
+_SLOW_RCON_COMMANDS = frozenset({
+    "list",
+    "globalkeys",
+    "players",
+    "banlist",
+    "adminlist",
+    "permitted",
+    "findobjects",
+    "findobjectsnear",
+    "findplayer",
+    "serverstats",
+    "logs",
+})
+
+
+def _rcon_timeout_for(command: str) -> float:
+    default = float(os.environ.get("PANEL_RCON_TIMEOUT", "15"))
+    slow = float(os.environ.get("PANEL_RCON_TIMEOUT_SLOW", "90"))
+    token = command.strip().split(maxsplit=1)[0].lower() if command.strip() else ""
+    if token in _SLOW_RCON_COMMANDS:
+        return slow
+    return default
+
+
+def _run_rcon(command: str) -> str:
+    if os.environ.get("VIKINGER_TEST_RCON"):
+        return f"ok: {command.strip()}"
+    try:
+        return execute_rcon(
+            command,
+            plugins_dir=PLUGINS_DIR,
+            disabled_dir=PLUGINS_DISABLED_DIR,
+            bepinex_cfg_dir=BEPINEX_CFG_DIR,
+            env_file=ENV_FILE,
+            read_env_fn=read_env,
+            timeout=_rcon_timeout_for(command),
+        )
+    except RconError as e:
+        raise HTTPException(503, str(e)) from e
+
+
+_PLAYER_RCON_ACTIONS = {
+    "kick": lambda sid: f"kick {sid}",
+    "ban": lambda sid: f"banSteamId {sid}",
+    "unban": lambda sid: f"unban {sid}",
+    "promote": lambda sid: f"addAdmin {sid}",
+    "demote": lambda sid: f"removeAdmin {sid}",
+}
+
+_PLAYER_LIST_SYNC = {
+    "ban": ("banned", True),
+    "unban": ("banned", False),
+    "promote": ("admin", True),
+    "demote": ("admin", False),
+}
 
 
 def file_tree(base: Path, prefix: str = "") -> list[dict]:
@@ -1458,30 +1711,508 @@ def dir_size(path: Path) -> int:
     return total
 
 
+BACKUP_KIND_LABELS = {
+    "auto": "Automático",
+    "manual-world": "Manual — mundo",
+    "manual-full": "Manual — completo",
+    "manual-configs": "Manual — configs",
+    "checkpoint": "Checkpoint",
+    "unknown": "Desconhecido",
+}
+
+BACKUP_LIST_NAMES = ("adminlist.txt", "bannedlist.txt", "permittedlist.txt")
+BACKUP_MANIFEST_FILENAME = "vikinger-manifest.json"
+BACKUP_METADATA_ARCNAMES = frozenset({BACKUP_MANIFEST_FILENAME})
+
+
+def read_backup_state() -> dict:
+    empty = {"active": None, "restored_at": None, "undo": None, "undo_of": None}
+    if not BACKUP_STATE_FILE.exists():
+        return empty
+    try:
+        data = json.loads(BACKUP_STATE_FILE.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            return empty
+        return {
+            "active": data.get("active"),
+            "restored_at": data.get("restored_at"),
+            "undo": data.get("undo"),
+            "undo_of": data.get("undo_of"),
+        }
+    except (OSError, json.JSONDecodeError):
+        return empty
+
+
+def write_backup_state(*, active: str | None, undo: str | None = None, undo_of: str | None = None) -> None:
+    state = {
+        "active": active,
+        "restored_at": datetime.now(timezone.utc).isoformat() if active else None,
+        "undo": undo,
+        "undo_of": undo_of,
+    }
+    try:
+        PANEL_DATA_DIR.mkdir(parents=True, exist_ok=True)
+        BACKUP_STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    except OSError as e:
+        logger.warning("Falha ao gravar backup_state.json: %s", e)
+
+
+def classify_backup(name: str) -> str:
+    if not name.endswith(".zip"):
+        return "unknown"
+    if name.startswith("checkpoint-"):
+        return "checkpoint"
+    if name.startswith("manual-world-"):
+        return "manual-world"
+    if name.startswith("manual-full-"):
+        return "manual-full"
+    if name.startswith("manual-configs-"):
+        return "manual-configs"
+    if name.startswith("worlds-"):
+        return "auto"
+    return "unknown"
+
+
+def validate_backup_name(name: str) -> Path:
+    if ".." in name or "/" in name or "\\" in name:
+        raise HTTPException(400, "Nome inválido")
+    target = BACKUPS_DIR / name
+    if not target.is_file() or not str(target.resolve()).startswith(str(BACKUPS_DIR.resolve())):
+        raise HTTPException(404, "Backup não encontrado")
+    return target
+
+
+def _is_backup_metadata_arcname(arcname: str) -> bool:
+    arc = arcname.replace("\\", "/").lstrip("/")
+    return arc in BACKUP_METADATA_ARCNAMES
+
+
+def backup_sidecar_path(zip_name: str) -> Path:
+    return BACKUPS_DIR / f"{zip_name}.manifest.json"
+
+
+def read_backup_sidecar(zip_name: str) -> dict | None:
+    path = backup_sidecar_path(zip_name)
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else None
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def write_backup_sidecar(zip_name: str, manifest: dict) -> None:
+    BACKUPS_DIR.mkdir(parents=True, exist_ok=True)
+    backup_sidecar_path(zip_name).write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def read_manifest_from_zip(zip_path: Path) -> dict | None:
+    try:
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            if BACKUP_MANIFEST_FILENAME not in zf.namelist():
+                return None
+            raw = zf.read(BACKUP_MANIFEST_FILENAME).decode("utf-8")
+            data = json.loads(raw)
+            return data if isinstance(data, dict) else None
+    except (OSError, zipfile.BadZipFile, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+
+
+def _zip_arcnames(zip_path: Path) -> list[str]:
+    try:
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            return [
+                info.filename
+                for info in zf.infolist()
+                if not info.is_dir() and not _is_backup_metadata_arcname(info.filename)
+            ]
+    except (OSError, zipfile.BadZipFile):
+        return []
+
+
+def _manifest_contents_from_arcs(arcnames: list[str], backup_kind: str) -> dict:
+    world_files: list[str] = []
+    has_env = False
+    has_adminlist = False
+    has_bannedlist = False
+    has_permittedlist = False
+    dll_count = 0
+    for arc in arcnames:
+        norm = arc.replace("\\", "/")
+        base = norm.split("/")[-1]
+        if base.endswith((".fwl", ".db")):
+            world_files.append(base)
+        if norm == ".env" or base == ".env":
+            has_env = True
+        if base == "adminlist.txt":
+            has_adminlist = True
+        if base == "bannedlist.txt":
+            has_bannedlist = True
+        if base == "permittedlist.txt":
+            has_permittedlist = True
+        lower = norm.lower()
+        if lower.endswith(".dll") and "/plugins/" in lower:
+            dll_count += 1
+    includes_mods_dlls = backup_kind == "manual-full" or dll_count > 0
+    includes_worlds = backup_kind in ("auto", "manual-world", "manual-full", "checkpoint") or bool(world_files)
+    includes_env = backup_kind in ("manual-full", "manual-configs") or has_env
+    return {
+        "includes_mods_dlls": includes_mods_dlls,
+        "includes_worlds": includes_worlds,
+        "includes_env": includes_env,
+        "has_adminlist": has_adminlist,
+        "has_bannedlist": has_bannedlist,
+        "has_permittedlist": has_permittedlist,
+        "world_files": sorted(set(world_files)),
+        "file_count": len(arcnames),
+    }
+
+
+def build_backup_manifest(backup_kind: str, zip_names: list[str] | None = None) -> dict:
+    env = read_env()
+    world_name = env.get("WORLD_NAME", "").strip() or None
+    game = read_game_version()
+    mods_data = list_mods_enriched()
+    mod_items = []
+    for mod in mods_data:
+        version = mod.get("installed_version") or mod.get("bundled_version")
+        mod_items.append({
+            "name": mod["name"],
+            "enabled": mod.get("enabled", True),
+            "package_id": mod.get("package_id"),
+            "version": version,
+            "bundled": mod.get("bundled", False),
+        })
+    enabled = sum(1 for mod in mod_items if mod["enabled"])
+    arcnames = zip_names or []
+    contents = _manifest_contents_from_arcs(arcnames, backup_kind)
+    return {
+        "schema_version": 1,
+        "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "backup_kind": backup_kind,
+        "world_name": world_name,
+        "game": game,
+        "mods": {
+            "total": len(mod_items),
+            "enabled": enabled,
+            "disabled": len(mod_items) - enabled,
+            "items": mod_items,
+        },
+        "contents": contents,
+        "mods_registry_snapshot": read_mods_registry(),
+        "inferred": False,
+    }
+
+
+def infer_backup_manifest_from_zip(zip_path: Path, backup_kind: str) -> dict:
+    arcnames = _zip_arcnames(zip_path)
+    mod_items = []
+    for arc in arcnames:
+        norm = arc.replace("\\", "/")
+        lower = norm.lower()
+        if not lower.endswith(".dll") or "/plugins/" not in lower:
+            continue
+        enabled = "/plugins/disabled/" not in lower
+        mod_items.append({
+            "name": Path(norm).name,
+            "enabled": enabled,
+            "package_id": None,
+            "version": None,
+            "bundled": False,
+        })
+    mod_items.sort(key=lambda item: item["name"].lower())
+    enabled = sum(1 for mod in mod_items if mod["enabled"])
+    contents = _manifest_contents_from_arcs(arcnames, backup_kind)
+    return {
+        "schema_version": 1,
+        "created_at": datetime.fromtimestamp(zip_path.stat().st_mtime, tz=timezone.utc)
+        .isoformat()
+        .replace("+00:00", "Z"),
+        "backup_kind": backup_kind,
+        "world_name": None,
+        "game": {"buildid": None, "last_updated": None},
+        "mods": {
+            "total": len(mod_items),
+            "enabled": enabled,
+            "disabled": len(mod_items) - enabled,
+            "items": mod_items,
+        },
+        "contents": contents,
+        "mods_registry_snapshot": {"packages": []},
+        "inferred": True,
+    }
+
+
+def summary_fields_from_manifest(manifest: dict) -> dict:
+    mods = manifest.get("mods") or {}
+    contents = manifest.get("contents") or {}
+    game = manifest.get("game") or {}
+    return {
+        "mods_count": mods.get("total"),
+        "mods_enabled_count": mods.get("enabled"),
+        "world_name": manifest.get("world_name"),
+        "game_buildid": game.get("buildid"),
+        "has_manifest": not manifest.get("inferred", False),
+        "manifest_inferred": bool(manifest.get("inferred", False)),
+        "includes_mods_dlls": bool(contents.get("includes_mods_dlls")),
+    }
+
+
+def ensure_backup_manifest(zip_path: Path, backup_kind: str) -> dict:
+    name = zip_path.name
+    sidecar = read_backup_sidecar(name)
+    if sidecar:
+        return sidecar
+    embedded = read_manifest_from_zip(zip_path)
+    if embedded:
+        write_backup_sidecar(name, embedded)
+        return embedded
+    if backup_kind == "manual-full":
+        manifest = infer_backup_manifest_from_zip(zip_path, backup_kind)
+    else:
+        manifest = build_backup_manifest(backup_kind, _zip_arcnames(zip_path))
+        manifest["inferred"] = True
+    write_backup_sidecar(name, manifest)
+    return manifest
+
+
+def attach_backup_manifest(zip_path: Path, backup_kind: str) -> dict:
+    manifest = build_backup_manifest(backup_kind, _zip_arcnames(zip_path))
+    try:
+        with zipfile.ZipFile(zip_path, "a", zipfile.ZIP_DEFLATED) as zf:
+            if BACKUP_MANIFEST_FILENAME not in zf.namelist():
+                zf.writestr(
+                    BACKUP_MANIFEST_FILENAME,
+                    json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+                )
+    except (OSError, zipfile.BadZipFile) as e:
+        logger.warning("Falha ao embutir manifest em %s: %s", zip_path.name, e)
+    write_backup_sidecar(zip_path.name, manifest)
+    return manifest
+
+
+def get_backup_details(name: str) -> dict:
+    target = validate_backup_name(name)
+    kind = classify_backup(name)
+    manifest = ensure_backup_manifest(target, kind)
+    stat = target.stat()
+    return {
+        "name": name,
+        "kind": kind,
+        "label": BACKUP_KIND_LABELS.get(kind, kind),
+        "size": stat.st_size,
+        "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+        "modified_display": datetime.fromtimestamp(stat.st_mtime).strftime("%d/%m/%Y %H:%M"),
+        "files": _zip_arcnames(target),
+        "manifest": manifest,
+        **summary_fields_from_manifest(manifest),
+    }
+
+
+def finalize_recent_auto_backup_manifests(before_mtime: float) -> list[str]:
+    """Após trigger automático, grava manifest nos ZIPs novos sem sidecar."""
+    if not BACKUPS_DIR.exists():
+        return []
+    finalized = []
+    for path in BACKUPS_DIR.iterdir():
+        if not path.is_file() or not path.name.endswith(".zip"):
+            continue
+        if classify_backup(path.name) != "auto":
+            continue
+        if read_backup_sidecar(path.name):
+            continue
+        try:
+            if path.stat().st_mtime <= before_mtime:
+                continue
+        except OSError:
+            continue
+        attach_backup_manifest(path, "auto")
+        finalized.append(path.name)
+    return finalized
+
+
+def _resolve_backup_entry(arcname: str) -> tuple[Path, str]:
+    arc = arcname.replace("\\", "/").lstrip("/")
+    if not arc or ".." in arc.split("/"):
+        raise ValueError(f"Caminho inválido: {arcname}")
+    if _is_backup_metadata_arcname(arc):
+        raise ValueError(f"Entrada não permitida: {arcname}")
+    parts = arc.split("/")
+    if len(parts) == 1:
+        if parts[0] in BACKUP_LIST_NAMES:
+            return CONFIG_DIR, parts[0]
+        if parts[0] == ".env":
+            return ENV_FILE.parent, ".env"
+        raise ValueError(f"Entrada não permitida: {arcname}")
+    root, rest = parts[0], "/".join(parts[1:])
+    if not rest:
+        raise ValueError(f"Entrada não permitida: {arcname}")
+    if root in ("worlds", "worlds_local"):
+        return WORLDS_DIR, rest
+    if root == "bepinex":
+        return BEPINEX_CFG_DIR, rest
+    if root == "panel-data":
+        return PANEL_DATA_DIR, rest
+    raise ValueError(f"Entrada não permitida: {arcname}")
+
+
+def inspect_backup_zip(zip_path: Path) -> list[str]:
+    """Valida entradas do ZIP. Retorna lista de nomes de arquivos restauráveis."""
+    names: list[str] = []
+    try:
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            for info in zf.infolist():
+                if info.is_dir() or _is_backup_metadata_arcname(info.filename):
+                    continue
+                _resolve_backup_entry(info.filename)
+                names.append(info.filename)
+    except zipfile.BadZipFile as e:
+        raise HTTPException(400, "Arquivo ZIP inválido") from e
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    if not names:
+        raise HTTPException(400, "Backup vazio ou sem arquivos restauráveis")
+    return names
+
+
+def extract_backup_zip(zip_path: Path) -> bool:
+    """Extrai backup. Retorna True se .env foi restaurado."""
+    env_restored = False
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        for info in zf.infolist():
+            if info.is_dir() or _is_backup_metadata_arcname(info.filename):
+                continue
+            dest_dir, rel = _resolve_backup_entry(info.filename)
+            if rel == ".env":
+                env_restored = True
+            dest = dest_dir / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            with zf.open(info) as src, open(dest, "wb") as dst:
+                shutil.copyfileobj(src, dst)
+    return env_restored
+
+
+def create_restore_checkpoint() -> str | None:
+    """Cria checkpoint do estado atual antes de um restore."""
+    try:
+        entries = backup_entries("world")
+    except HTTPException:
+        if WORLDS_DIR.exists() and any(WORLDS_DIR.iterdir()):
+            entries = [(WORLDS_DIR, "worlds_local")]
+        else:
+            return None
+    ts = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+    name = f"checkpoint-{ts}.zip"
+    out = BACKUPS_DIR / name
+    count = zip_paths(entries, out)
+    if count == 0:
+        try:
+            out.unlink()
+        except OSError:
+            pass
+        return None
+    attach_backup_manifest(out, "checkpoint")
+    return name
+
+
+def restore_backup(name: str) -> dict:
+    target = validate_backup_name(name)
+    inspect_backup_zip(target)
+
+    checkpoint = create_restore_checkpoint()
+    prev_state = read_backup_state()
+
+    stop_valheim_container()
+    try:
+        env_restored = extract_backup_zip(target)
+    except Exception:
+        if container_exists():
+            restart_valheim_container()
+        raise
+
+    write_backup_state(active=name, undo=checkpoint, undo_of=prev_state.get("active"))
+
+    if env_restored:
+        r = recreate_container()
+    else:
+        r = restart_valheim_container()
+    if r.returncode != 0:
+        raise HTTPException(500, r.stderr or r.stdout or "Erro ao reiniciar container")
+
+    return {"ok": True, "active": name, "undo": checkpoint, "restarted": True}
+
+
+def latest_restorable_backup() -> str | None:
+    if not BACKUPS_DIR.exists():
+        return None
+    candidates: list[tuple[float, str]] = []
+    for b in BACKUPS_DIR.iterdir():
+        if not b.is_file() or not b.name.endswith(".zip"):
+            continue
+        if classify_backup(b.name) == "checkpoint":
+            continue
+        try:
+            candidates.append((b.stat().st_mtime, b.name))
+        except OSError:
+            continue
+    if not candidates:
+        return None
+    candidates.sort(reverse=True)
+    return candidates[0][1]
+
+
 def list_backups() -> list[dict]:
     items = []
     if not BACKUPS_DIR.exists():
         return items
     now = time.time()
-    for b in sorted(BACKUPS_DIR.iterdir(), reverse=True):
+    state = read_backup_state()
+    active = state.get("active")
+    for b in BACKUPS_DIR.iterdir():
         try:
-            if b.is_file():
-                stat = b.stat()
-                size = stat.st_size
-            elif b.is_dir():
-                stat = b.stat()
-                size = dir_size(b)
-            else:
+            if not b.is_file() or not b.name.endswith(".zip"):
                 continue
+            stat = b.stat()
+            size = stat.st_size
+            kind = classify_backup(b.name)
             age_days = round((now - stat.st_mtime) / 86400, 1)
-            items.append({
+            item = {
                 "name": b.name,
                 "size": size,
                 "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "modified_display": datetime.fromtimestamp(stat.st_mtime).strftime("%d/%m/%Y %H:%M"),
                 "age_days": age_days,
-            })
+                "kind": kind,
+                "label": BACKUP_KIND_LABELS.get(kind, kind),
+                "is_checkpoint": kind == "checkpoint",
+                "is_active": False,
+                "is_latest": False,
+            }
+            try:
+                item.update(summary_fields_from_manifest(ensure_backup_manifest(b, kind)))
+            except (OSError, zipfile.BadZipFile):
+                item.update({
+                    "mods_count": None,
+                    "mods_enabled_count": None,
+                    "world_name": None,
+                    "game_buildid": None,
+                    "has_manifest": False,
+                    "manifest_inferred": False,
+                    "includes_mods_dlls": False,
+                })
+            items.append(item)
         except OSError:
             continue
+    items.sort(key=lambda x: x["modified"], reverse=True)
+    restorable = [i for i in items if not i["is_checkpoint"]]
+    latest_name = restorable[0]["name"] if restorable else None
+    for item in items:
+        item["is_active"] = item["name"] == active
+        item["is_latest"] = item["name"] == latest_name
     return items
 
 
@@ -1500,6 +2231,9 @@ def purge_old_backups(max_age_days: int | None = None) -> list[str]:
                 shutil.rmtree(b)
             else:
                 b.unlink()
+            sidecar = backup_sidecar_path(b.name)
+            if sidecar.is_file():
+                sidecar.unlink()
             deleted.append(b.name)
         except OSError as e:
             logger.warning("Falha ao apagar backup %s: %s", b.name, e)
@@ -1563,6 +2297,8 @@ def backup_entries(backup_type: str) -> list[tuple[Path, str]]:
             entries.append((WORLDS_DIR, "worlds_local"))
         if BEPINEX_CFG_DIR.exists():
             entries.append((BEPINEX_CFG_DIR, "bepinex"))
+        if MODS_REGISTRY_FILE.exists():
+            entries.append((MODS_REGISTRY_FILE, "panel-data/mods-registry.json"))
         entries.extend(serverlists)
         entries.extend(env_entry)
         return entries
@@ -1593,6 +2329,7 @@ def create_manual_backup(backup_type: str) -> str:
         except OSError:
             pass
         raise HTTPException(400, "Nada para incluir no backup")
+    attach_backup_manifest(out, f"manual-{backup_type}")
     return name
 
 
@@ -2012,12 +2749,19 @@ def _mod_cfg_for_dll(dll_stem: str, cfg_map: dict[str, str]) -> Optional[str]:
 
 def _collect_mod_entry(dll: Path, enabled: bool, cfg_map: dict[str, str]) -> dict:
     stat = dll.stat()
+    bundled = is_protected_mod(dll.name)
+    meta = BUNDLED_MODS.get(dll.name, {})
     return {
         "name": dll.name,
         "enabled": enabled,
         "size": stat.st_size,
         "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
         "config": _mod_cfg_for_dll(dll.stem, cfg_map),
+        "bundled": bundled,
+        "protected": bundled,
+        "label": meta.get("label"),
+        "bundled_version": meta.get("version"),
+        "description": meta.get("description"),
     }
 
 
@@ -2181,6 +2925,14 @@ class ServerListUpdate(BaseModel):
     ids: list[str]
 
 
+class ConsoleCommand(BaseModel):
+    command: str
+
+
+class PlayerActionBody(BaseModel):
+    action: str
+
+
 class FileContent(BaseModel):
     content: str
 
@@ -2218,6 +2970,13 @@ class UpdateConfigUpdate(BaseModel):
     values: dict[str, str] = {}
     bepinex: Optional[bool] = None
     restart: bool = False
+
+
+class SetupComplete(BaseModel):
+    mode: str
+    admin_steam_id: Optional[str] = None
+    world_name: Optional[str] = None
+    activate_world: bool = False
 
 
 class ModLink(BaseModel):
@@ -2449,6 +3208,62 @@ def api_logs(lines: int = Query(150, ge=10, le=2000), source: str = "docker"):
     return {"logs": get_logs(lines)}
 
 
+# ── Console RCON ─────────────────────────────────────────────────────────────
+
+@app.get("/api/console/status")
+def api_console_status():
+    maybe_ensure_rcon_password()
+    plugin_installed = is_plugin_installed(PLUGINS_DIR, PLUGINS_DISABLED_DIR)
+    mod_enabled = is_mod_enabled(PLUGINS_DIR, PLUGINS_DISABLED_DIR)
+    bepinex = read_bepinex_compose()
+    cfg = _rcon_settings()
+    configured = cfg is not None and mod_enabled
+    running = container_running()
+    return {
+        "available": plugin_installed and mod_enabled and configured and running,
+        "plugin_installed": plugin_installed,
+        "mod_enabled": mod_enabled,
+        "configured": configured,
+        "bepinex_enabled": bepinex,
+        "container_running": running,
+        "host": cfg["host"] if cfg else None,
+        "port": cfg["port"] if cfg else None,
+    }
+
+
+@app.post("/api/console/command")
+def api_console_command(body: ConsoleCommand):
+    command = body.command.strip()
+    if not command:
+        raise HTTPException(400, "Comando vazio")
+    _require_rcon()
+    output = _run_rcon(command)
+    return {"ok": True, "command": command, "output": output}
+
+
+@app.post("/api/players/{steam_id}/action")
+def api_player_action(steam_id: str, body: PlayerActionBody):
+    sid = steam_id.strip()
+    if not STEAM_ID_RE.match(sid):
+        raise HTTPException(400, "Steam ID inválido (esperado 17 dígitos)")
+
+    action = body.action.strip().lower()
+    if action not in _PLAYER_RCON_ACTIONS:
+        raise HTTPException(400, f"Ação inválida: {action}")
+
+    _require_rcon()
+    rcon_cmd = _PLAYER_RCON_ACTIONS[action](sid)
+    output = _run_rcon(rcon_cmd)
+
+    synced: Optional[dict] = None
+    if action in _PLAYER_LIST_SYNC:
+        kind, add = _PLAYER_LIST_SYNC[action]
+        ids = mutate_serverlist(kind, sid, add)
+        synced = {"kind": kind, "ids": ids}
+
+    return {"ok": True, "action": action, "steam_id": sid, "output": output, "synced": synced}
+
+
 # ── Config / Env ─────────────────────────────────────────────────────────────
 
 @app.get("/api/config/env")
@@ -2569,6 +3384,8 @@ async def api_install_mod_url(body: ModUrlInstall):
 def api_delete_mod(name: str):
     if ".." in name or "/" in name:
         raise HTTPException(400, "Nome inválido")
+    if is_protected_mod(name):
+        raise HTTPException(403, "Este mod é integrado ao painel e não pode ser removido")
     found = find_mod(name)
     if not found:
         raise HTTPException(404, "Mod não encontrado")
@@ -2973,10 +3790,11 @@ def api_get_updates_config():
 @app.put("/api/updates/config")
 def api_put_updates_config(body: UpdateConfigUpdate):
     bepinex_changed = False
+    mode_result = None
     if body.bepinex is not None:
         current = read_bepinex_compose()
         if current != body.bepinex:
-            write_bepinex_compose(body.bepinex)
+            mode_result = apply_server_mode(body.bepinex)
             bepinex_changed = True
 
     if body.values:
@@ -2988,12 +3806,15 @@ def api_put_updates_config(body: UpdateConfigUpdate):
         if r.returncode != 0:
             raise HTTPException(500, r.stderr or r.stdout or "Erro ao recriar container")
 
-    return {
+    response = {
         "ok": True,
         "values": update_config(),
         "bepinex": read_bepinex_compose(),
         "recreated": body.restart or bepinex_changed,
     }
+    if mode_result:
+        response["mode_result"] = mode_result
+    return response
 
 
 @app.get("/api/updates/status")
@@ -3019,12 +3840,84 @@ def api_updates_check():
     return {"ok": True, "message": "Verificação de atualização solicitada", "output": output}
 
 
+# ── Setup (primeiro acesso) ───────────────────────────────────────────────────
+
+@app.get("/api/setup/status")
+def api_setup_status():
+    setup = migrate_setup_if_needed()
+    needs_wizard = not setup.get("completed") and not _has_worlds()
+    return {
+        "completed": bool(setup.get("completed")),
+        "mode": setup.get("mode"),
+        "needs_wizard": needs_wizard,
+    }
+
+
+@app.post("/api/setup/complete")
+def api_setup_complete(body: SetupComplete):
+    if body.mode not in ("vanilla", "bepinex"):
+        raise HTTPException(400, "Modo inválido — use 'vanilla' ou 'bepinex'")
+
+    bepinex = body.mode == "bepinex"
+    mode_result = apply_server_mode(bepinex)
+
+    admin_configured = False
+    if not bepinex and body.admin_steam_id:
+        sid = body.admin_steam_id.strip()
+        if not STEAM_ID_RE.match(sid):
+            raise HTTPException(400, "Steam ID inválido (17 dígitos)")
+        write_serverlist("admin", [sid])
+        admin_configured = True
+
+    world_name = None
+    world_activated = False
+    if body.world_name and body.world_name.strip():
+        world_name = validate_world_name(body.world_name.strip())
+        fwl = WORLDS_DIR / f"{world_name}.fwl"
+        if fwl.exists():
+            raise HTTPException(409, "Mundo já existe")
+        WORLDS_DIR.mkdir(parents=True, exist_ok=True)
+        write_world_fwl(fwl, world_name, WorldConfig(), backup=False)
+        if body.activate_world:
+            write_env({"WORLD_NAME": world_name})
+            remove_pending_world(world_name)
+            world_activated = True
+        else:
+            add_pending_world(world_name)
+
+    write_setup({
+        "completed": True,
+        "mode": body.mode,
+        "completed_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+    r = recreate_container()
+    if r.returncode != 0:
+        raise HTTPException(500, r.stderr or r.stdout or "Erro ao recriar container")
+
+    rcon_password = None
+    if mode_result.get("rcon", {}).get("created"):
+        rcon_password = mode_result["rcon"].get("password")
+
+    return {
+        "ok": True,
+        "mode": body.mode,
+        "bepinex": bepinex,
+        "admin_configured": admin_configured,
+        "world_name": world_name,
+        "world_activated": world_activated,
+        "rcon_password": rcon_password,
+        "mode_result": mode_result,
+        "recreated": True,
+    }
+
+
 # ── Backups ──────────────────────────────────────────────────────────────────
 
 @app.get("/api/backups")
 def api_list_backups():
     purge_old_backups()
-    return {"backups": list_backups(), "config": backup_config()}
+    return {"backups": list_backups(), "config": backup_config(), "state": read_backup_state()}
 
 
 @app.get("/api/backups/config")
@@ -3044,23 +3937,61 @@ def api_put_backup_config(body: BackupConfigUpdate):
             raise HTTPException(400, "BACKUPS_MAX_AGE deve ser um número >= 1") from e
     write_env(allowed)
     purge_old_backups()
-    if body.restart and container_running():
+    if container_exists():
         r = restart_valheim_container()
         if r.returncode != 0:
             raise HTTPException(500, r.stderr or r.stdout or "Erro ao reiniciar container")
-    return {"ok": True, "values": backup_config(), "purged": True}
+    return {"ok": True, "values": backup_config(), "purged": True, "restarted": container_exists()}
 
 
 @app.post("/api/backups/trigger")
 def api_trigger_backup():
+    before_mtime = time.time()
     output = trigger_backup()
-    return {"ok": True, "message": "Backup solicitado", "output": output}
+    time.sleep(3)
+    manifested = finalize_recent_auto_backup_manifests(before_mtime)
+    return {
+        "ok": True,
+        "message": "Backup solicitado",
+        "output": output,
+        "manifested": manifested,
+    }
 
 
 @app.post("/api/backups/create")
 def api_create_backup(body: BackupCreate):
     name = create_manual_backup(body.type)
     return {"ok": True, "name": name, "type": body.type}
+
+
+@app.post("/api/backups/restore-latest")
+def api_restore_latest_backup():
+    name = latest_restorable_backup()
+    if not name:
+        raise HTTPException(404, "Nenhum backup restaurável encontrado")
+    result = restore_backup(name)
+    return result
+
+
+@app.post("/api/backups/restore-undo")
+def api_restore_undo_backup():
+    state = read_backup_state()
+    undo = state.get("undo")
+    if not undo:
+        raise HTTPException(404, "Nenhum checkpoint de desfazer disponível")
+    result = restore_backup(undo)
+    return result
+
+
+@app.post("/api/backups/{name}/restore")
+def api_restore_backup(name: str):
+    result = restore_backup(name)
+    return result
+
+
+@app.get("/api/backups/{name}/details")
+def api_backup_details(name: str):
+    return get_backup_details(name)
 
 
 @app.delete("/api/backups/{name}")
@@ -3075,6 +4006,9 @@ def api_delete_backup(name: str):
             shutil.rmtree(target)
         else:
             target.unlink()
+        sidecar = backup_sidecar_path(name)
+        if sidecar.is_file():
+            sidecar.unlink()
     except OSError as e:
         raise HTTPException(500, f"Falha ao apagar: {e}") from e
     return {"ok": True, "deleted": name}

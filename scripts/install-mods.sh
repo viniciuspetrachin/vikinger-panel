@@ -8,6 +8,7 @@ TMP_DIR="${ROOT_DIR}/.mod-cache"
 mkdir -p "${PLUGINS_DIR}" "${TMP_DIR}"
 
 declare -A MODS=(
+  ["ValheimRcon"]="https://thunderstore.io/package/download/Tristan/ValheimRcon/1.5.1/"
   ["BetterArchery"]="https://gcdn.thunderstore.io/live/repository/packages/ishid4-BetterArchery-1.9.82.zip"
   ["PlantEasily"]="https://gcdn.thunderstore.io/live/repository/packages/Advize-PlantEasily-2.1.1.zip"
   ["AutoRepair"]="https://gcdn.thunderstore.io/live/repository/packages/Tekla-AutoRepair-5.4.1602.zip"

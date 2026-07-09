@@ -72,11 +72,13 @@ def env_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "WORLDS_PENDING_FILE", config / "worlds_pending.json")
     monkeypatch.setattr(main, "WORLDS_CONFIG_FILE", config / "worlds_config.json")
     monkeypatch.setattr(main, "BACKUPS_DIR", backups)
+    monkeypatch.setattr(main, "BACKUP_STATE_FILE", panel_data / "backup_state.json")
     monkeypatch.setattr(main, "ENV_FILE", env_file)
     monkeypatch.setattr(main, "COMPOSE_FILE", compose)
     monkeypatch.setattr(main, "LOGS_DIR", logs)
     monkeypatch.setattr(main, "AUDIT_FILE", logs / "audit.jsonl")
     monkeypatch.setattr(main, "MODS_REGISTRY_FILE", panel_data / "mods-registry.json")
+    monkeypatch.setattr(main, "SETUP_FILE", panel_data / "setup.json")
     monkeypatch.setattr(main, "APP_MANIFEST_PATH", data / "dl" / "server" / "steamapps" / "appmanifest_896660.acf")
 
     monkeypatch.setattr(main, "container_running", lambda: True)
@@ -97,6 +99,89 @@ def env_dir(tmp_path, monkeypatch):
         "worlds": worlds, "backups": backups, "data": data, "env_file": env_file,
         "panel_data": panel_data, "fwl_backups": fwl_backups,
     }
+
+
+@pytest.fixture
+def rcon_ready(env_dir, monkeypatch):
+    """Habilita RCON nos testes unitários (config + mock de execução)."""
+    (env_dir["bepinex"] / "org.tristan.rcon.cfg").write_text(
+        "[General]\nPort = 2458\nPassword = test-rcon-secret\n"
+    )
+    monkeypatch.setattr(main, "_run_rcon", lambda cmd: f"mock: {cmd.strip()}")
+    return env_dir
+
+
+@pytest.fixture
+def fresh_env_dir(tmp_path, monkeypatch):
+    """Árvore isolada sem mundos — para testes do wizard de setup."""
+    root = tmp_path
+    config = root / "config"
+    plugins = config / "bepinex" / "plugins"
+    bepinex = config / "bepinex"
+    worlds = config / "worlds_local"
+    backups = config / "backups"
+    data = root / "data"
+    panel_data = root / "panel-data"
+    logs = panel_data / "logs"
+    fwl_backups = panel_data / "world_fwl_backups"
+
+    for d in (plugins, bepinex, worlds, backups, data, panel_data, fwl_backups, logs):
+        d.mkdir(parents=True, exist_ok=True)
+
+    env_file = root / ".env"
+    env_file.write_text("SERVER_NAME=Test\nWORLD_NAME=\nSERVER_PORT=2456\n")
+    compose = root / "docker-compose.yml"
+    compose.write_text(
+        "services:\n  valheim:\n    image: test\n    container_name: valheim-server\n"
+        "    stop_grace_period: 120s\n    environment:\n      BEPINEX: \"false\"\n"
+    )
+
+    monkeypatch.setattr(main, "ROOT", root)
+    monkeypatch.setattr(main, "PANEL_DATA_DIR", panel_data)
+    monkeypatch.setattr(main, "FWL_BACKUP_DIR", fwl_backups)
+    monkeypatch.setattr(main, "FWL_STAGING_DIR", panel_data / "world_fwl_staging")
+    monkeypatch.setattr(main, "CONFIG_DIR", config)
+    monkeypatch.setattr(main, "DATA_DIR", data)
+    runtime_plugins = data / "bepinex" / "BepInEx" / "plugins"
+    runtime_plugins.mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setattr(main, "PLUGINS_DIR", plugins)
+    monkeypatch.setattr(main, "PLUGINS_DISABLED_DIR", plugins / "disabled")
+    monkeypatch.setattr(main, "RUNTIME_PLUGINS_DIR", runtime_plugins)
+    monkeypatch.setattr(main, "RUNTIME_PLUGINS_DISABLED_DIR", runtime_plugins / "disabled")
+    monkeypatch.setattr(main, "BEPINEX_CFG_DIR", bepinex)
+    monkeypatch.setattr(main, "WORLDS_DIR", worlds)
+    monkeypatch.setattr(main, "WORLDS_PENDING_FILE", config / "worlds_pending.json")
+    monkeypatch.setattr(main, "WORLDS_CONFIG_FILE", config / "worlds_config.json")
+    monkeypatch.setattr(main, "BACKUPS_DIR", backups)
+    monkeypatch.setattr(main, "BACKUP_STATE_FILE", panel_data / "backup_state.json")
+    monkeypatch.setattr(main, "ENV_FILE", env_file)
+    monkeypatch.setattr(main, "COMPOSE_FILE", compose)
+    monkeypatch.setattr(main, "LOGS_DIR", logs)
+    monkeypatch.setattr(main, "AUDIT_FILE", logs / "audit.jsonl")
+    monkeypatch.setattr(main, "MODS_REGISTRY_FILE", panel_data / "mods-registry.json")
+    monkeypatch.setattr(main, "SETUP_FILE", panel_data / "setup.json")
+    monkeypatch.setattr(main, "APP_MANIFEST_PATH", data / "dl" / "server" / "steamapps" / "appmanifest_896660.acf")
+
+    monkeypatch.setattr(main, "container_running", lambda: False)
+    monkeypatch.setattr(main, "get_container_world_name", lambda: None)
+    monkeypatch.setattr(main, "supervisor_status", lambda: {"valheim-server": "STOPPED"})
+    monkeypatch.setattr(main, "server_process_status", lambda: "stopped")
+    monkeypatch.setattr(main, "docker", lambda *a, **k: FakeCompleted(0, "ok", ""))
+    monkeypatch.setattr(main, "docker_compose", lambda *a, **k: FakeCompleted(0, "ok", ""))
+    monkeypatch.setattr(main, "recreate_container", lambda: FakeCompleted(0))
+
+    return {
+        "root": root, "config": config, "plugins": plugins, "bepinex": bepinex,
+        "worlds": worlds, "backups": backups, "data": data, "env_file": env_file,
+        "panel_data": panel_data,
+    }
+
+
+@pytest.fixture
+def fresh_client(fresh_env_dir):
+    with TestClient(main.app) as c:
+        yield c
 
 
 @pytest.fixture

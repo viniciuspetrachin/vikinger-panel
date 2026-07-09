@@ -21,8 +21,12 @@ export const help = {
       label: "Servidor",
       items: [
         { q: "Qual a diferença entre Iniciar, Parar, Reiniciar, Pausar e Retomar?", a: "<b>Iniciar/Parar/Reiniciar</b> ligam/desligam o container inteiro. <b>Pausar/Retomar</b> apenas suspendem o processo do Valheim dentro do container (mais rápido, mantém o container ligado)." },
-        { q: "O que são as listas de Administradores, Banidos e Permitidos?", a: "Listas de Steam IDs. <b>Admin</b> ganha comandos de moderação; <b>Banidos</b> não conseguem entrar; <b>Permitidos</b> funciona como whitelist (se preenchida, só esses IDs entram)." },
-        { q: "Como descubro o Steam ID de um jogador?", a: "Peça para o jogador acessar <a href=\"https://steamid.io\" target=\"_blank\" rel=\"noopener\">steamid.io</a> e enviar o <b>steamID64</b> (número de 17 dígitos)." },
+        { q: "O que são as listas de Administradores, Banidos e Permitidos?", a: "Listas de Steam IDs. <b>Admin</b> ganha comandos de moderação; <b>Banidos</b> não conseguem entrar; <b>Permitidos</b> funciona como whitelist (se preenchida, só esses IDs entram). Na <b>Visão Geral</b>, use o menu <b>Ações</b> ao lado de cada jogador conectado para promover, expulsar ou banir sem editar arquivos manualmente." },
+        { q: "Como uso o console interativo do painel?", a: "O mod <b>ValheimRcon</b> vem integrado ao painel (badge <b>Integrado</b> na aba Mods). No modo <b>Com mods (BepInEx)</b>, a senha RCON é gerada automaticamente na primeira configuração. Console e moderação exigem BepInEx ativo e o mod habilitado." },
+        { q: "Como troco a senha RCON?", a: "Edite <code>config/bepinex/org.tristan.rcon.cfg</code> (campo <code>Password</code>) na aba Mods → Config do ValheimRcon, ou defina <code>PANEL_RCON_PASSWORD</code> no <code>.env</code>. Reinicie o servidor após alterar." },
+        { q: "Qual a diferença entre expulsar (kick) e banir?", a: "<b>Kick</b> desconecta o jogador na hora, mas ele pode voltar a entrar. <b>Ban</b> bloqueia o Steam ID na lista de banidos até você desbanir. Ambos exigem ValheimRcon habilitado e senha RCON configurada." },
+        { q: "Posso remover o ValheimRcon?", a: "Não — ele é integrado ao painel e não pode ser removido. Você pode <b>desativá-lo</b> na aba Mods; ao voltar para o modo Com mods (BepInEx), ele é reativado automaticamente." },
+        { q: "Como descubro o Steam ID de um jogador?", a: "Jogadores conectados aparecem na Visão Geral com nome e Steam ID. Para quem não está online, use <a href=\"https://steamid.io\" target=\"_blank\" rel=\"noopener\">steamid.io</a> e copie o <b>steamID64</b> (17 dígitos)." },
       ],
     },
     {
@@ -42,7 +46,7 @@ export const help = {
         { q: "Como instalo um mod?", a: "Na aba <b>Mods e Configs</b>, cole a URL do <a href=\"https://thunderstore.io/c/valheim/\" target=\"_blank\" rel=\"noopener\">Thunderstore</a> (página, link de download ou r2modman) e clique em Instalar, ou faça upload de um <code>.zip</code>/<code>.dll</code>." },
         { q: "Os jogadores também precisam do mod?", a: "Depende do mod. Mods de servidor (ex.: ServerSideMap) rodam só no servidor; a maioria dos mods de gameplay/UI precisa estar instalada também no cliente de cada jogador, na mesma versão." },
         { q: "O que é BepInEx?", a: "É o carregador de mods usado pelo Valheim. Cada mod costuma gerar um arquivo <code>.cfg</code> em <code>config/bepinex</code>, editável na própria aba Mods e Configs." },
-        { q: "Vanilla ou com mods?", a: "Na aba <b>Servidor</b>, em <b>Atualizações do jogo</b>, escolha <b>Vanilla</b> (sem BepInEx) ou <b>Com mods</b>. Os arquivos dos mods permanecem no disco; apenas o carregador é desativado no modo vanilla." },
+        { q: "Vanilla ou com mods?", a: "No <b>primeiro acesso</b> ou na aba <b>Servidor</b> → <b>Atualizações do jogo</b>, escolha <b>Vanilla</b> (desliga BepInEx e todos os mods) ou <b>Com mods</b> (ativa BepInEx e o ValheimRcon integrado). Em vanilla, use <b>Administradores</b> em Listas de Jogadores para ser admin no jogo." },
         { q: "Como funcionam as atualizações do jogo?", a: "O container usa o <code>valheim-updater</code> (SteamCMD). Na aba <b>Servidor</b>, você pode ativar auto-atualização, desligá-la ou clicar em <b>Verificar atualizações agora</b>. Com mods instalados, prefira atualizar manualmente após conferir compatibilidade." },
         { q: "Atualizações podem quebrar mods?", a: "Sim. Um patch do Valheim pode exigir versões novas dos mods. Faça backup, atualize o jogo e depois use <b>Buscar atualizações</b> em cada mod vinculado ao Thunderstore." },
         { q: "Como atualizo um mod?", a: "Mods instalados via Thunderstore mostram status de versão. Use <b>Buscar atualizações</b> e, se houver nova versão, <b>Atualizar mod</b>. Mods enviados por upload precisam ser <b>vinculados</b> a uma URL Thunderstore para checagem automática." },
@@ -53,9 +57,10 @@ export const help = {
       id: "backups",
       label: "Backups",
       items: [
-        { q: "Os backups são automáticos?", a: "Sim. Na aba <b>Backups</b> você define o intervalo (cron). A retenção é de 30 dias — backups mais antigos são apagados automaticamente." },
-        { q: "Como faço um backup agora?", a: "Clique em <b>Backup Agora</b> e escolha o tipo: Mundo ativo (rápido), Completo ou Somente configs." },
-        { q: "Como restauro um backup?", a: "Baixe o <code>.zip</code> pela lista, extraia e coloque os arquivos do mundo em <code>config/worlds_local/</code> (com o servidor parado)." },
+        { q: "Os backups são automáticos?", a: "Sim. Na aba <b>Backups</b>, em <b>Agendamento automático</b>, você define o intervalo. O container copia <code>worlds_local/</code> para <code>config/backups/</code> como arquivos <code>worlds-*.zip</code>. Retenção: 30 dias." },
+        { q: "Como faço um backup agora?", a: "Clique em <b>Criar backup manual</b> e escolha o tipo: Mundo ativo (rápido), Completo ou Somente configs." },
+        { q: "Como restauro um backup?", a: "Na lista de backups, clique em <b>Voltar até aqui</b> no ponto desejado. O painel cria um checkpoint, restaura os arquivos e reinicia o servidor. Use <b>Voltar ao mais recente</b> ou <b>Desfazer última restauração</b> para voltar." },
+        { q: "O que é Executar agendado agora?", a: "Dispara manualmente o mesmo job de backup que roda no intervalo configurado — diferente de <b>Criar backup manual</b>, que permite escolher o escopo (mundo, completo ou configs)." },
       ],
     },
     {

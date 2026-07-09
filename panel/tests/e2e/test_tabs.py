@@ -93,6 +93,7 @@ def test_backups_tab_content(page: Page, base_url: str) -> None:
     page.wait_for_selector("[x-cloak]", state="detached")
     goto_tab(page, "Backups")
 
-    expect(page.get_by_text("Configuração de Backups")).to_be_visible()
-    expect(page.get_by_text("Backups Armazenados")).to_be_visible()
+    expect(page.get_by_role("heading", name="Agendamento automático")).to_be_visible()
+    expect(page.get_by_role("heading", name="Backups armazenados")).to_be_visible()
+    expect(page.get_by_text("Estado do servidor")).to_be_visible()
     assert_no_error_toast(page)

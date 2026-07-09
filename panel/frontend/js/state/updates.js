@@ -65,13 +65,17 @@ export const updates = {
   async saveUpdateConfig(restart = false) {
     return this.withBusy(restart ? "saveUpdateConfigRestart" : "saveUpdateConfig", async () => {
       try {
-        await this.api("PUT", "/api/updates/config", {
+        const data = await this.api("PUT", "/api/updates/config", {
           values: this.updateConfigPayload(),
           bepinex: this.bepinexEnabled,
           restart,
         });
         this.toast(restart ? "Config salva e container recriado!" : "Config de atualizações salva!");
+        if (data.mode_result?.rcon?.created && data.mode_result.rcon.password) {
+          this.setupRconPassword = data.mode_result.rcon.password;
+        }
         await this.loadUpdatesPage();
+        if (this.page === "mods") await this.loadMods();
       } catch (e) { this.toast(e.message, "error"); }
     });
   },

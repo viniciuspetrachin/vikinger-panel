@@ -107,6 +107,7 @@ def _seed_root(root: Path) -> None:
     (worlds / "TestWorld.db").write_text("db")
     (bepinex / "sample.mod.cfg").write_text("[General]\nEnabled = true\n")
     (config / "adminlist.txt").write_text("// admins\n76561198000000000\n")
+    (bepinex / "org.tristan.rcon.cfg").write_text("[General]\nPort = 2458\nPassword = e2e-rcon-secret\n")
 
 
 def _wait_up(url: str, timeout: float = 30.0) -> None:
@@ -146,6 +147,7 @@ def base_url(tmp_path_factory):
     port = _free_port()
     env = os.environ.copy()
     env["VALHEIM_PANEL_ROOT"] = str(root)
+    env["VIKINGER_TEST_RCON"] = "1"
     env["PATH"] = f"{bindir}:{env.get('PATH', '')}"
 
     proc = subprocess.Popen(

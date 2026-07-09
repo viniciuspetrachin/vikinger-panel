@@ -6,6 +6,7 @@ export const dashboard = {
   players: { count: 0, players: [], online: false },
   playerLists: { admin: [], banned: [], permitted: [] },
   playersExpanded: false,
+  playerMenuOpen: null,
   metricsChartExpanded: false,
   metricsLoading: false,
   metricsPollCount: 0,
@@ -16,7 +17,7 @@ export const dashboard = {
 
   async loadDashboardData() {
     await this.refreshStatus();
-    await Promise.all([this.loadPlayers(), this.loadPlayerLists()]);
+    await Promise.all([this.loadPlayers(), this.loadPlayerLists(), this.loadConsoleStatus()]);
     await this.loadDashLogs();
   },
 
@@ -51,49 +52,54 @@ export const dashboard = {
     return (this.playerLists.banned || []).includes(String(steamId));
   },
 
-  async updatePlayerList(kind, ids) {
-    await this.api("PUT", `/api/config/serverlists/${kind}`, { ids });
-    this.playerLists[kind] = ids;
-  },
-
-  async togglePlayerAdmin(steamId) {
+  togglePlayerMenu(steamId) {
     const sid = String(steamId);
-    return this.withBusy(`playerAdmin:${sid}`, async () => {
-      try {
-        const ids = [...(this.playerLists.admin || [])];
-        const idx = ids.indexOf(sid);
-        if (idx >= 0) {
-          ids.splice(idx, 1);
-          await this.updatePlayerList("admin", ids);
-          this.toast(`${sid} removido de administradores`);
-        } else {
-          ids.push(sid);
-          await this.updatePlayerList("admin", ids);
-          this.toast(`${sid} promovido a administrador`);
-        }
-      } catch (e) { this.toast(e.message, "error"); }
-    });
+    this.playerMenuOpen = this.playerMenuOpen === sid ? null : sid;
   },
 
-  async togglePlayerBan(steamId, name) {
+  closePlayerMenu() {
+    this.playerMenuOpen = null;
+  },
+
+  playerActionLabel(action, steamId) {
+    if (action === "promote") return this.isPlayerAdmin(steamId) ? "Remover admin" : "Tornar admin";
+    if (action === "ban") return this.isPlayerBanned(steamId) ? "Desbanir" : "Banir";
+    if (action === "kick") return "Expulsar (kick)";
+    return action;
+  },
+
+  async playerAction(steamId, name, action) {
     const sid = String(steamId);
     const label = name && name !== sid ? name : sid;
-    if (this.isPlayerBanned(sid)) {
-      return this.withBusy(`playerBan:${sid}`, async () => {
-        try {
-          const ids = (this.playerLists.banned || []).filter((id) => id !== sid);
-          await this.updatePlayerList("banned", ids);
-          this.toast(`${label} desbanido`);
-        } catch (e) { this.toast(e.message, "error"); }
-      });
+    this.closePlayerMenu();
+
+    if (action === "kick") {
+      if (!confirm(`Expulsar ${label}? O jogador poderá voltar a entrar.`)) return;
+    } else if (action === "ban" && !this.isPlayerBanned(sid)) {
+      if (!confirm(`Banir ${label} (${sid})? O jogador não poderá entrar até ser desbanido.`)) return;
+    } else if (action === "promote") {
+      action = this.isPlayerAdmin(sid) ? "demote" : "promote";
+    } else if (action === "ban") {
+      action = this.isPlayerBanned(sid) ? "unban" : "ban";
     }
-    if (!confirm(`Banir ${label} (${sid})? O jogador será desconectado na próxima reinicialização.`)) return;
-    return this.withBusy(`playerBan:${sid}`, async () => {
+
+    return this.withBusy(`playerAction:${sid}:${action}`, async () => {
       try {
-        const ids = [...(this.playerLists.banned || [])];
-        if (!ids.includes(sid)) ids.push(sid);
-        await this.updatePlayerList("banned", ids);
-        this.toast(`${label} banido`);
+        const data = await this.api("POST", `/api/players/${encodeURIComponent(sid)}/action`, { action });
+        const messages = {
+          kick: `${label} expulso`,
+          ban: `${label} banido`,
+          unban: `${label} desbanido`,
+          promote: `${label} promovido a admin`,
+          demote: `${label} removido de admin`,
+        };
+        this.toast(messages[action] || "Ação executada");
+        if (data.synced) {
+          this.playerLists[data.synced.kind] = data.synced.ids;
+        } else {
+          await this.loadPlayerLists();
+        }
+        await this.loadPlayers();
       } catch (e) { this.toast(e.message, "error"); }
     });
   },

@@ -9,10 +9,12 @@ import { updates } from "./state/updates.js";
 import { backups } from "./state/backups.js";
 import { files } from "./state/files.js";
 import { logs } from "./state/logs.js";
+import { console as consoleState } from "./state/console.js";
 import { audit } from "./state/audit.js";
 import { help } from "./state/help.js";
 import { donation } from "./state/donation.js";
 import { about } from "./state/about.js";
+import { setup } from "./state/setup.js";
 
 function panel() {
   const core = {
@@ -53,6 +55,7 @@ function panel() {
     async init() {
       this.actionPending = null;
       this.initNav();
+      await this.loadSetupStatus();
       await this.loadDashboardData();
       await this.loadMemoryConfig();
       await this.loadVersion();
@@ -84,7 +87,10 @@ function panel() {
           if (this.editPath && this.editContent) this.mountFileEditor(this.editContent);
         });
       }
-      if (this.page === "logs") await this.loadLogs();
+      if (this.page === "logs") {
+        await this.loadLogs();
+        await this.loadConsoleStatus();
+      }
       if (this.page === "audit") await this.loadAudit();
       if (this.page === "about") await this.loadVersion();
       if (this.page === "donation") {
@@ -137,10 +143,12 @@ function panel() {
     backups,
     files,
     logs,
+    consoleState,
     audit,
     help,
     donation,
     about,
+    setup,
     core,
   );
 }

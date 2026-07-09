@@ -1,6 +1,7 @@
 """Testes unitários cobrindo todas as rotas da API do painel."""
 
 import io
+import shutil
 import time
 import zipfile
 from pathlib import Path
@@ -139,9 +140,9 @@ def test_logs_docker_sanitized(client, env_dir, monkeypatch):
     assert "\x1b" not in body
     assert "^[[0m" not in body
     assert ".d..t" not in body
-    assert "[valheim-updater] Loading Steam API..." in body
-    assert "[valheim-server]" in body
-    assert "TestPlayer" in body
+    assert "Loading Steam API..." in body
+    assert "World loaded" in body or "TestPlayer" in body
+    assert "[valheim-server]" not in body
 
 
 # ── Config / Env ─────────────────────────────────────────────────────────────
@@ -175,12 +176,182 @@ def test_put_serverlist_invalid_kind(client):
     assert r.status_code == 400
 
 
+# ── Console RCON ─────────────────────────────────────────────────────────────
+
+def test_console_status_unavailable(client):
+    r = client.get("/api/console/status")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["available"] is False
+    assert data["plugin_installed"] is True
+    assert data["mod_enabled"] is True
+    assert data["configured"] is False
+
+
+def test_console_status_available(rcon_ready, client):
+    r = client.get("/api/console/status")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["available"] is True
+    assert data["plugin_installed"] is True
+    assert data["configured"] is True
+    assert data["port"] == 2458
+
+
+def test_console_command_empty(rcon_ready, client):
+    r = client.post("/api/console/command", json={"command": "   "})
+    assert r.status_code == 400
+
+
+def test_console_command_ok(rcon_ready, client):
+    r = client.post("/api/console/command", json={"command": "save"})
+    assert r.status_code == 200
+    assert r.json()["output"] == "mock: save"
+
+
+def test_rcon_timeout_for_slow_commands(monkeypatch):
+    monkeypatch.delenv("PANEL_RCON_TIMEOUT", raising=False)
+    monkeypatch.delenv("PANEL_RCON_TIMEOUT_SLOW", raising=False)
+    assert main._rcon_timeout_for("list") == 90.0
+    assert main._rcon_timeout_for("save") == 15.0
+    monkeypatch.setenv("PANEL_RCON_TIMEOUT_SLOW", "120")
+    assert main._rcon_timeout_for("list") == 120.0
+
+
+def test_player_action_invalid_steam_id(rcon_ready, client):
+    r = client.post("/api/players/bad/action", json={"action": "kick"})
+    assert r.status_code == 400
+
+
+def test_player_action_invalid_action(rcon_ready, client):
+    r = client.post("/api/players/76561198000000000/action", json={"action": "fly"})
+    assert r.status_code == 400
+
+
+def test_player_action_kick(rcon_ready, client):
+    sid = "76561198000000000"
+    r = client.post(f"/api/players/{sid}/action", json={"action": "kick"})
+    assert r.status_code == 200
+    assert r.json()["output"] == f"mock: kick {sid}"
+    assert r.json()["synced"] is None
+
+
+def test_player_action_ban_syncs_list(rcon_ready, client, env_dir):
+    sid = "76561198000000000"
+    r = client.post(f"/api/players/{sid}/action", json={"action": "ban"})
+    assert r.status_code == 200
+    assert sid in r.json()["synced"]["ids"]
+    lists = client.get("/api/config/serverlists").json()
+    assert sid in lists["banned"]
+
+
+def test_player_action_promote_syncs_admin(rcon_ready, client):
+    sid = "76561198273697711"
+    r = client.post(f"/api/players/{sid}/action", json={"action": "promote"})
+    assert r.status_code == 200
+    assert sid in r.json()["synced"]["ids"]
+    lists = client.get("/api/config/serverlists").json()
+    assert sid in lists["admin"]
+
+
+def test_player_action_rcon_unavailable(client, monkeypatch):
+    monkeypatch.setattr(main, "container_running", lambda: False)
+    r = client.post("/api/players/76561198000000000/action", json={"action": "kick"})
+    assert r.status_code == 503
+
+
 # ── Mods ─────────────────────────────────────────────────────────────────────
 
-def test_list_mods_empty(client):
+def test_list_mods_includes_bundled(client):
     r = client.get("/api/mods")
     assert r.status_code == 200
-    assert r.json()["mods"] == []
+    names = [m["name"] for m in r.json()["mods"]]
+    assert "ValheimRcon.dll" in names
+    bundled = next(m for m in r.json()["mods"] if m["name"] == "ValheimRcon.dll")
+    assert bundled["protected"] is True
+    assert bundled["bundled"] is True
+
+
+def test_delete_bundled_mod_forbidden(client):
+    r = client.delete("/api/mods/ValheimRcon.dll")
+    assert r.status_code == 403
+
+
+def test_toggle_bundled_mod_allowed(client):
+    r = client.post("/api/mods/ValheimRcon.dll/toggle", json={"enabled": False})
+    assert r.status_code == 200
+    assert r.json()["enabled"] is False
+    mods = client.get("/api/mods").json()["mods"]
+    bundled = next(m for m in mods if m["name"] == "ValheimRcon.dll")
+    assert bundled["enabled"] is False
+
+
+def test_apply_server_mode_vanilla_disables_all_mods(client, env_dir):
+    (env_dir["plugins"] / "user.dll").write_text("x")
+    (env_dir["plugins"] / "ValheimRcon.dll").write_text("x")
+    result = main.apply_server_mode(False)
+    assert result["bepinex"] is False
+    assert result["mods_disabled"] >= 2
+    assert not (env_dir["plugins"] / "user.dll").exists()
+    assert (env_dir["plugins"] / "disabled" / "user.dll").exists()
+
+
+def test_apply_server_mode_bepinex_enables_bundled_only(client, env_dir):
+    disabled = env_dir["plugins"] / "disabled"
+    disabled.mkdir(parents=True, exist_ok=True)
+    for dll in list(env_dir["plugins"].glob("*.dll")):
+        shutil.move(str(dll), str(disabled / dll.name))
+    (disabled / "user.dll").write_text("x")
+    result = main.apply_server_mode(True)
+    assert result["bepinex"] is True
+    assert "ValheimRcon.dll" in result["mods_enabled"]
+    assert (env_dir["plugins"] / "ValheimRcon.dll").exists()
+    assert not (env_dir["plugins"] / "user.dll").exists()
+    assert (disabled / "user.dll").exists()
+
+
+def test_ensure_rcon_config_generates_password(env_dir):
+    from rcon_client import ensure_rcon_config, read_rcon_cfg_file, RCON_CFG_NAME
+
+    result = ensure_rcon_config(cfg_dir=env_dir["bepinex"], server_port=2456)
+    assert result["created"] is True
+    assert result["password"]
+    cfg = read_rcon_cfg_file(env_dir["bepinex"] / RCON_CFG_NAME)
+    assert cfg["Password"] == result["password"]
+
+    again = ensure_rcon_config(cfg_dir=env_dir["bepinex"], server_port=2456)
+    assert again["created"] is False
+    assert again["password"] is None
+
+
+def test_ensure_rcon_config_patches_valheimrcon_format(env_dir):
+    from rcon_client import ensure_rcon_config, read_rcon_cfg_file, RCON_CFG_NAME
+
+    cfg_path = env_dir["bepinex"] / RCON_CFG_NAME
+    cfg_path.write_text(
+        "## Settings file was created by plugin Valheim Rcon v1.5.1\n"
+        "[1. Rcon]\n"
+        "Port = 2458\n"
+        "Password = \n"
+        "Whitelist IP mask = \n",
+        encoding="utf-8",
+    )
+    result = ensure_rcon_config(cfg_dir=env_dir["bepinex"], server_port=2456)
+    assert result["created"] is True
+    text = cfg_path.read_text(encoding="utf-8")
+    assert "[1. Rcon]" in text
+    assert "Whitelist IP mask" in text
+    cfg = read_rcon_cfg_file(cfg_path)
+    assert cfg["Password"] == result["password"]
+
+
+def test_maybe_ensure_rcon_on_startup(client, env_dir):
+    cfg_path = env_dir["bepinex"] / "org.tristan.rcon.cfg"
+    cfg_path.write_text("[1. Rcon]\nPort = 2458\nPassword = \n", encoding="utf-8")
+    result = main.maybe_ensure_rcon_password()
+    assert result["created"] is True
+    assert "Password =" in cfg_path.read_text(encoding="utf-8")
+    assert cfg_path.read_text(encoding="utf-8").split("Password =")[1].strip()
 
 
 def test_upload_mod_dll_enabled(client, env_dir):
@@ -253,7 +424,8 @@ def test_toggle_mod_disable(client, env_dir):
     assert not (env_dir["plugins"] / "toggle.dll").exists()
     assert (disabled / "toggle.dll").exists()
     mods = client.get("/api/mods").json()["mods"]
-    assert mods[0]["enabled"] is False
+    toggle = next(m for m in mods if m["name"] == "toggle.dll")
+    assert toggle["enabled"] is False
 
 
 def test_toggle_mod_enable(client, env_dir):
@@ -997,7 +1169,10 @@ def test_bepinex_configs(client):
 def test_backups_list(client):
     r = client.get("/api/backups")
     assert r.status_code == 200
-    assert "config" in r.json()
+    data = r.json()
+    assert "config" in data
+    assert "state" in data
+    assert "active" in data["state"]
 
 
 def test_backup_config_get(client):
@@ -1059,6 +1234,235 @@ def test_backup_download(client, env_dir):
     r = client.get("/api/backups/manual-full-y.zip/download")
     assert r.status_code == 200
     assert r.content == b"PK\x03\x04"
+
+
+def _write_world_zip(path: Path, prefix: str = "worlds") -> None:
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(f"{prefix}/TestWorld.fwl", "restored fwl")
+        zf.writestr(f"{prefix}/TestWorld.db", b"restored db")
+
+
+def test_backup_restore_worlds_format(client, env_dir, monkeypatch):
+    worlds = env_dir["worlds"]
+    make_test_fwl(worlds / "TestWorld.fwl", "TestWorld")
+    (worlds / "TestWorld.db").write_bytes(b"old db")
+
+    backup = env_dir["backups"] / "worlds-20250708-120000.zip"
+    _write_world_zip(backup, "worlds")
+
+    monkeypatch.setattr(main, "stop_valheim_container", lambda: FakeCompleted(0))
+    monkeypatch.setattr(main, "restart_valheim_container", lambda: FakeCompleted(0))
+
+    r = client.post("/api/backups/worlds-20250708-120000.zip/restore")
+    assert r.status_code == 200
+    assert r.json()["active"] == "worlds-20250708-120000.zip"
+    assert (worlds / "TestWorld.fwl").read_text() == "restored fwl"
+    assert (worlds / "TestWorld.db").read_bytes() == b"restored db"
+    state = main.read_backup_state()
+    assert state["active"] == "worlds-20250708-120000.zip"
+    assert state["undo"] and state["undo"].startswith("checkpoint-")
+
+
+def test_backup_restore_manual_world_format(client, env_dir, monkeypatch):
+    worlds = env_dir["worlds"]
+    make_test_fwl(worlds / "TestWorld.fwl", "TestWorld")
+    (worlds / "TestWorld.db").write_bytes(b"old db")
+
+    backup = env_dir["backups"] / "manual-world-20250708.zip"
+    _write_world_zip(backup, "worlds_local")
+
+    monkeypatch.setattr(main, "stop_valheim_container", lambda: FakeCompleted(0))
+    monkeypatch.setattr(main, "restart_valheim_container", lambda: FakeCompleted(0))
+
+    r = client.post("/api/backups/manual-world-20250708.zip/restore")
+    assert r.status_code == 200
+    assert (worlds / "TestWorld.db").read_bytes() == b"restored db"
+
+
+def test_backup_restore_rejects_traversal(client, env_dir):
+    backup = env_dir["backups"] / "evil.zip"
+    with zipfile.ZipFile(backup, "w") as zf:
+        zf.writestr("../evil.txt", "bad")
+    r = client.post("/api/backups/evil.zip/restore")
+    assert r.status_code == 400
+
+
+def test_backup_restore_latest(client, env_dir, monkeypatch):
+    import os
+
+    worlds = env_dir["worlds"]
+    make_test_fwl(worlds / "TestWorld.fwl", "TestWorld")
+    (worlds / "TestWorld.db").write_bytes(b"old")
+
+    older = env_dir["backups"] / "worlds-20250701-120000.zip"
+    newer = env_dir["backups"] / "worlds-20250708-120000.zip"
+    _write_world_zip(older, "worlds")
+    with zipfile.ZipFile(newer, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("worlds/TestWorld.fwl", "newest fwl")
+        zf.writestr("worlds/TestWorld.db", b"newest db")
+    os.utime(older, (1_700_000_000, 1_700_000_000))
+    os.utime(newer, (1_800_000_000, 1_800_000_000))
+
+    monkeypatch.setattr(main, "stop_valheim_container", lambda: FakeCompleted(0))
+    monkeypatch.setattr(main, "restart_valheim_container", lambda: FakeCompleted(0))
+
+    r = client.post("/api/backups/restore-latest")
+    assert r.status_code == 200
+    assert r.json()["active"] == newer.name
+    assert (worlds / "TestWorld.fwl").read_text() == "newest fwl"
+
+
+def test_backup_restore_undo(client, env_dir, monkeypatch):
+    worlds = env_dir["worlds"]
+    make_test_fwl(worlds / "TestWorld.fwl", "TestWorld")
+    (worlds / "TestWorld.db").write_bytes(b"v1")
+
+    target = env_dir["backups"] / "worlds-20250701-120000.zip"
+    with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("worlds/TestWorld.fwl", "old backup fwl")
+        zf.writestr("worlds/TestWorld.db", b"old backup db")
+
+    monkeypatch.setattr(main, "stop_valheim_container", lambda: FakeCompleted(0))
+    monkeypatch.setattr(main, "restart_valheim_container", lambda: FakeCompleted(0))
+
+    r1 = client.post("/api/backups/worlds-20250701-120000.zip/restore")
+    assert r1.status_code == 200
+    assert (worlds / "TestWorld.db").read_bytes() == b"old backup db"
+
+    r2 = client.post("/api/backups/restore-undo")
+    assert r2.status_code == 200
+    assert (worlds / "TestWorld.db").read_bytes() == b"v1"
+
+
+def test_backup_config_put_restarts(client, monkeypatch):
+    called = {"n": 0}
+    monkeypatch.setattr(main, "restart_valheim_container", lambda: (called.__setitem__("n", called["n"] + 1) or FakeCompleted(0)))
+    r = client.put("/api/backups/config", json={"values": {"BACKUPS_MAX_AGE": "10"}})
+    assert r.status_code == 200
+    assert called["n"] == 1
+    assert r.json().get("restarted") is True
+
+
+def test_classify_backup():
+    assert main.classify_backup("worlds-20250708.zip") == "auto"
+    assert main.classify_backup("manual-world-x.zip") == "manual-world"
+    assert main.classify_backup("checkpoint-20250708.zip") == "checkpoint"
+
+
+def _write_mods_fixture(env_dir) -> None:
+    plugins = env_dir["plugins"]
+    (plugins / "AlphaMod.dll").write_bytes(b"mod-a")
+    (plugins / "disabled").mkdir(exist_ok=True)
+    (plugins / "disabled" / "BetaMod.dll").write_bytes(b"mod-b")
+    registry = {
+        "packages": [{
+            "id": "Author/AlphaMod",
+            "owner": "Author",
+            "name": "AlphaMod",
+            "version": "1.2.3",
+            "dlls": ["AlphaMod.dll"],
+            "source_url": "https://thunderstore.io/package/Author/AlphaMod/1.2.3/",
+            "installed_at": "2026-01-01T00:00:00Z",
+            "latest_version": "1.2.3",
+            "update_status": "up_to_date",
+        }],
+    }
+    env_dir["panel_data"].joinpath("mods-registry.json").write_text(
+        __import__("json").dumps(registry, indent=2),
+        encoding="utf-8",
+    )
+
+
+def test_build_backup_manifest_with_mods(env_dir):
+    _write_mods_fixture(env_dir)
+    manifest = main.build_backup_manifest("manual-full", ["bepinex/plugins/AlphaMod.dll"])
+    assert manifest["mods"]["total"] >= 2
+    assert manifest["mods"]["enabled"] >= 1
+    assert manifest["world_name"] == "TestWorld"
+    alpha = next(m for m in manifest["mods"]["items"] if m["name"] == "AlphaMod.dll")
+    assert alpha["version"] == "1.2.3"
+    assert alpha["package_id"] == "Author/AlphaMod"
+
+
+def test_backup_create_full_generates_manifest_and_sidecar(client, env_dir):
+    _write_mods_fixture(env_dir)
+    r = client.post("/api/backups/create", json={"type": "full"})
+    assert r.status_code == 200
+    name = r.json()["name"]
+    zip_path = env_dir["backups"] / name
+    sidecar = env_dir["backups"] / f"{name}.manifest.json"
+    assert sidecar.is_file()
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        assert main.BACKUP_MANIFEST_FILENAME in zf.namelist()
+        assert "panel-data/mods-registry.json" in zf.namelist()
+    manifest = __import__("json").loads(sidecar.read_text(encoding="utf-8"))
+    assert manifest["mods"]["total"] >= 2
+
+
+def test_backups_list_includes_mods_count(client, env_dir):
+    _write_mods_fixture(env_dir)
+    client.post("/api/backups/create", json={"type": "full"})
+    r = client.get("/api/backups")
+    assert r.status_code == 200
+    full = next(b for b in r.json()["backups"] if b["kind"] == "manual-full")
+    assert full["mods_count"] >= 2
+    assert full["world_name"] == "TestWorld"
+    assert full["has_manifest"] is True
+
+
+def test_backup_details_endpoint(client, env_dir):
+    _write_mods_fixture(env_dir)
+    created = client.post("/api/backups/create", json={"type": "full"}).json()
+    name = created["name"]
+    r = client.get(f"/api/backups/{name}/details")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["mods_count"] >= 2
+    assert len(data["manifest"]["mods"]["items"]) >= 2
+    assert data["manifest"]["contents"]["includes_mods_dlls"] is True
+
+
+def test_backup_details_inferred_from_legacy_zip(client, env_dir):
+    backup = env_dir["backups"] / "manual-full-legacy.zip"
+    with zipfile.ZipFile(backup, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("bepinex/plugins/LegacyMod.dll", b"x")
+        zf.writestr("worlds_local/TestWorld.fwl", "fwl")
+    r = client.get("/api/backups/manual-full-legacy.zip/details")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["manifest_inferred"] is True
+    assert data["mods_count"] == 1
+    assert data["manifest"]["mods"]["items"][0]["name"] == "LegacyMod.dll"
+    assert data["manifest"]["mods"]["items"][0]["version"] is None
+
+
+def test_backup_restore_ignores_manifest_and_restores_registry(client, env_dir, monkeypatch):
+    _write_mods_fixture(env_dir)
+    registry_path = env_dir["panel_data"] / "mods-registry.json"
+    created = client.post("/api/backups/create", json={"type": "full"}).json()
+    name = created["name"]
+
+    registry_path.write_text('{"packages": []}', encoding="utf-8")
+    (env_dir["worlds"] / "TestWorld.db").write_bytes(b"changed")
+
+    monkeypatch.setattr(main, "stop_valheim_container", lambda: FakeCompleted(0))
+    monkeypatch.setattr(main, "restart_valheim_container", lambda: FakeCompleted(0))
+
+    r = client.post(f"/api/backups/{name}/restore")
+    assert r.status_code == 200
+    restored = __import__("json").loads(registry_path.read_text(encoding="utf-8"))
+    assert restored["packages"][0]["id"] == "Author/AlphaMod"
+
+
+def test_backup_delete_removes_sidecar(client, env_dir):
+    _write_mods_fixture(env_dir)
+    created = client.post("/api/backups/create", json={"type": "world"}).json()
+    name = created["name"]
+    sidecar = env_dir["backups"] / f"{name}.manifest.json"
+    assert sidecar.is_file()
+    r = client.delete(f"/api/backups/{name}")
+    assert r.status_code == 200
+    assert not sidecar.is_file()
 
 
 # ── Audit ────────────────────────────────────────────────────────────────────
@@ -1408,3 +1812,59 @@ def test_parse_io_pair():
     rx, tx = main.parse_io_pair("248kB / 251kB")
     assert rx == 248 * 1000
     assert tx == 251 * 1000
+
+
+# ── Setup (primeiro acesso) ───────────────────────────────────────────────────
+
+def test_setup_status_migration_existing_install(client):
+    r = client.get("/api/setup/status")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["completed"] is True
+    assert body["needs_wizard"] is False
+    assert body["mode"] in ("vanilla", "bepinex")
+
+
+def test_setup_status_needs_wizard(fresh_client):
+    r = fresh_client.get("/api/setup/status")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["needs_wizard"] is True
+    assert body["completed"] is False
+
+
+def test_setup_complete_vanilla_with_admin(fresh_client, fresh_env_dir):
+    r = fresh_client.post("/api/setup/complete", json={
+        "mode": "vanilla",
+        "admin_steam_id": "76561198000000000",
+        "world_name": "NovoMundo",
+        "activate_world": True,
+    })
+    assert r.status_code == 200
+    body = r.json()
+    assert body["mode"] == "vanilla"
+    assert body["admin_configured"] is True
+    assert body["world_name"] == "NovoMundo"
+    assert body["world_activated"] is True
+    assert body["rcon_password"] is None
+    assert main.read_bepinex_compose() is False
+    admin = (fresh_env_dir["config"] / "adminlist.txt").read_text()
+    assert "76561198000000000" in admin
+    status = fresh_client.get("/api/setup/status").json()
+    assert status["completed"] is True
+    assert status["needs_wizard"] is False
+
+
+def test_setup_complete_bepinex_with_rcon(fresh_client, fresh_env_dir):
+    bundled_src = Path(__file__).resolve().parents[2] / "bundled-mods" / "ValheimRcon.dll"
+    if bundled_src.exists():
+        shutil.copy2(bundled_src, fresh_env_dir["plugins"] / "ValheimRcon.dll")
+    r = fresh_client.post("/api/setup/complete", json={"mode": "bepinex"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["mode"] == "bepinex"
+    assert body["rcon_password"]
+    assert main.read_bepinex_compose() is True
+    assert (fresh_env_dir["plugins"] / "ValheimRcon.dll").exists()
+    cfg = (fresh_env_dir["bepinex"] / "org.tristan.rcon.cfg").read_text()
+    assert body["rcon_password"] in cfg

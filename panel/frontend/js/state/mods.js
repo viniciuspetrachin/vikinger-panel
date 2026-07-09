@@ -7,6 +7,7 @@ export const mods = {
   exportSkipped: 0,
 
   async loadModsPage() {
+    await this.loadUpdatesConfig();
     await this.loadMods();
     await this.loadBepinexConfigs();
     this.updateExportSkipped();

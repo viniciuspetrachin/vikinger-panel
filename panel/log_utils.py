@@ -26,7 +26,7 @@ def normalize_docker_log_line(line: str) -> str:
         msg = strip_ansi((match.group("msg") or "")).strip()
         if not msg or TAR_VERBOSE_RE.match(msg):
             return ""
-        return f"[{match.group('ts')}] [{match.group('proc')}] {msg}"
+        return f"[{match.group('ts')}] {msg}"
     return line
 
 

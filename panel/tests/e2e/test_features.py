@@ -52,7 +52,8 @@ def test_logs_tab_no_supervisord_prefix(page: Page, base_url: str) -> None:
     text = console.inner_text()
     assert "supervisord:" not in text
     assert "^[[0m" not in text
-    assert "[valheim-server]" in text
+    assert "[valheim-server]" not in text
+    assert re.search(r"\[Jul\s+\d", text)
 
 
 def test_loading_disables_button(page: Page, base_url: str) -> None:
@@ -91,32 +92,76 @@ def test_double_click_prevented(page: Page, base_url: str) -> None:
 def test_backup_modal_flow(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     page.get_by_role("button", name="Backups", exact=True).click()
-    page.get_by_role("button", name="Backup Agora", exact=True).click()
+    page.get_by_role("button", name="Criar backup manual", exact=True).click()
 
-    expect(page.get_by_text("Criar Backup")).to_be_visible()
+    expect(page.get_by_role("heading", name="Criar Backup")).to_be_visible()
     expect(page.get_by_role("button", name="Mundo ativo")).to_be_visible()
     expect(page.get_by_role("button", name="Completo")).to_be_visible()
     expect(page.get_by_role("button", name="Somente configs")).to_be_visible()
 
     page.get_by_role("button", name="Mundo ativo").click()
     expect(page.get_by_text(re.compile("Backup criado"))).to_be_visible(timeout=8000)
-    expect(page.get_by_text("Criar Backup")).not_to_be_visible()
+    expect(page.get_by_role("heading", name="Criar Backup")).not_to_be_visible()
 
 
 def test_backup_appears_in_list(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     page.get_by_role("button", name="Backups", exact=True).click()
-    page.get_by_role("button", name="Backup Agora", exact=True).click()
+    page.get_by_role("button", name="Criar backup manual", exact=True).click()
     page.get_by_role("button", name="Completo").click()
     expect(page.get_by_text(re.compile("Backup criado"))).to_be_visible(timeout=8000)
     page.wait_for_timeout(800)
     expect(page.locator("table").get_by_text(re.compile("manual-full-")).first).to_be_visible(timeout=8000)
 
 
+def test_backup_details_modal_shows_mods(page: Page, base_url: str) -> None:
+    _boot(page, base_url)
+    page.get_by_role("button", name="Backups", exact=True).click()
+    page.get_by_role("button", name="Criar backup manual", exact=True).click()
+    page.get_by_role("button", name="Completo").click()
+    expect(page.get_by_text(re.compile("Backup criado"))).to_be_visible(timeout=8000)
+    page.wait_for_timeout(800)
+    expect(page.locator("table th", has_text="Mods")).to_be_visible()
+    page.get_by_role("button", name="Detalhes").first.click()
+    expect(page.get_by_role("heading", name="Detalhes do backup")).to_be_visible(timeout=8000)
+    modal = page.locator(".modal-overlay").filter(has=page.get_by_role("heading", name="Detalhes do backup"))
+    expect(modal.get_by_text(re.compile(r"Mods \(\d+\)"))).to_be_visible(timeout=8000)
+
+
+def test_backup_restore_button_visible(page: Page, base_url: str) -> None:
+    _boot(page, base_url)
+    page.get_by_role("button", name="Backups", exact=True).click()
+    page.get_by_role("button", name="Criar backup manual", exact=True).click()
+    page.get_by_role("button", name="Mundo ativo").click()
+    expect(page.get_by_text(re.compile("Backup criado"))).to_be_visible(timeout=8000)
+    page.wait_for_timeout(800)
+    expect(page.get_by_role("button", name="Voltar até aqui").first).to_be_visible(timeout=8000)
+
+
+def test_backup_apply_single_button(page: Page, base_url: str) -> None:
+    _boot(page, base_url)
+    page.get_by_role("button", name="Backups", exact=True).click()
+    expect(page.get_by_role("button", name="Aplicar e reiniciar", exact=True)).to_be_visible()
+    expect(page.get_by_role("button", name="Salvar", exact=True)).not_to_be_visible()
+    expect(page.get_by_role("button", name="Executar agendado agora", exact=True)).to_be_visible()
+
+
+def test_backup_restore_modal_flow(page: Page, base_url: str) -> None:
+    _boot(page, base_url)
+    page.get_by_role("button", name="Backups", exact=True).click()
+    page.get_by_role("button", name="Criar backup manual", exact=True).click()
+    page.get_by_role("button", name="Mundo ativo").click()
+    expect(page.get_by_text(re.compile("Backup criado"))).to_be_visible(timeout=8000)
+    page.wait_for_timeout(800)
+    page.get_by_role("button", name="Voltar até aqui").first.click()
+    expect(page.get_by_role("heading", name="Restaurar backup")).to_be_visible()
+    expect(page.get_by_role("button", name="Restaurar e reiniciar")).to_be_visible()
+
+
 def test_backup_dashboard_button_opens_modal(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     page.get_by_role("button", name="💾 Backup", exact=True).click()
-    expect(page.get_by_text("Criar Backup")).to_be_visible()
+    expect(page.get_by_role("heading", name="Criar Backup")).to_be_visible()
 
 
 def test_audit_records_action(page: Page, base_url: str) -> None:
@@ -314,8 +359,50 @@ def test_dashboard_players_card(page: Page, base_url: str) -> None:
     players_block = page.locator(".bg-valheim-800").filter(has=page.get_by_text("Jogadores Conectados", exact=True))
     expect(players_block.locator("ul .font-medium", has_text="TestPlayer")).to_be_visible()
     expect(players_block.get_by_text("76561198273697711")).to_be_visible()
-    expect(players_block.get_by_role("button", name="Tornar admin")).to_be_visible()
-    expect(players_block.get_by_role("button", name="Banir")).to_be_visible()
+    expect(players_block.get_by_role("button", name="Ações ▾")).to_be_visible()
+    page.on("dialog", lambda d: d.accept())
+    players_block.get_by_role("button", name="Ações ▾").click()
+    expect(page.get_by_role("button", name="Expulsar (kick)")).to_be_visible()
+    expect(page.get_by_role("button", name="Banir")).to_be_visible()
+
+
+def test_dashboard_console_command(page: Page, base_url: str) -> None:
+    _boot(page, base_url)
+    console_input = page.locator(".console-input").first
+    expect(console_input).to_be_visible()
+    expect(console_input).to_be_enabled(timeout=8000)
+    console_input.fill("save")
+    page.get_by_role("button", name="Enviar", exact=True).first.click()
+    expect(console_input).to_have_value("", timeout=5000)
+    expect(page.locator(".console-history")).to_have_count(0)
+
+
+def test_console_tab_completes_command(page: Page, base_url: str) -> None:
+    _boot(page, base_url)
+    console_input = page.locator(".console-input").first
+    expect(console_input).to_be_enabled(timeout=8000)
+    console_input.fill("sa")
+    console_input.press("Tab")
+    expect(console_input).to_have_value("save ")
+
+
+def test_console_tab_completes_player(page: Page, base_url: str) -> None:
+    _boot(page, base_url)
+    console_input = page.locator(".console-input").first
+    expect(console_input).to_be_enabled(timeout=8000)
+    page.wait_for_timeout(1500)
+    console_input.fill("kick Test")
+    console_input.press("Tab")
+    expect(console_input).to_have_value("kick TestPlayer ")
+
+
+def test_console_help_modal(page: Page, base_url: str) -> None:
+    _boot(page, base_url)
+    page.get_by_role("button", name="Ver comandos disponíveis").first.click()
+    expect(page.get_by_text("Comandos RCON")).to_be_visible()
+    expect(page.get_by_text("kick", exact=True).first).to_be_visible()
+    page.keyboard.press("Escape")
+    expect(page.get_by_text("Comandos RCON")).not_to_be_visible()
 
 
 def test_audit_modal(page: Page, base_url: str) -> None:
@@ -334,7 +421,18 @@ def test_mod_toggle_visible(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     page.get_by_role("button", name="Mods e Configs", exact=True).click()
     page.wait_for_timeout(500)
-    expect(page.get_by_text("Nenhum mod instalado")).to_be_visible()
+    mods_section = page.locator("section").filter(has=page.get_by_text("ValheimRcon vem integrado"))
+    expect(mods_section.get_by_text("Integrado — não removível", exact=True)).to_be_visible()
+    expect(mods_section.locator("input[type='checkbox']").first).to_be_visible()
+
+
+def test_server_mode_vanilla_bepinex_copy(page: Page, base_url: str) -> None:
+    _boot(page, base_url)
+    page.get_by_role("button", name="Servidor", exact=True).click()
+    page.wait_for_timeout(800)
+    updates = page.locator("section").filter(has=page.get_by_role("heading", name="Atualizações do jogo"))
+    expect(updates.get_by_text("Com mods (BepInEx)", exact=True)).to_be_visible()
+    expect(updates.get_by_text("desliga todos os mods", exact=False)).to_be_visible()
 
 
 def test_server_updates_section(page: Page, base_url: str) -> None:
