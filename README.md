@@ -4,7 +4,7 @@ Painel web moderno para gerenciar servidores **Valheim** dockerizados — mundos
 backups, métricas, logs e muito mais, tudo em uma interface única.
 
 [![License: Polyform Shield](https://img.shields.io/badge/License-Polyform%20Shield-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.1.0-gold.svg)](https://github.com/viniciuspetrachin/vikinger-panel)
+[![Version](https://img.shields.io/badge/version-2.1.1-gold.svg)](https://github.com/viniciuspetrachin/vikinger-panel)
 
 > Interface em português · 100% dockerizado · Testes unitários e E2E · Sem CDN externo
 
