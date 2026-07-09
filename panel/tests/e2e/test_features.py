@@ -38,8 +38,16 @@ def test_dashboard_console_preserves_scroll(page: Page, base_url: str) -> None:
         "() => { const el = document.querySelector('[x-ref=\"dashConsole\"]'); return el && el.scrollHeight > el.clientHeight + 10; }",
         timeout=8000,
     )
+    logs_get = lambda r: "/api/logs" in r.url and r.request.method == "GET"  # noqa: E731
+    # Drena refresh em voo (captura scroll antigo e restaura no fim após o await da API).
+    with page.expect_response(logs_get, timeout=8000):
+        pass
+    page.wait_for_timeout(400)
     page.evaluate("() => { const el = document.querySelector('[x-ref=\"dashConsole\"]'); if (el) el.scrollTop = 0; }")
-    page.wait_for_timeout(5500)
+    # Próximo poll (5s) deve preservar scroll no topo, não auto-rolar para o fim.
+    with page.expect_response(logs_get, timeout=8000):
+        page.wait_for_timeout(6000)
+    page.wait_for_timeout(400)
     scroll_top = page.evaluate("() => document.querySelector('[x-ref=\"dashConsole\"]')?.scrollTop ?? -1")
     scroll_max = page.evaluate(
         "() => { const el = document.querySelector('[x-ref=\"dashConsole\"]'); return el ? el.scrollHeight - el.clientHeight : 0; }"
