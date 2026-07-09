@@ -18,71 +18,71 @@ export const worlds = {
 
   worldModifierCatalog: {
     preset: [
-      { value: "", label: "Padrão do jogo", desc: "Sem modificadores — experiência vanilla, como antes do patch Hildir's Request." },
-      { value: "easy", label: "Fácil", desc: "Combate mais leve (dano fácil) e raids menos frequentes." },
-      { value: "normal", label: "Normal", desc: "Equivalente ao padrão do jogo — todos os sliders em Normal." },
-      { value: "hard", label: "Difícil", desc: "Combate difícil e raids mais frequentes." },
-      { value: "hardcore", label: "Hardcore", desc: "Combate muito difícil, penalidade máxima de morte, raids frequentes, portais difíceis e sem mapa." },
-      { value: "casual", label: "Casual", desc: "Combate muito fácil, morte leve, mais recursos, sem raids, portais casuais, eventos por jogador e mobs passivos." },
-      { value: "hammer", label: "Modo Martelo", desc: "Construção sem custo de materiais, raids desativadas e mobs passivos." },
-      { value: "immersive", label: "Imersivo", desc: "Portais proibidos, fogo se espalha pelo mundo e sem mapa/minimapa." },
+      { value: "", label: "Game default", desc: "No modifiers — vanilla experience, as before the Hildir's Request patch." },
+      { value: "easy", label: "Easy", desc: "Lighter combat (easy damage) and less frequent raids." },
+      { value: "normal", label: "Normal", desc: "Equivalent to game default — all sliders at Normal." },
+      { value: "hard", label: "Hard", desc: "Hard combat and more frequent raids." },
+      { value: "hardcore", label: "Hardcore", desc: "Very hard combat, maximum death penalty, frequent raids, hard portals, and no map." },
+      { value: "casual", label: "Casual", desc: "Very easy combat, light death penalty, more resources, no raids, casual portals, per-player events, and passive mobs." },
+      { value: "hammer", label: "Hammer mode", desc: "Building with no material cost, raids disabled, and passive mobs." },
+      { value: "immersive", label: "Immersive", desc: "Portals forbidden, fire spreads across the world, and no map/minimap." },
     ],
     combat: [
-      { value: "", label: "Usar preset", desc: "Herdar dificuldade de combate do preset selecionado." },
-      { value: "veryeasy", label: "Muito fácil", desc: "125% dano do jogador, 50% dano inimigo, inimigos 90% velocidade/tamanho." },
-      { value: "easy", label: "Fácil", desc: "110% dano do jogador, 75% dano inimigo, inimigos 95% velocidade/tamanho." },
-      { value: "normal", label: "Normal", desc: "100% em todos os parâmetros de combate. Maior chance de inimigos de alto nível em Difícil/Muito difícil." },
-      { value: "hard", label: "Difícil", desc: "85% dano do jogador, 150% dano inimigo, inimigos 110% velocidade/tamanho, 120% taxa de level up." },
-      { value: "veryhard", label: "Muito difícil", desc: "70% dano do jogador, 200% dano inimigo, inimigos 120% velocidade/tamanho, 140% taxa de level up." },
+      { value: "", label: "Use preset", desc: "Inherit combat difficulty from the selected preset." },
+      { value: "veryeasy", label: "Very easy", desc: "125% player damage, 50% enemy damage, enemies 90% speed/size." },
+      { value: "easy", label: "Easy", desc: "110% player damage, 75% enemy damage, enemies 95% speed/size." },
+      { value: "normal", label: "Normal", desc: "100% on all combat parameters. Higher chance of high-level enemies on Hard/Very hard." },
+      { value: "hard", label: "Hard", desc: "85% player damage, 150% enemy damage, enemies 110% speed/size, 120% level-up rate." },
+      { value: "veryhard", label: "Very hard", desc: "70% player damage, 200% enemy damage, enemies 120% speed/size, 140% level-up rate." },
     ],
     deathpenalty: [
-      { value: "", label: "Usar preset", desc: "Herdar penalidade de morte do preset selecionado." },
-      { value: "casual", label: "Casual", desc: "Equipamento mantido ao morrer. Inventário dropado. Perda de skills: 1%." },
-      { value: "veryeasy", label: "Muito fácil", desc: "Dropa tudo ao morrer. Perda de skills: 1% (menor que Normal)." },
-      { value: "easy", label: "Fácil", desc: "Dropa tudo ao morrer. Perda de skills: 2,5%." },
-      { value: "normal", label: "Normal", desc: "Dropa tudo ao morrer. Perda de skills: 5%." },
-      { value: "hard", label: "Difícil", desc: "Equipamento dropado, inventário destruído permanentemente. Perda de skills: 7,5%." },
-      { value: "hardcore", label: "Hardcore", desc: "Todos os itens e skills perdidos permanentemente ao morrer." },
+      { value: "", label: "Use preset", desc: "Inherit death penalty from the selected preset." },
+      { value: "casual", label: "Casual", desc: "Equipment kept on death. Inventory dropped. Skill loss: 1%." },
+      { value: "veryeasy", label: "Very easy", desc: "Drop everything on death. Skill loss: 1% (less than Normal)." },
+      { value: "easy", label: "Easy", desc: "Drop everything on death. Skill loss: 2.5%." },
+      { value: "normal", label: "Normal", desc: "Drop everything on death. Skill loss: 5%." },
+      { value: "hard", label: "Hard", desc: "Equipment dropped, inventory permanently destroyed. Skill loss: 7.5%." },
+      { value: "hardcore", label: "Hardcore", desc: "All items and skills permanently lost on death." },
     ],
     resources: [
-      { value: "", label: "Usar preset", desc: "Herdar taxa de recursos do preset selecionado." },
-      { value: "muchless", label: "Muito menos", desc: "50% da taxa normal de drop de mobs e objetos (≈0,5×)." },
-      { value: "less", label: "Menos", desc: "75% da taxa normal (≈0,75×)." },
-      { value: "normal", label: "Normal", desc: "Taxa padrão de recursos do jogo." },
-      { value: "more", label: "Mais", desc: "150% da taxa normal (≈1,5×)." },
-      { value: "muchmore", label: "Muito mais", desc: "200% da taxa normal (≈2×)." },
-      { value: "most", label: "Máximo", desc: "300% da taxa normal (≈3×)." },
+      { value: "", label: "Use preset", desc: "Inherit resource rate from the selected preset." },
+      { value: "muchless", label: "Much less", desc: "50% of normal mob and object drop rate (≈0.5×)." },
+      { value: "less", label: "Less", desc: "75% of normal rate (≈0.75×)." },
+      { value: "normal", label: "Normal", desc: "Default game resource rate." },
+      { value: "more", label: "More", desc: "150% of normal rate (≈1.5×)." },
+      { value: "muchmore", label: "Much more", desc: "200% of normal rate (≈2×)." },
+      { value: "most", label: "Maximum", desc: "300% of normal rate (≈3×)." },
     ],
     raids: [
-      { value: "", label: "Usar preset", desc: "Herdar frequência de raids do preset selecionado." },
-      { value: "none", label: "Nenhuma", desc: "EventRate 0 — raids diurnas desativadas. Raids noturnas ainda podem ocorrer." },
-      { value: "muchless", label: "Muito menos", desc: "Intervalo ~92 min, 10% chance — bem menos raids." },
-      { value: "less", label: "Menos", desc: "Intervalo ~69 min, ~13% chance." },
-      { value: "normal", label: "Normal", desc: "Intervalo ~46 min, 20% chance." },
-      { value: "more", label: "Mais", desc: "Intervalo ~28 min, ~33% chance." },
-      { value: "muchmore", label: "Muito mais", desc: "Intervalo ~14 min, ~67% chance." },
+      { value: "", label: "Use preset", desc: "Inherit raid frequency from the selected preset." },
+      { value: "none", label: "None", desc: "EventRate 0 — daytime raids disabled. Night raids may still occur." },
+      { value: "muchless", label: "Much less", desc: "Interval ~92 min, 10% chance — far fewer raids." },
+      { value: "less", label: "Less", desc: "Interval ~69 min, ~13% chance." },
+      { value: "normal", label: "Normal", desc: "Interval ~46 min, 20% chance." },
+      { value: "more", label: "More", desc: "Interval ~28 min, ~33% chance." },
+      { value: "muchmore", label: "Much more", desc: "Interval ~14 min, ~67% chance." },
     ],
     portals: [
-      { value: "", label: "Usar preset", desc: "Herdar regras de portais do preset selecionado." },
-      { value: "casual", label: "Casual", desc: "TeleportAll — quase tudo pode ser levado por portal (exceto animais domados)." },
-      { value: "normal", label: "Normal", desc: "Itens não-portáveis seguem as regras padrão do jogo." },
-      { value: "hard", label: "Sem portais de boss", desc: "Portais indisponíveis enquanto um boss estiver ativo na área." },
-      { value: "veryhard", label: "Sem portais", desc: "Nenhum portal permitido no mundo." },
+      { value: "", label: "Use preset", desc: "Inherit portal rules from the selected preset." },
+      { value: "casual", label: "Casual", desc: "TeleportAll — almost everything can go through portals (except tamed animals)." },
+      { value: "normal", label: "Normal", desc: "Non-portable items follow default game rules." },
+      { value: "hard", label: "No boss portals", desc: "Portals unavailable while a boss is active in the area." },
+      { value: "veryhard", label: "No portals", desc: "No portals allowed in the world." },
     ],
   },
   worldConfigFields: [
-    { key: "combat", label: "Combate", icon: "⚔️" },
-    { key: "deathpenalty", label: "Penalidade de morte", icon: "💀" },
-    { key: "resources", label: "Recursos", icon: "🪵" },
+    { key: "combat", label: "Combat", icon: "⚔️" },
+    { key: "deathpenalty", label: "Death penalty", icon: "💀" },
+    { key: "resources", label: "Resources", icon: "🪵" },
     { key: "raids", label: "Raids", icon: "🔥" },
-    { key: "portals", label: "Portais", icon: "🌀" },
+    { key: "portals", label: "Portals", icon: "🌀" },
   ],
   worldConfigFlags: [
-    { key: "nobuildcost", label: "Sem custo de construção", desc: "Peças de construção não consomem materiais. Receitas ainda precisam ser descobertas." },
-    { key: "playerevents", label: "Raids por jogador", desc: "Raids baseadas no progresso individual de cada jogador, não nos bosses mortos no servidor." },
-    { key: "fire", label: "Perigo de fogo", desc: "Madeira pode pegar fogo e o fogo se espalha pelo mundo inteiro, não só em Ashlands." },
-    { key: "passivemobs", label: "Inimigos passivos", desc: "Inimigos não atacam até serem provocados." },
-    { key: "nomap", label: "Sem mapa", desc: "Mapa e minimapa desabilitados — navegação apenas por marcos visuais." },
+    { key: "nobuildcost", label: "No build cost", desc: "Building pieces consume no materials. Recipes still need to be discovered." },
+    { key: "playerevents", label: "Per-player raids", desc: "Raids based on each player's individual progress, not bosses killed on the server." },
+    { key: "fire", label: "Fire hazard", desc: "Wood can catch fire and fire spreads across the entire world, not just Ashlands." },
+    { key: "passivemobs", label: "Passive enemies", desc: "Enemies do not attack until provoked." },
+    { key: "nomap", label: "No map", desc: "Map and minimap disabled — navigate by landmarks only." },
   ],
 
   async loadWorldsPage() {
@@ -104,13 +104,13 @@ export const worlds = {
     const world = this.worlds.find((w) => w.name === name);
     const isNew = world && world.pending && !world.has_db;
     const msg = isNew
-      ? `Ativar mundo "${name}"? O servidor será reiniciado e um mundo NOVO (vazio) será criado.`
-      : `Ativar mundo "${name}"? O servidor será reiniciado.`;
+      ? `Activate world "${name}"? The server will restart and a NEW (empty) world will be created.`
+      : `Activate world "${name}"? The server will restart.`;
     if (!confirm(msg)) return;
     return this.withBusy(`switchWorld:${name}`, async () => {
       try {
         await this.api("POST", "/api/worlds/switch", { world_name: name });
-        this.toast(`Mundo "${name}" ativado`);
+        this.toast(`World "${name}" activated`);
         await this.loadWorlds();
         await this.refreshStatus();
         if (this.page === "server") {
@@ -127,7 +127,7 @@ export const worlds = {
     return this.withBusy(act ? "createWorldActivate" : "createWorld", async () => {
       try {
         await this.api("POST", `/api/worlds/create?name=${encodeURIComponent(this.newWorldName)}&activate=${act}`);
-        this.toast(act ? `Mundo "${this.newWorldName}" criado e ativado` : `Mundo "${this.newWorldName}" registrado`);
+        this.toast(act ? `World "${this.newWorldName}" created and activated` : `World "${this.newWorldName}" registered`);
         this.newWorldName = "";
         this.createWorldActivate = false;
         await this.loadWorlds();
@@ -137,21 +137,21 @@ export const worlds = {
   },
 
   async deleteWorld(name) {
-    if (!confirm(`Apagar mundo "${name}" permanentemente?`)) return;
+    if (!confirm(`Permanently delete world "${name}"?`)) return;
     return this.withBusy(`deleteWorld:${name}`, async () => {
       try {
         await this.api("DELETE", `/api/worlds/${encodeURIComponent(name)}`);
-        this.toast(`Mundo "${name}" apagado`);
+        this.toast(`World "${name}" deleted`);
         await this.loadWorlds();
       } catch (e) { this.toast(e.message, "error"); }
     });
   },
 
   worldBadge(world) {
-    if (world.running && !world.has_db) return "Aguardando criação";
-    if (world.running) return "Em execução";
-    if (world.active) return "Ativo";
-    if (world.pending) return "Pendente";
+    if (world.running && !world.has_db) return "Awaiting creation";
+    if (world.running) return "Running";
+    if (world.active) return "Active";
+    if (world.pending) return "Pending";
     return "";
   },
 
@@ -160,14 +160,14 @@ export const worlds = {
     if (!s) return "";
     const preset = this.worldOptionLabel("preset", s.preset || "normal");
     const portals = this.worldOptionLabel("portals", s.portals || "normal");
-    return `${preset} · Portais: ${portals}`;
+    return `${preset} · Portals: ${portals}`;
   },
 
   worldOptionLabel(field, value) {
     const v = value ?? "";
     const item = (this.worldModifierCatalog[field] || []).find((o) => o.value === v);
     if (item) return item.label;
-    if (!v) return field === "preset" ? "Padrão do jogo" : "Preset";
+    if (!v) return field === "preset" ? "Game default" : "Preset";
     return v;
   },
 
@@ -190,11 +190,11 @@ export const worlds = {
     const eff = this.computeWorldEffective();
     return [
       { key: "preset", label: "Preset", value: eff.preset },
-      { key: "combat", label: "Combate", value: eff.combat },
-      { key: "deathpenalty", label: "Morte", value: eff.deathpenalty },
-      { key: "resources", label: "Recursos", value: eff.resources },
+      { key: "combat", label: "Combat", value: eff.combat },
+      { key: "deathpenalty", label: "Death", value: eff.deathpenalty },
+      { key: "resources", label: "Resources", value: eff.resources },
       { key: "raids", label: "Raids", value: eff.raids },
-      { key: "portals", label: "Portais", value: eff.portals },
+      { key: "portals", label: "Portals", value: eff.portals },
     ];
   },
 
@@ -263,7 +263,7 @@ export const worlds = {
       try {
         const payload = { config: this.worldConfigForm, restart };
         const data = await this.api("PUT", `/api/worlds/${encodeURIComponent(this.worldConfigName)}/config`, payload);
-        this.toast(restart ? "Configurações salvas e servidor reiniciado" : "Configurações do mundo salvas");
+        this.toast(restart ? "Settings saved and server restarted" : "World settings saved");
         this.worldConfigRequiresRestart = !!data.requires_restart;
         this.worldConfigEffective = data.effective || data.summary || null;
         this.worldConfigInferredPreset = data.inferred_preset || "";

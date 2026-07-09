@@ -1,125 +1,117 @@
-# Vikinger Panel
+# Vikinger Panel — Web Panel for Self-Hosted Valheim Servers
 
-Painel web moderno para gerenciar servidores **Valheim** dockerizados — mundos, mods BepInEx,
-backups, métricas, logs e muito mais, tudo em uma interface única.
+A modern web panel to manage **dockerized Valheim servers** — worlds, BepInEx mods,
+backups, metrics, logs, and more, all in one interface.
 
 [![License: Polyform Shield](https://img.shields.io/badge/License-Polyform%20Shield-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.1.0-gold.svg)](https://github.com/viniciuspetrachin/vikinger-panel)
+[![Version](https://img.shields.io/badge/version-2.1.0-gold.svg)](https://github.com/viniciuspetrachin/vikinger-panel/releases)
+[![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa)](https://github.com/sponsors/viniciuspetrachin/dashboard)
 
-> Interface em português · 100% dockerizado · Testes unitários e E2E · Sem CDN externo
+> Docker-native · Unit & E2E tests · No external CDN · English UI
+
+**Keywords:** valheim server panel · valheim server manager · docker valheim · bepinex mod manager · thunderstore · self-hosted valheim · world backups · game server admin
 
 ---
 
-## Monorepo: uma pasta, dois containers
+## Table of contents
 
-Todo o projeto vive em **uma única pasta**. O `docker compose` sobe **dois containers separados**:
+- [Quick start (recommended — GitHub Release)](#quick-start-recommended--github-release)
+- [Install from source](#install-from-source)
+- [Updating](#updating)
+- [Features](#features)
+- [Requirements](#requirements)
+- [GitHub Sponsors](#github-sponsors)
+- [Licensing](#licensing)
+- [Support](#support)
+- [Development](#development)
+- [CI/CD and releases](#cicd-and-releases)
+- [Credits](#credits)
 
-```mermaid
-flowchart LR
-  browser["Navegador :8080"] --> panel["container vikinger-panel (FastAPI)"]
-  panel -->|docker.sock| daemon["Docker do host"]
-  panel -->|config/ + data/| vol["Volumes do projeto"]
-  daemon --> srv["container valheim-server (UDP 2456-2458)"]
+---
+
+## Quick start (recommended — GitHub Release)
+
+Best for server owners who just want to run the panel — **no git clone required**.
+
+### 1. Requirements
+
+- Linux with **Docker** and **Docker Compose** v2
+- UDP ports **2456–2458** open on your firewall (for external players)
+- ~4 GB RAM (Valheim + BepInEx + panel)
+- Your user in the `docker` group (`DOCKER_GID`)
+
+### 2. Download the release
+
+Go to **[GitHub Releases](https://github.com/viniciuspetrachin/vikinger-panel/releases)** and download:
+
+`vikinger-panel-X.Y.Z-dist.zip`
+
+### 3. Extract and configure
+
+```bash
+unzip vikinger-panel-*-dist.zip
+cd vikinger-panel-*/
+cp .env.example .env
+nano .env   # or your preferred editor
 ```
 
+| Variable | What to set |
+|----------|-------------|
+| `HOST_PROJECT_DIR` | **Absolute** path to this folder (e.g. `/home/you/vikinger-panel`) |
+| `DOCKER_GID` | Docker group GID: `getent group docker \| cut -d: -f3` |
+| `SERVER_NAME` | Server name shown in the server list |
+| `WORLD_NAME` | Active world name on first boot |
+| `SERVER_PASS` | Server password (min. 5 characters; empty = open) |
+| `PANEL_PORT` | Panel HTTP port (default `8080`) |
+
+### 4. Start everything
+
+```bash
+chmod +x scripts/*.sh
+./scripts/start.sh
 ```
-vikinger-panel/
-├─ panel/                     # painel web (FastAPI + Alpine.js) — todo o código-fonte
-├─ server/                    # infra do servidor de jogo (compose standalone)
-├─ scripts/                   # dev.sh, reload-panel.sh, entrypoint.sh, install-mods.sh
-├─ docker-compose.yml         # PRODUÇÃO: sobe valheim-server + vikinger-panel
-├─ docker-compose.dev.yml     # DEV: hot-reload sem rebuild
-├─ config/                    # config do servidor (gitignored)
-├─ data/                      # dados do jogo: mundos, steamapps (gitignored)
-└─ panel-data/                # dados do painel: auditoria, registry de mods (gitignored)
-```
+
+The script loads the bundled Docker image and starts two containers:
+**valheim-server** (game) and **vikinger-panel** (web UI).
+
+### 5. Open the panel
+
+Browse to **http://localhost:8080** (or your `PANEL_PORT`).
+
+On the **first boot**, Valheim downloads the game and installs BepInEx — this can take
+several minutes. Watch progress on the **Overview** tab (live console).
+
+### 6. Connect in-game
+
+In Valheim, use **Join IP** and enter `YOUR_IP:2456` (default port). Enter the server
+password if set. The current address is shown on the **Overview** tab under “How to connect”.
+
+### Troubleshooting
+
+| Issue | Fix |
+|-------|-----|
+| Permission errors on folders | Ensure `config/` and `data/` are owned by UID 1000 |
+| Players cannot connect | Forward UDP **2456–2458** to the host |
+| Panel looks stale after update | Hard refresh: `Ctrl+Shift+R` |
+| `DOCKER_GID` wrong | Run `getent group docker` and update `.env` |
 
 ---
 
-## Funcionalidades
+## Install from source
 
-| Área | O que você pode fazer |
-|------|----------------------|
-| **Visão Geral** | Status do servidor, jogadores online, console ao vivo, controles rápidos |
-| **Servidor** | Nome, senha, porta, listas admin/ban/permitidos, argumentos extra (`-crossplay`) |
-| **Mundos** | Criar, trocar, presets (Fácil → Hardcore), editor de `.fwl`, importar mundos |
-| **Mods e Configs** | Instalar via Thunderstore/URL/upload, ativar/desativar, editar `.cfg` BepInEx, atualizações do jogo e por mod |
-| **Backups** | Agendamento cron, backup manual, download e restauração |
-| **Recursos** *(avançado)* | Limite de RAM do container, gráficos de CPU/rede em tempo real |
-| **Arquivos** *(avançado)* | Navegador de arquivos com editor CodeMirror |
-| **Logs / Auditoria** *(avançado)* | Logs do Docker sanitizados, trilha de auditoria de todas as ações |
-
-O **Modo avançado** na sidebar revela Recursos, Arquivos, Logs e Auditoria — ideal para
-administradores experientes.
-
----
-
-## Requisitos
-
-- Linux com **Docker** e **Docker Compose** v2
-- Portas UDP **2456–2458** liberadas (para jogadores externos)
-- ~4 GB RAM recomendados (Valheim + BepInEx + painel)
-- Acesso ao `docker.sock` (o container do painel controla o servidor)
-
----
-
-## Instalação rápida
+For contributors or anyone who wants to build the image locally:
 
 ```bash
 git clone https://github.com/viniciuspetrachin/vikinger-panel.git
 cd vikinger-panel
 cp .env.example .env
-# Edite .env: SERVER_NAME, WORLD_NAME, SERVER_PASS, HOST_PROJECT_DIR, DOCKER_GID
+# Edit .env: SERVER_NAME, WORLD_NAME, SERVER_PASS, HOST_PROJECT_DIR, DOCKER_GID
 docker compose up -d --build
 ```
 
-Abra **http://localhost:8080** (ou a porta definida em `PANEL_PORT`).
+Open **http://localhost:8080**. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full dev workflow.
 
-### Instalação sem código-fonte (usuário final)
-
-Para quem só quer rodar o servidor, sem clonar o repositório, baixe o pacote ZIP em
-**[GitHub Releases](https://github.com/viniciuspetrachin/vikinger-panel/releases)**.
-O pacote inclui a imagem Docker pré-construída e um guia passo a passo (`README-INSTALL.md`).
-
----
-
-## CI/CD e releases
-
-Cada merge na branch `main` dispara automaticamente:
-
-1. **Testes** (unitários + E2E com Playwright)
-2. **Versionamento** — incremento automático do patch (`2.1.0` → `2.1.1`; major/minor só mudam se você editar manualmente em `panel/version.py`)
-3. **Git tag** `vX.Y.Z` e **GitHub Release** com:
-   - ZIP pronto para leigos (sem código-fonte)
-   - Arquivo `.tar` da imagem Docker
-4. **Imagem no GHCR:** `ghcr.io/viniciuspetrachin/vikinger-panel:X.Y.Z`
-
-Pull requests para `main` rodam os mesmos testes via GitHub Actions. Configure **branch protection**
-no repositório para exigir o check `test` antes do merge — veja [CONTRIBUTING.md](CONTRIBUTING.md).
-
----
-
-### Variáveis importantes
-
-| Variável | Descrição |
-|----------|-----------|
-| `SERVER_NAME` | Nome exibido na lista do Valheim |
-| `WORLD_NAME` | Mundo ativo na primeira subida |
-| `SERVER_PASS` | Senha do servidor (mín. 5 caracteres) |
-| `HOST_PROJECT_DIR` | Caminho absoluto do projeto no host |
-| `DOCKER_GID` | GID do grupo `docker` no host (`getent group docker`) |
-| `PANEL_PORT` | Porta HTTP do painel (padrão `8080`) |
-| `UPDATE_CRON` | Cron de verificação de updates do jogo (vazio = desligado) |
-| `UPDATE_IF_IDLE` | Só atualizar quando não houver jogadores (`true`/`false`) |
-
-Na aba **Mods**, configure auto-atualização do jogo, modo vanilla/modded (BepInEx) e updates individuais de mods Thunderstore.
-
-### Primeira subida
-
-Na primeira execução o container do Valheim baixa o jogo e instala o BepInEx — pode levar
-vários minutos. Acompanhe na aba **Visão Geral** (console ao vivo).
-
-### Rodar só o servidor (sem painel)
+### Valheim only (no panel)
 
 ```bash
 docker compose --project-directory . -f server/docker-compose.standalone.yml up -d
@@ -127,103 +119,184 @@ docker compose --project-directory . -f server/docker-compose.standalone.yml up 
 
 ---
 
-## Desenvolvimento
+## Updating
 
-### Modo dev com hot-reload (recomendado para debug)
+### From a release ZIP
+
+1. Download the new release from [GitHub Releases](https://github.com/viniciuspetrachin/vikinger-panel/releases)
+2. Extract **over** the existing folder (or migrate `config/`, `data/`, `panel-data/`)
+3. Run:
+
+```bash
+./scripts/reload-panel.sh --load-image
+```
+
+Your worlds, mods, and settings in `config/`, `data/`, and `panel-data/` are preserved.
+
+### Pull image from GHCR (alternative)
+
+```bash
+docker pull ghcr.io/viniciuspetrachin/vikinger-panel:X.Y.Z
+docker compose up -d
+```
+
+---
+
+## Features
+
+| Area | What you can do |
+|------|-----------------|
+| **Overview** | Server status, online players, live console, quick controls |
+| **Server** | Name, password, port, admin/ban/allow lists, extra args (`-crossplay`) |
+| **Worlds** | Create, switch, presets (Easy → Hardcore), `.fwl` editor, import worlds |
+| **Mods & Config** | Install via Thunderstore/URL/upload, enable/disable, edit BepInEx `.cfg`, game & mod updates |
+| **Backups** | Cron scheduling, manual backup, download and restore |
+| **Resources** *(advanced)* | Container RAM limit, real-time CPU/network charts |
+| **Files** *(advanced)* | File browser with CodeMirror editor |
+| **Logs / Audit** *(advanced)* | Sanitized Docker logs, audit trail of all panel actions |
+
+**Advanced mode** in the sidebar reveals Resources, Files, Logs, and Audit — for experienced admins.
+
+---
+
+## Requirements
+
+- Linux with **Docker** and **Docker Compose** v2
+- UDP ports **2456–2458** open (for external players)
+- ~4 GB RAM recommended (Valheim + BepInEx + panel)
+- Access to `docker.sock` (the panel container controls the game server)
+
+---
+
+## GitHub Sponsors
+
+If Vikinger Panel helps you, consider becoming a sponsor:
+
+**[github.com/sponsors/viniciuspetrachin/dashboard](https://github.com/sponsors/viniciuspetrachin/dashboard)**
+
+- Sponsorship helps **keep the project maintained** — new features, bug fixes, and releases
+- Sponsors at **$1 USD/month or more** get **direct support** from the author (install help, configuration questions, etc.)
+- Sponsorship is voluntary and **does not replace** a commercial license for hosting providers reselling the panel
+
+You can also use the **Support the Project** tab inside the panel.
+
+---
+
+## Licensing
+
+This project uses **[Polyform Shield 1.0.0](LICENSE)** — a *source-available* license for open
+community use **without allowing resale**.
+
+### Free for self-hosters
+
+- Run on **your own** Valheim server (home, VPS, community)
+- Modify the code for personal use
+- Contribute PRs, issues, and documentation
+- Distribute forks under the same license terms
+
+### Commercial license for hosting providers
+
+- Hosting providers offering the panel to paying customers
+- Resale or white-label as a paid product
+- Any service competing with Vikinger Panel as a commercial offering
+
+**Contact for commercial licensing:** [vr.petrachin@gmail.com](mailto:vr.petrachin@gmail.com)
+
+See [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md) for details.
+
+---
+
+## Support
+
+| Channel | Purpose |
+|---------|---------|
+| [GitHub Issues](https://github.com/viniciuspetrachin/vikinger-panel/issues) | Bugs and feature requests |
+| [GitHub Sponsors](https://github.com/sponsors/viniciuspetrachin/dashboard) ($1+/month) | Direct support from the author |
+| Panel **Help** tab | Built-in FAQ |
+| [vr.petrachin@gmail.com](mailto:vr.petrachin@gmail.com) | Commercial licensing |
+
+---
+
+## Development
+
+### Dev mode with hot-reload
 
 ```bash
 ./scripts/dev.sh
 ```
 
-- **Backend:** `uvicorn --reload` — editar `panel/*.py` recarrega sozinho.
-- **Frontend:** watcher Tailwind + esbuild — editar `panel/frontend/**` regenera os bundles.
-- Basta **F5** no navegador; **não precisa rebuild** da imagem.
+- **Backend:** `uvicorn --reload` — edit `panel/*.py` and it reloads
+- **Frontend:** Tailwind + esbuild watcher — edit `panel/frontend/**` and refresh with **F5**
+- No image rebuild needed in dev mode
 
-Sob o capô, `docker-compose.dev.yml` monta `panel/` por cima de `/app` e sobe um container
-`assets` (Node) rodando o watcher.
-
-### Deploy de produção (imagem embarcada)
-
-Fora do modo dev, o painel serve arquivos **embarcados na imagem**. Após alterar código:
+### Production deploy (embedded assets)
 
 ```bash
-./scripts/reload-panel.sh           # rebuild + restart do container
-./scripts/reload-panel.sh --tests   # pytest unit + e2e antes, depois deploy
+./scripts/reload-panel.sh           # rebuild + restart panel container
+./scripts/reload-panel.sh --tests   # pytest unit + e2e before deploy
 ```
 
-### Testes e build manual
+### Manual tests and build
 
 ```bash
 cd panel
 python -m venv .venv && .venv/bin/pip install -r requirements.txt
-.venv/bin/pytest tests/unit -q          # unitários
+.venv/bin/pytest tests/unit -q
 .venv/bin/playwright install chromium
-.venv/bin/pytest tests/e2e -q           # E2E com Playwright
-
-npm install && npm run build            # rebuild CSS/JS
+.venv/bin/pytest tests/e2e -q
+npm install && npm run build
 ```
 
-Veja [CONTRIBUTING.md](CONTRIBUTING.md) para o fluxo completo de contribuição.
-
 ---
 
-## Stack
+## CI/CD and releases
 
-FastAPI · Alpine.js · Tailwind CSS · Chart.js · CodeMirror · Docker Compose
+Every merge to `main` automatically:
 
----
+1. **Runs tests** (unit + E2E with Playwright)
+2. **Bumps version** — patch auto-increment (`2.1.0` → `2.1.1`; edit `panel/version.py` manually for major/minor)
+3. **Creates git tag** `vX.Y.Z` and **GitHub Release** with:
+   - Ready-to-use ZIP (no source code)
+   - Docker image `.tar` file
+4. **Publishes image to GHCR:** `ghcr.io/viniciuspetrachin/vikinger-panel:X.Y.Z`
 
-## Licenciamento
+Pull requests to `main` run the same tests via GitHub Actions. Enable **branch protection**
+requiring the `test` check before merge — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Este projeto usa a **[Polyform Shield 1.0.0](LICENSE)** — licença *source-available* pensada
-para projetos que querem comunidade aberta **sem permitir revenda**.
+### Monorepo layout
 
-### Uso gratuito para quem auto-hospeda
-
-- Rodar no **seu próprio** servidor Valheim (casa, VPS, comunidade)
-- Modificar o código para uso pessoal
-- Contribuir com PRs, issues e documentação
-- Distribuir forks mantendo os termos da licença
-
-### Licença paga para empresas de hospedagem
-
-- Provedores de **hospedagem** que oferecem o painel aos clientes
-- **Revenda** ou white-label como produto pago
-- Qualquer serviço que concorra com o Vikinger Panel como oferta comercial
-
-Detalhes, planos e contato: **[COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md)**
-
----
-
-## Doações
-
-O desenvolvimento é mantido de forma independente. Se o painel te ajuda, considere apoiar
-pela aba **Doações** dentro do painel. Configure os links no `.env`:
-
-```bash
-PANEL_DONATION_GITHUB=https://github.com/sponsors/seu-usuario
-PANEL_DONATION_KOFI=https://ko-fi.com/seu-usuario
-PANEL_DONATION_PIX=sua-chave-pix@email.com
-PANEL_COMMERCIAL_EMAIL=licensing@seudominio.com
+```
+vikinger-panel/
+├─ panel/                     # web panel (FastAPI + Alpine.js)
+├─ server/                    # standalone game server compose
+├─ scripts/                   # dev.sh, reload-panel.sh, release scripts
+├─ docker-compose.yml         # PRODUCTION: valheim-server + vikinger-panel
+├─ docker-compose.dev.yml     # DEV: hot-reload override
+├─ config/                    # server config (gitignored)
+├─ data/                      # game data: worlds, steamapps (gitignored)
+└─ panel-data/                # panel data: audit, mod registry (gitignored)
 ```
 
-> Doações são voluntárias e **não substituem** licença comercial para hospedagens.
+### Important environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `SERVER_NAME` | Name shown in the Valheim server list |
+| `WORLD_NAME` | Active world on first boot |
+| `SERVER_PASS` | Server password (min. 5 characters) |
+| `HOST_PROJECT_DIR` | Absolute project path on the host |
+| `DOCKER_GID` | GID of the `docker` group (`getent group docker`) |
+| `PANEL_PORT` | Panel HTTP port (default `8080`) |
+| `UPDATE_CRON` | Cron for game update checks (empty = disabled) |
+| `UPDATE_IF_IDLE` | Only update when no players online (`true`/`false`) |
 
 ---
 
-## Créditos
+## Credits
 
-- [lloesche/valheim-server-docker](https://github.com/lloesche/valheim-server-docker) — imagem base do servidor
+- [lloesche/valheim-server-docker](https://github.com/lloesche/valheim-server-docker) — base server image
 - [Thunderstore Valheim](https://thunderstore.io/c/valheim/) — mods
-- Comunidade Valheim BR
-
----
-
-## Suporte
-
-- **Bugs e features:** [GitHub Issues](https://github.com/viniciuspetrachin/vikinger-panel/issues)
-- **Licenciamento comercial:** veja [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md)
-- **Ajuda no painel:** aba **Ajuda** (FAQ integrado)
+- Valheim community
 
 ---
 

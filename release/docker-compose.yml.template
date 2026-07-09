@@ -41,6 +41,9 @@ services:
       DOCKER_GID: "${DOCKER_GID:-999}"
       PANEL_BUILD_DATE: "{{BUILD_DATE}}"
       PANEL_GIT_COMMIT: "{{GIT_COMMIT}}"
+      PANEL_DONATION_GITHUB: ${PANEL_DONATION_GITHUB:-https://github.com/sponsors/viniciuspetrachin/dashboard}
+      PANEL_COMMERCIAL_EMAIL: ${PANEL_COMMERCIAL_EMAIL:-vr.petrachin@gmail.com}
+      PANEL_COMMERCIAL_URL: ${PANEL_COMMERCIAL_URL:-https://github.com/viniciuspetrachin/vikinger-panel/blob/main/COMMERCIAL-LICENSE.md}
     working_dir: /app
     depends_on:
       - valheim

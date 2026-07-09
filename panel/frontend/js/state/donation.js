@@ -11,9 +11,9 @@ export const donation = {
   },
 
   donationPitch:
-    "O Vikinger Panel é gratuito para uso pessoal e aceita contribuições da comunidade. " +
-    "Doações voluntárias ajudam a manter o desenvolvimento. " +
-    "Provedores de hospedagem precisam de licença comercial — veja abaixo.",
+    "Vikinger Panel is free for personal use. Sponsors help maintain the project and keep development going. " +
+    "Contributors at $1+/month get direct support from the maintainer. " +
+    "Sponsorship does not replace a commercial license — hosting providers still need one (see below).",
 
   async loadDonationInfo() {
     try {

@@ -21,7 +21,7 @@ def _go_worlds(page: Page) -> None:
 
 def test_dashboard_live_console(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    expect(page.get_by_text("Console do Servidor (ao vivo)")).to_be_visible()
+    expect(page.get_by_text("Server Console (live)")).to_be_visible()
     console = page.locator("[x-ref='dashConsole']")
     expect(console).to_contain_text(re.compile("World loaded|Listening|connected"), timeout=8000)
     text = console.inner_text()
@@ -71,7 +71,7 @@ def test_logs_tab_no_supervisord_prefix(page: Page, base_url: str) -> None:
 
 def test_loading_disables_button(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    btn = page.get_by_role("button", name="↻ Reiniciar", exact=True)
+    btn = page.get_by_role("button", name="↻ Restart", exact=True)
     expect(btn).to_be_enabled(timeout=5000)
     btn.click()
     page.wait_for_function(
@@ -96,7 +96,7 @@ def test_double_click_prevented(page: Page, base_url: str) -> None:
         route.continue_()
 
     page.route("**/api/server/start", handle)
-    btn = page.get_by_role("button", name="▶ Iniciar", exact=True)
+    btn = page.get_by_role("button", name="▶ Start", exact=True)
     expect(btn).to_be_enabled(timeout=5000)
     btn.click()
     btn.click()
@@ -107,24 +107,24 @@ def test_double_click_prevented(page: Page, base_url: str) -> None:
 def test_backup_modal_flow(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     page.get_by_role("button", name="Backups", exact=True).click()
-    page.get_by_role("button", name="Criar backup manual", exact=True).click()
+    page.get_by_role("button", name="Create manual backup", exact=True).click()
 
-    expect(page.get_by_role("heading", name="Criar Backup")).to_be_visible()
-    expect(page.get_by_role("button", name="Mundo ativo")).to_be_visible()
-    expect(page.get_by_role("button", name="Completo")).to_be_visible()
-    expect(page.get_by_role("button", name="Somente configs")).to_be_visible()
+    expect(page.get_by_role("heading", name="Create Backup")).to_be_visible()
+    expect(page.get_by_role("button", name="Active world (quick)")).to_be_visible()
+    expect(page.get_by_role("button", name="Full")).to_be_visible()
+    expect(page.get_by_role("button", name="Configs only")).to_be_visible()
 
-    page.get_by_role("button", name="Mundo ativo").click()
-    expect(page.get_by_text(re.compile("Backup criado"))).to_be_visible(timeout=8000)
-    expect(page.get_by_role("heading", name="Criar Backup")).not_to_be_visible()
+    page.get_by_role("button", name="Active world (quick)").click()
+    expect(page.get_by_text(re.compile("Backup created"))).to_be_visible(timeout=8000)
+    expect(page.get_by_role("heading", name="Create Backup")).not_to_be_visible()
 
 
 def test_backup_appears_in_list(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     page.get_by_role("button", name="Backups", exact=True).click()
-    page.get_by_role("button", name="Criar backup manual", exact=True).click()
-    page.get_by_role("button", name="Completo").click()
-    expect(page.get_by_text(re.compile("Backup criado"))).to_be_visible(timeout=8000)
+    page.get_by_role("button", name="Create manual backup", exact=True).click()
+    page.get_by_role("button", name="Full").click()
+    expect(page.get_by_text(re.compile("Backup created"))).to_be_visible(timeout=8000)
     page.wait_for_timeout(800)
     expect(page.locator("table").get_by_text(re.compile("manual-full-")).first).to_be_visible(timeout=8000)
 
@@ -132,61 +132,61 @@ def test_backup_appears_in_list(page: Page, base_url: str) -> None:
 def test_backup_details_modal_shows_mods(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     page.get_by_role("button", name="Backups", exact=True).click()
-    page.get_by_role("button", name="Criar backup manual", exact=True).click()
-    page.get_by_role("button", name="Completo").click()
-    expect(page.get_by_text(re.compile("Backup criado"))).to_be_visible(timeout=8000)
+    page.get_by_role("button", name="Create manual backup", exact=True).click()
+    page.get_by_role("button", name="Full").click()
+    expect(page.get_by_text(re.compile("Backup created"))).to_be_visible(timeout=8000)
     page.wait_for_timeout(800)
     expect(page.locator("table th", has_text="Mods")).to_be_visible()
-    page.get_by_role("button", name="Detalhes").first.click()
-    expect(page.get_by_role("heading", name="Detalhes do backup")).to_be_visible(timeout=8000)
-    modal = page.locator(".modal-overlay").filter(has=page.get_by_role("heading", name="Detalhes do backup"))
+    page.get_by_role("button", name="Details").first.click()
+    expect(page.get_by_role("heading", name="Backup details")).to_be_visible(timeout=8000)
+    modal = page.locator(".modal-overlay").filter(has=page.get_by_role("heading", name="Backup details"))
     expect(modal.get_by_text(re.compile(r"Mods \(\d+\)"))).to_be_visible(timeout=8000)
 
 
 def test_backup_restore_button_visible(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     page.get_by_role("button", name="Backups", exact=True).click()
-    page.get_by_role("button", name="Criar backup manual", exact=True).click()
-    page.get_by_role("button", name="Mundo ativo").click()
-    expect(page.get_by_text(re.compile("Backup criado"))).to_be_visible(timeout=8000)
+    page.get_by_role("button", name="Create manual backup", exact=True).click()
+    page.get_by_role("button", name="Active world (quick)").click()
+    expect(page.get_by_text(re.compile("Backup created"))).to_be_visible(timeout=8000)
     page.wait_for_timeout(800)
-    expect(page.get_by_role("button", name="Voltar até aqui").first).to_be_visible(timeout=8000)
+    expect(page.get_by_role("button", name="Restore to here").first).to_be_visible(timeout=8000)
 
 
 def test_backup_apply_single_button(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     page.get_by_role("button", name="Backups", exact=True).click()
-    expect(page.get_by_role("button", name="Aplicar e reiniciar", exact=True)).to_be_visible()
-    expect(page.get_by_role("button", name="Salvar", exact=True)).not_to_be_visible()
-    expect(page.get_by_role("button", name="Executar agendado agora", exact=True)).to_be_visible()
+    expect(page.get_by_role("button", name="Apply and restart", exact=True)).to_be_visible()
+    expect(page.get_by_role("button", name="Save", exact=True)).not_to_be_visible()
+    expect(page.get_by_role("button", name="Run scheduled job now", exact=True)).to_be_visible()
 
 
 def test_backup_restore_modal_flow(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     page.get_by_role("button", name="Backups", exact=True).click()
-    page.get_by_role("button", name="Criar backup manual", exact=True).click()
-    page.get_by_role("button", name="Mundo ativo").click()
-    expect(page.get_by_text(re.compile("Backup criado"))).to_be_visible(timeout=8000)
+    page.get_by_role("button", name="Create manual backup", exact=True).click()
+    page.get_by_role("button", name="Active world (quick)").click()
+    expect(page.get_by_text(re.compile("Backup created"))).to_be_visible(timeout=8000)
     page.wait_for_timeout(800)
-    page.get_by_role("button", name="Voltar até aqui").first.click()
-    expect(page.get_by_role("heading", name="Restaurar backup")).to_be_visible()
-    expect(page.get_by_role("button", name="Restaurar e reiniciar")).to_be_visible()
+    page.get_by_role("button", name="Restore to here").first.click()
+    expect(page.get_by_role("heading", name="Restore backup")).to_be_visible()
+    expect(page.get_by_role("button", name="Restore and restart")).to_be_visible()
 
 
 def test_backup_dashboard_button_opens_modal(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     page.get_by_role("button", name="💾 Backup", exact=True).click()
-    expect(page.get_by_role("heading", name="Criar Backup")).to_be_visible()
+    expect(page.get_by_role("heading", name="Create Backup")).to_be_visible()
 
 
 def test_audit_records_action(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    btn = page.get_by_role("button", name="↻ Reiniciar", exact=True)
+    btn = page.get_by_role("button", name="↻ Restart", exact=True)
     expect(btn).to_be_enabled(timeout=5000)
     btn.click()
     page.wait_for_timeout(3500)  # aguarda ação concluir e ser registrada
 
-    page.get_by_role("button", name="Auditoria", exact=True).click()
+    page.get_by_role("button", name="Audit", exact=True).click()
     page.wait_for_timeout(800)
     expect(page.get_by_text("/api/server/restart").first).to_be_visible(timeout=8000)
 
@@ -208,7 +208,7 @@ def _open_sample_mod_cfg(page: Page) -> None:
 def test_file_editor_codemirror(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     page.wait_for_function("() => typeof window.PanelEditor !== 'undefined'", timeout=20000)
-    page.get_by_role("button", name="Arquivos", exact=True).click()
+    page.get_by_role("button", name="Files", exact=True).click()
     _open_sample_mod_cfg(page)
     page.wait_for_function(
         "() => document.querySelector('[x-data]')._x_dataStack[0].editPath && document.querySelector('.cm-editor')",
@@ -217,14 +217,14 @@ def test_file_editor_codemirror(page: Page, base_url: str) -> None:
     page.locator(".cm-content").click()
     page.keyboard.type("# e2e edit")
     expect(page.locator('#file-editor-dirty')).to_be_visible(timeout=5000)
-    page.get_by_role("button", name="Salvar", exact=True).click()
-    expect(page.get_by_text(re.compile("Arquivo salvo"))).to_be_visible(timeout=8000)
+    page.get_by_role("button", name="Save", exact=True).click()
+    expect(page.get_by_text(re.compile("File saved"))).to_be_visible(timeout=8000)
 
 
 def test_file_editor_undo(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     page.wait_for_function("() => typeof window.PanelEditor !== 'undefined'", timeout=20000)
-    page.get_by_role("button", name="Arquivos", exact=True).click()
+    page.get_by_role("button", name="Files", exact=True).click()
     _open_sample_mod_cfg(page)
     page.wait_for_function(
         "() => document.querySelector('.cm-editor')",
@@ -244,7 +244,7 @@ def test_file_editor_undo(page: Page, base_url: str) -> None:
 def test_world_config_open_from_list(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     _go_worlds(page)
-    expect(page.get_by_role("button", name="Salvar configurações", exact=True)).to_be_visible(timeout=8000)
+    expect(page.get_by_role("button", name="Save settings", exact=True)).to_be_visible(timeout=8000)
     world_row = page.locator(".bg-valheim-800.rounded-xl.p-5").filter(
         has=page.locator("p.font-medium", has_text="TestWorld")
     ).first
@@ -263,61 +263,61 @@ def test_world_config_open_from_list(page: Page, base_url: str) -> None:
 def test_world_config_after_create(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     _go_worlds(page)
-    expect(page.get_by_text("Valores efetivos")).to_be_visible(timeout=10000)
+    expect(page.get_by_text("Effective values")).to_be_visible(timeout=10000)
     world_name = "E2eCfgWorld"
     page.locator("input[x-model='newWorldName']").fill(world_name)
     with page.expect_response(
         lambda r: "/api/worlds/create" in r.url and r.request.method == "POST" and r.status == 200,
         timeout=10000,
     ):
-        page.get_by_role("button", name="Criar", exact=True).click()
+        page.get_by_role("button", name="Create", exact=True).click()
     expect(page.locator("p.font-medium", has_text=world_name)).to_be_visible(timeout=8000)
     world_row = page.locator(".bg-valheim-800.rounded-xl.p-5").filter(
         has=page.locator("p.font-medium", has_text=world_name)
     ).first
     world_row.get_by_role("button", name="Config", exact=True).click()
     expect(page.locator("select[x-model='worldConfigName']")).to_have_value(world_name, timeout=8000)
-    expect(page.get_by_text("Valores efetivos")).to_be_visible()
-    expect(page.get_by_role("button", name="Salvar configurações", exact=True)).to_be_visible()
+    expect(page.get_by_text("Effective values")).to_be_visible()
+    expect(page.get_by_role("button", name="Save settings", exact=True)).to_be_visible()
     expect(page.get_by_text("Not found")).not_to_be_visible()
 
 
 def test_world_config_panel(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     _go_worlds(page)
-    expect(page.get_by_text("Configurações do Mundo")).to_be_visible()
-    expect(page.get_by_text("Valores efetivos")).to_be_visible()
-    expect(page.get_by_text("Preset do mundo")).to_be_visible()
-    expect(page.locator(".world-preset-card").filter(has_text="Padrão do jogo").first).to_be_visible()
-    expect(page.get_by_text("Modificadores individuais")).to_be_visible()
-    expect(page.get_by_role("button", name="Salvar configurações", exact=True)).to_be_visible()
-    page.get_by_role("button", name="Salvar configurações", exact=True).click()
-    expect(page.get_by_text(re.compile("Configurações do mundo salvas|salvas e servidor"))).to_be_visible(timeout=8000)
+    expect(page.get_by_text("World Settings")).to_be_visible()
+    expect(page.get_by_text("Effective values")).to_be_visible()
+    expect(page.get_by_text("World preset")).to_be_visible()
+    expect(page.locator(".world-preset-card").filter(has_text="Game default").first).to_be_visible()
+    expect(page.get_by_text("Individual modifiers")).to_be_visible()
+    expect(page.get_by_role("button", name="Save settings", exact=True)).to_be_visible()
+    page.get_by_role("button", name="Save settings", exact=True).click()
+    expect(page.get_by_text(re.compile("World settings saved|Settings saved and server restarted"))).to_be_visible(timeout=8000)
 
 
 def test_dashboard_metrics_section(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    expect(page.get_by_role("heading", name="Desempenho", exact=True)).to_be_visible()
-    expect(page.get_by_text("Tráfego de rede (gráfico)")).to_be_visible()
-    page.get_by_text("Tráfego de rede (gráfico)").click()
+    expect(page.get_by_role("heading", name="Performance", exact=True)).to_be_visible()
+    expect(page.get_by_text("Network traffic (chart)")).to_be_visible()
+    page.get_by_text("Network traffic (chart)").click()
     page.wait_for_timeout(500)
     expect(page.locator("canvas")).to_be_visible()
 
 
 def test_dashboard_disk_usage(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    perf = page.locator(".bg-valheim-800").filter(has=page.get_by_role("heading", name="Desempenho", exact=True))
-    disk_card = perf.locator(".bg-valheim-900").filter(has=page.get_by_text("Disco (Valheim)", exact=True)).first
+    perf = page.locator(".bg-valheim-800").filter(has=page.get_by_role("heading", name="Performance", exact=True))
+    disk_card = perf.locator(".bg-valheim-900").filter(has=page.get_by_text("Disk (Valheim)", exact=True)).first
     expect(disk_card.locator(".text-lg.font-bold")).not_to_have_text("—", timeout=8000)
-    expect(disk_card.get_by_text("jogo:", exact=False)).to_be_visible()
+    expect(disk_card.get_by_text("game:", exact=False)).to_be_visible()
     expect(disk_card.get_by_text("mods:", exact=False)).to_be_visible()
-    expect(disk_card.get_by_text("mundos:", exact=False)).to_be_visible()
+    expect(disk_card.get_by_text("worlds:", exact=False)).to_be_visible()
     expect(disk_card.get_by_text("backups:", exact=False)).to_be_visible()
 
 
 def test_dashboard_cpu_valheim_only(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    perf = page.locator(".bg-valheim-800").filter(has=page.get_by_role("heading", name="Desempenho", exact=True))
+    perf = page.locator(".bg-valheim-800").filter(has=page.get_by_role("heading", name="Performance", exact=True))
     cpu_card = perf.locator(".bg-valheim-900").filter(has=page.get_by_text("CPU", exact=True)).first
     expect(cpu_card.get_by_role("button", name="Sistema", exact=True)).not_to_be_visible()
     expect(cpu_card.locator(".text-lg.font-bold")).to_contain_text("12.5", timeout=8000)
@@ -329,7 +329,7 @@ def test_dashboard_cpu_valheim_only(page: Page, base_url: str) -> None:
 
 def test_dashboard_net_chart_points(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    page.get_by_text("Tráfego de rede (gráfico)").click()
+    page.get_by_text("Network traffic (chart)").click()
     page.wait_for_timeout(6000)
     points = page.evaluate(
         "() => { const root = document.querySelector('[x-data]');"
@@ -342,10 +342,10 @@ def test_dashboard_net_chart_points(page: Page, base_url: str) -> None:
 
 def test_apply_memory_button_visible(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    page.get_by_role("button", name="Servidor", exact=True).click()
+    page.get_by_role("button", name="Server", exact=True).click()
     page.wait_for_timeout(500)
-    expect(page.get_by_role("heading", name="Capacidade do servidor", exact=True)).to_be_visible()
-    btn = page.get_by_role("button", name="Aplicar limite de RAM")
+    expect(page.get_by_role("heading", name="Server capacity", exact=True)).to_be_visible()
+    btn = page.get_by_role("button", name="Apply RAM limit")
     expect(btn).to_be_visible()
     page.on("dialog", lambda d: d.dismiss())
     btn.click()
@@ -354,38 +354,38 @@ def test_apply_memory_button_visible(page: Page, base_url: str) -> None:
 
 def test_worlds_create_buttons(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    page.get_by_role("button", name="Mundos", exact=True).click()
-    expect(page.get_by_role("button", name="Criar", exact=True)).to_be_visible()
-    expect(page.get_by_role("button", name="Criar e Ativar", exact=True)).to_be_visible()
+    page.get_by_role("button", name="Worlds", exact=True).click()
+    expect(page.get_by_role("button", name="Create", exact=True)).to_be_visible()
+    expect(page.get_by_role("button", name="Create and Activate", exact=True)).to_be_visible()
 
 
 def test_server_password_toggle(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    page.get_by_role("button", name="Servidor", exact=True).click()
+    page.get_by_role("button", name="Server", exact=True).click()
     pwd = page.locator("input[x-model='envValues.SERVER_PASS']")
     expect(pwd).to_have_attribute("type", "password")
-    page.get_by_title("Mostrar senha").click()
+    page.get_by_title("Show password").click()
     expect(pwd).to_have_attribute("type", "text")
 
 
 def test_server_world_select(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    page.get_by_role("button", name="Servidor", exact=True).click()
+    page.get_by_role("button", name="Server", exact=True).click()
     expect(page.locator("select[x-model='selectedWorld']")).to_be_visible()
 
 
 def test_dashboard_players_card(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    expect(page.get_by_text("Jogadores Online", exact=True)).to_be_visible()
-    expect(page.get_by_text("Jogadores Conectados", exact=True)).to_be_visible()
-    players_block = page.locator(".bg-valheim-800").filter(has=page.get_by_text("Jogadores Conectados", exact=True))
+    expect(page.get_by_text("Players Online", exact=True)).to_be_visible()
+    expect(page.get_by_text("Connected Players", exact=True)).to_be_visible()
+    players_block = page.locator(".bg-valheim-800").filter(has=page.get_by_text("Connected Players", exact=True))
     expect(players_block.locator("ul .font-medium", has_text="TestPlayer")).to_be_visible()
     expect(players_block.get_by_text("76561198273697711")).to_be_visible()
-    expect(players_block.get_by_role("button", name="Ações ▾")).to_be_visible()
+    expect(players_block.get_by_role("button", name="Actions ▾")).to_be_visible()
     page.on("dialog", lambda d: d.accept())
-    players_block.get_by_role("button", name="Ações ▾").click()
-    expect(page.get_by_role("button", name="Expulsar (kick)")).to_be_visible()
-    expect(page.get_by_role("button", name="Banir")).to_be_visible()
+    players_block.get_by_role("button", name="Actions ▾").click()
+    expect(page.get_by_role("button", name="Kick")).to_be_visible()
+    expect(page.get_by_role("button", name="Ban")).to_be_visible()
 
 
 def test_dashboard_console_command(page: Page, base_url: str) -> None:
@@ -394,7 +394,7 @@ def test_dashboard_console_command(page: Page, base_url: str) -> None:
     expect(console_input).to_be_visible()
     expect(console_input).to_be_enabled(timeout=8000)
     console_input.fill("save")
-    page.get_by_role("button", name="Enviar", exact=True).first.click()
+    page.get_by_role("button", name="Send", exact=True).first.click()
     expect(console_input).to_have_value("", timeout=5000)
     expect(page.locator(".console-history")).to_have_count(0)
 
@@ -420,57 +420,59 @@ def test_console_tab_completes_player(page: Page, base_url: str) -> None:
 
 def test_console_help_modal(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    page.get_by_role("button", name="Ver comandos disponíveis").first.click()
-    expect(page.get_by_text("Comandos RCON")).to_be_visible()
+    page.get_by_role("button", name="View available commands").first.click()
+    expect(page.get_by_text("RCON commands")).to_be_visible()
     expect(page.get_by_text("kick", exact=True).first).to_be_visible()
     page.keyboard.press("Escape")
-    expect(page.get_by_text("Comandos RCON")).not_to_be_visible()
+    expect(page.get_by_text("RCON commands")).not_to_be_visible()
 
 
 def test_audit_modal(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    page.get_by_role("button", name="↻ Reiniciar", exact=True).click()
+    page.get_by_role("button", name="↻ Restart", exact=True).click()
     page.wait_for_timeout(3500)
-    page.get_by_role("button", name="Auditoria", exact=True).click()
-    page.wait_for_timeout(800)
-    page.get_by_role("button", name="Ver").first.click()
-    expect(page.get_by_text("Detalhes da Auditoria")).to_be_visible()
-    expect(page.get_by_text("Request", exact=True)).to_be_visible()
-    expect(page.get_by_text("Response", exact=True)).to_be_visible()
+    page.get_by_role("button", name="Audit", exact=True).click()
+    expect(page.get_by_text("/api/server/restart").first).to_be_visible(timeout=8000)
+    audit_section = page.locator("section").filter(has=page.get_by_text("Persistent log"))
+    audit_section.get_by_role("button", name="View").first.click()
+    modal = page.locator(".modal-overlay").filter(has_text="Audit details")
+    expect(modal).to_be_visible(timeout=8000)
+    expect(modal.get_by_text("Request", exact=True)).to_be_visible()
+    expect(modal.get_by_text("Response", exact=True)).to_be_visible()
 
 
 def test_mod_toggle_visible(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    page.get_by_role("button", name="Mods e Configs", exact=True).click()
+    page.get_by_role("button", name="Mods & Config", exact=True).click()
     page.wait_for_timeout(500)
-    mods_section = page.locator("section").filter(has=page.get_by_text("ValheimRcon vem integrado"))
-    expect(mods_section.get_by_text("Integrado — não removível", exact=True)).to_be_visible()
+    mods_section = page.locator("section").filter(has=page.get_by_text("is bundled with the panel"))
+    expect(mods_section.get_by_text("Bundled — cannot be removed", exact=True)).to_be_visible()
     expect(mods_section.locator("input[type='checkbox']").first).to_be_visible()
 
 
 def test_server_mode_vanilla_bepinex_copy(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    page.get_by_role("button", name="Servidor", exact=True).click()
+    page.get_by_role("button", name="Server", exact=True).click()
     page.wait_for_timeout(800)
-    updates = page.locator("section").filter(has=page.get_by_role("heading", name="Atualizações do jogo"))
-    expect(updates.get_by_text("Com mods (BepInEx)", exact=True)).to_be_visible()
-    expect(updates.get_by_text("desliga todos os mods", exact=False)).to_be_visible()
+    updates = page.locator("section").filter(has=page.get_by_role("heading", name="Game updates"))
+    expect(updates.get_by_text("With mods (BepInEx)", exact=True)).to_be_visible()
+    expect(updates.get_by_text("turns off all mods", exact=False)).to_be_visible()
 
 
 def test_server_updates_section(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    page.get_by_role("button", name="Servidor", exact=True).click()
+    page.get_by_role("button", name="Server", exact=True).click()
     page.wait_for_timeout(800)
-    expect(page.get_by_role("heading", name="Atualizações do jogo")).to_be_visible()
-    expect(page.get_by_role("button", name="Verificar atualizações agora", exact=True)).to_be_visible()
-    expect(page.get_by_text("Auto-atualização do jogo")).to_be_visible()
+    expect(page.get_by_role("heading", name="Game updates")).to_be_visible()
+    expect(page.get_by_role("button", name="Check for updates now", exact=True)).to_be_visible()
+    expect(page.get_by_text("Auto-update game")).to_be_visible()
 
 
 def test_server_save_update_config_busy(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    page.get_by_role("button", name="Servidor", exact=True).click()
+    page.get_by_role("button", name="Server", exact=True).click()
     page.wait_for_timeout(800)
-    btn = page.get_by_role("button", name="Salvar", exact=True)
+    btn = page.get_by_role("button", name="Save", exact=True)
     btn.click()
     page.wait_for_function(
         "() => !document.querySelector('[x-data]')._x_dataStack[0].actionPending",
@@ -485,15 +487,15 @@ def test_server_check_game_update_shows_loading(page: Page, base_url: str) -> No
 
     _boot(page, base_url)
     page.route("**/api/updates/check", slow_check)
-    page.get_by_role("button", name="Servidor", exact=True).click()
+    page.get_by_role("button", name="Server", exact=True).click()
     page.wait_for_timeout(800)
-    btn = page.get_by_role("button", name="Verificar atualizações agora", exact=True)
+    btn = page.get_by_role("button", name="Check for updates now", exact=True)
     btn.click()
     page.wait_for_function(
         "() => document.querySelector('[x-data]')._x_dataStack[0].actionPending === 'checkGameUpdate'",
         timeout=3000,
     )
-    expect(btn).to_contain_text("Verificando...")
+    expect(btn).to_contain_text("Checking...")
     page.wait_for_function(
         "() => !document.querySelector('[x-data]')._x_dataStack[0].actionPending",
         timeout=8000,

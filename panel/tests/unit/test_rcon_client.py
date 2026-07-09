@@ -132,6 +132,6 @@ def test_rcon_command_auth_rejects_bad_password():
     thread = threading.Thread(target=lambda: handle(server.accept()[0]), daemon=True)
     thread.start()
 
-    with pytest.raises(RconError, match="Autenticação RCON falhou"):
+    with pytest.raises(RconError, match="RCON authentication failed"):
         rcon_command("save", host=host, port=port, password="wrong", response_timeout=2.0)
     thread.join(timeout=2)

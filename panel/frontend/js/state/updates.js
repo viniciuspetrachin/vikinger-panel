@@ -11,11 +11,11 @@ export const updates = {
   modLinkTarget: null,
 
   updateIntervalPresets: [
-    { id: "15min", label: "A cada 15 minutos", cron: "*/15 * * * *" },
-    { id: "1h", label: "A cada hora", cron: "0 * * * *" },
-    { id: "6h", label: "A cada 6 horas", cron: "0 */6 * * *" },
-    { id: "daily", label: "Diário (06:00)", cron: "0 6 * * *" },
-    { id: "custom", label: "Personalizado", cron: "" },
+    { id: "15min", label: "Every 15 minutes", cron: "*/15 * * * *" },
+    { id: "1h", label: "Every hour", cron: "0 * * * *" },
+    { id: "6h", label: "Every 6 hours", cron: "0 */6 * * *" },
+    { id: "daily", label: "Daily (06:00)", cron: "0 6 * * *" },
+    { id: "custom", label: "Custom", cron: "" },
   ],
 
   cronFromUpdatePreset() {
@@ -70,7 +70,7 @@ export const updates = {
           bepinex: this.bepinexEnabled,
           restart,
         });
-        this.toast(restart ? "Config salva e container recriado!" : "Config de atualizações salva!");
+        this.toast(restart ? "Config saved and container recreated!" : "Update settings saved!");
         if (data.mode_result?.rcon?.created && data.mode_result.rcon.password) {
           this.setupRconPassword = data.mode_result.rcon.password;
         }
@@ -84,7 +84,7 @@ export const updates = {
     return this.withBusy("checkGameUpdate", async () => {
       try {
         const data = await this.api("POST", "/api/updates/check");
-        this.toast(data.message || "Verificação solicitada");
+        this.toast(data.message || "Check requested");
         await this.loadUpdatesStatus();
       } catch (e) { this.toast(e.message, "error"); }
     });

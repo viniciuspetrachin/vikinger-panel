@@ -1,20 +1,20 @@
-// Sobre / Versão.
+// About / Version.
 
 export const about = {
   versionInfo: { version: "", commit: "", build_date: "", repo_url: "", license: "" },
 
   changelogHighlights: [
     { version: "2.0.0", items: [
-      "Reformulação completa de UI/UX com navegação por seções.",
-      "Novas telas de Ajuda (FAQ com busca), Doações e Sobre/Versão.",
-      "Licença Polyform Shield — uso livre, sem revenda comercial sem autorização.",
-      "Métricas na Visão Geral; capacidade (RAM e jogadores) na aba Servidor; Ferramentas com Arquivos, Logs e Auditoria.",
-      "100% dockerizado, sem dores de permissão; assets locais (sem CDN).",
+      "Complete UI/UX overhaul with section-based navigation.",
+      "New Help (searchable FAQ), Support the Project, and About/Version screens.",
+      "Polyform Shield license — free use, no commercial resale without authorization.",
+      "Metrics on Overview; capacity (RAM and players) on Server tab; Tools with Files, Logs, and Audit.",
+      "100% dockerized, no permission headaches; local assets (no CDN).",
     ] },
   ],
 
   credits: [
-    { label: "Servidor Valheim em Docker", by: "lloesche/valheim-server-docker" },
+    { label: "Valheim server in Docker", by: "lloesche/valheim-server-docker" },
     { label: "Backend", by: "FastAPI + Uvicorn" },
     { label: "Frontend", by: "Alpine.js + Tailwind CSS + Chart.js + CodeMirror" },
   ],
@@ -22,6 +22,6 @@ export const about = {
   async loadVersion() {
     try {
       this.versionInfo = await this.api("GET", "/api/version");
-    } catch (e) { /* silencioso */ }
+    } catch (e) { /* silent */ }
   },
 };

@@ -6,16 +6,16 @@ from playwright.sync_api import Page, expect
 pytestmark = pytest.mark.e2e
 
 TAB_LABELS = [
-    "Visão Geral",
-    "Servidor",
-    "Mundos",
-    "Mods e Configs",
+    "Overview",
+    "Server",
+    "Worlds",
+    "Mods & Config",
     "Backups",
-    "Arquivos",
+    "Files",
     "Logs",
-    "Auditoria",
-    "Ajuda",
-    "Sobre",
+    "Audit",
+    "Help",
+    "About",
 ]
 
 
@@ -40,20 +40,20 @@ def test_all_tabs_load_without_500(page: Page, base_url: str) -> None:
 def test_help_faq_search(page: Page, base_url: str) -> None:
     page.goto(base_url)
     page.wait_for_selector("[x-cloak]", state="detached")
-    goto_tab(page, "Ajuda")
+    goto_tab(page, "Help")
 
-    expect(page.get_by_placeholder("Buscar no FAQ...")).to_be_visible()
-    page.get_by_placeholder("Buscar no FAQ...").fill("crossplay")
-    expect(page.get_by_text("Como habilito crossplay")).to_be_visible()
+    expect(page.get_by_placeholder("Search FAQ...")).to_be_visible()
+    page.get_by_placeholder("Search FAQ...").fill("crossplay")
+    expect(page.get_by_text("How do I enable crossplay")).to_be_visible()
 
 
 def test_about_version(page: Page, base_url: str) -> None:
     page.goto(base_url)
     page.wait_for_selector("[x-cloak]", state="detached")
-    goto_tab(page, "Sobre")
+    goto_tab(page, "About")
 
     expect(page.get_by_role("main").get_by_role("heading", name="Vikinger Panel")).to_be_visible()
-    expect(page.get_by_text("Novidades")).to_be_visible()
+    expect(page.get_by_text("What's new")).to_be_visible()
     expect(page.get_by_role("main").get_by_text("v2.0.0")).to_be_visible()
 
 
@@ -61,15 +61,15 @@ def test_dashboard_connect_block(page: Page, base_url: str) -> None:
     page.goto(base_url)
     page.wait_for_selector("[x-cloak]", state="detached")
 
-    expect(page.get_by_role("heading", name="Como conectar", exact=True)).to_be_visible()
-    expect(page.get_by_role("button", name="Copiar endereço", exact=True)).to_be_visible()
+    expect(page.get_by_role("heading", name="How to connect", exact=True)).to_be_visible()
+    expect(page.get_by_role("button", name="Copy address", exact=True)).to_be_visible()
     assert_no_error_toast(page)
 
 
 def test_files_all_scopes(page: Page, base_url: str) -> None:
     page.goto(base_url)
     page.wait_for_selector("[x-cloak]", state="detached")
-    goto_tab(page, "Arquivos")
+    goto_tab(page, "Files")
 
     for scope in ("Config", "Data"):
         page.get_by_role("button", name=scope, exact=True).click()
@@ -93,7 +93,7 @@ def test_backups_tab_content(page: Page, base_url: str) -> None:
     page.wait_for_selector("[x-cloak]", state="detached")
     goto_tab(page, "Backups")
 
-    expect(page.get_by_role("heading", name="Agendamento automático")).to_be_visible()
-    expect(page.get_by_role("heading", name="Backups armazenados")).to_be_visible()
-    expect(page.get_by_text("Estado do servidor")).to_be_visible()
+    expect(page.get_by_role("heading", name="Automatic scheduling")).to_be_visible()
+    expect(page.get_by_role("heading", name="Stored backups")).to_be_visible()
+    expect(page.get_by_text("Server state")).to_be_visible()
     assert_no_error_toast(page)

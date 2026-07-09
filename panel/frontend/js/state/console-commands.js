@@ -1,43 +1,43 @@
-/** Catálogo RCON (ValheimRcon) + autocomplete estilo terminal. */
+/** RCON catalog (ValheimRcon) + terminal-style autocomplete. */
 
 export const RCON_COMMANDS = [
-  { name: "save", usage: "save", desc: "Salva o mundo atual", category: "Servidor", playerArg: false },
-  { name: "list", usage: "list", desc: "Lista todos os comandos no servidor", category: "Servidor", playerArg: false },
-  { name: "players", usage: "players", desc: "Mostra jogadores online com posição", category: "Servidor", playerArg: false },
-  { name: "serverStats", usage: "serverStats", desc: "Estatísticas do servidor (FPS, RAM, jogadores)", category: "Servidor", playerArg: false },
-  { name: "time", usage: "time", desc: "Mostra hora e dia do servidor", category: "Servidor", playerArg: false },
-  { name: "logs", usage: "logs", desc: "Últimas linhas do log do servidor", category: "Servidor", playerArg: false },
-  { name: "consoleCommand", usage: "consoleCommand <comando>", desc: "Executa comando de console Valheim", category: "Servidor", playerArg: false },
+  { name: "save", usage: "save", desc: "Saves the current world", category: "Server", playerArg: false },
+  { name: "list", usage: "list", desc: "Lists all commands on the server", category: "Server", playerArg: false },
+  { name: "players", usage: "players", desc: "Shows online players with position", category: "Server", playerArg: false },
+  { name: "serverStats", usage: "serverStats", desc: "Server statistics (FPS, RAM, players)", category: "Server", playerArg: false },
+  { name: "time", usage: "time", desc: "Shows server time and day", category: "Server", playerArg: false },
+  { name: "logs", usage: "logs", desc: "Latest server log lines", category: "Server", playerArg: false },
+  { name: "consoleCommand", usage: "consoleCommand <command>", desc: "Runs a Valheim console command", category: "Server", playerArg: false },
 
-  { name: "kick", usage: "kick <jogador|SteamID>", desc: "Expulsa um jogador", category: "Moderação", playerArg: true },
-  { name: "ban", usage: "ban <jogador|SteamID>", desc: "Bane por nome ou Steam ID", category: "Moderação", playerArg: true },
-  { name: "banSteamId", usage: "banSteamId <SteamID>", desc: "Bane pelo Steam ID", category: "Moderação", playerArg: true },
-  { name: "unban", usage: "unban <jogador|SteamID>", desc: "Remove banimento", category: "Moderação", playerArg: true },
-  { name: "addAdmin", usage: "addAdmin <SteamID>", desc: "Adiciona administrador", category: "Moderação", playerArg: true },
-  { name: "removeAdmin", usage: "removeAdmin <SteamID>", desc: "Remove administrador", category: "Moderação", playerArg: true },
-  { name: "addPermitted", usage: "addPermitted <SteamID>", desc: "Adiciona à lista de permitidos", category: "Moderação", playerArg: true },
-  { name: "removePermitted", usage: "removePermitted <SteamID>", desc: "Remove da lista de permitidos", category: "Moderação", playerArg: true },
-  { name: "adminlist", usage: "adminlist", desc: "Lista administradores", category: "Moderação", playerArg: false },
-  { name: "banlist", usage: "banlist", desc: "Lista jogadores banidos", category: "Moderação", playerArg: false },
-  { name: "permitted", usage: "permitted", desc: "Lista jogadores permitidos", category: "Moderação", playerArg: false },
-  { name: "disconnectAll", usage: "disconnectAll", desc: "Desconecta todos os jogadores", category: "Moderação", playerArg: false },
+  { name: "kick", usage: "kick <player|SteamID>", desc: "Kicks a player", category: "Moderation", playerArg: true },
+  { name: "ban", usage: "ban <player|SteamID>", desc: "Bans by name or Steam ID", category: "Moderation", playerArg: true },
+  { name: "banSteamId", usage: "banSteamId <SteamID>", desc: "Bans by Steam ID", category: "Moderation", playerArg: true },
+  { name: "unban", usage: "unban <player|SteamID>", desc: "Removes a ban", category: "Moderation", playerArg: true },
+  { name: "addAdmin", usage: "addAdmin <SteamID>", desc: "Adds an administrator", category: "Moderation", playerArg: true },
+  { name: "removeAdmin", usage: "removeAdmin <SteamID>", desc: "Removes an administrator", category: "Moderation", playerArg: true },
+  { name: "addPermitted", usage: "addPermitted <SteamID>", desc: "Adds to permitted list", category: "Moderation", playerArg: true },
+  { name: "removePermitted", usage: "removePermitted <SteamID>", desc: "Removes from permitted list", category: "Moderation", playerArg: true },
+  { name: "adminlist", usage: "adminlist", desc: "Lists administrators", category: "Moderation", playerArg: false },
+  { name: "banlist", usage: "banlist", desc: "Lists banned players", category: "Moderation", playerArg: false },
+  { name: "permitted", usage: "permitted", desc: "Lists permitted players", category: "Moderation", playerArg: false },
+  { name: "disconnectAll", usage: "disconnectAll", desc: "Disconnects all players", category: "Moderation", playerArg: false },
 
-  { name: "give", usage: "give <jogador|SteamID> <item> [opções]", desc: "Dá item a um jogador", category: "Jogadores", playerArg: true },
-  { name: "heal", usage: "heal <jogador|SteamID> <vida>", desc: "Cura jogador até o valor de vida", category: "Jogadores", playerArg: true },
-  { name: "damage", usage: "damage <jogador|SteamID> <dano>", desc: "Causa dano a um jogador", category: "Jogadores", playerArg: true },
-  { name: "teleport", usage: "teleport <jogador|SteamID> <x> <y> <z>", desc: "Teleporta jogador", category: "Jogadores", playerArg: true },
-  { name: "findPlayer", usage: "findPlayer <nome>", desc: "Busca jogador e mostra detalhes", category: "Jogadores", playerArg: true },
+  { name: "give", usage: "give <player|SteamID> <item> [options]", desc: "Gives an item to a player", category: "Players", playerArg: true },
+  { name: "heal", usage: "heal <player|SteamID> <health>", desc: "Heals player to health value", category: "Players", playerArg: true },
+  { name: "damage", usage: "damage <player|SteamID> <damage>", desc: "Deals damage to a player", category: "Players", playerArg: true },
+  { name: "teleport", usage: "teleport <player|SteamID> <x> <y> <z>", desc: "Teleports a player", category: "Players", playerArg: true },
+  { name: "findPlayer", usage: "findPlayer <name>", desc: "Finds a player and shows details", category: "Players", playerArg: true },
 
-  { name: "say", usage: "say <mensagem>", desc: "Envia mensagem no chat (grito)", category: "Chat", playerArg: false },
-  { name: "showMessage", usage: "showMessage <mensagem>", desc: "Mensagem central na tela de todos", category: "Chat", playerArg: false },
-  { name: "ping", usage: "ping <x> <y> <z>", desc: "Ping no mapa para todos", category: "Chat", playerArg: false },
+  { name: "say", usage: "say <message>", desc: "Sends a chat message (shout)", category: "Chat", playerArg: false },
+  { name: "showMessage", usage: "showMessage <message>", desc: "Center-screen message for everyone", category: "Chat", playerArg: false },
+  { name: "ping", usage: "ping <x> <y> <z>", desc: "Map ping for everyone", category: "Chat", playerArg: false },
 
-  { name: "spawn", usage: "spawn <prefab> <x> <y> <z> [opções]", desc: "Spawna objetos/creaturas", category: "Objetos", playerArg: false },
-  { name: "findObjects", usage: "findObjects [opções]", desc: "Busca objetos no mundo", category: "Objetos", playerArg: false },
+  { name: "spawn", usage: "spawn <prefab> <x> <y> <z> [options]", desc: "Spawns objects/creatures", category: "Objects", playerArg: false },
+  { name: "findObjects", usage: "findObjects [options]", desc: "Searches for objects in the world", category: "Objects", playerArg: false },
 
-  { name: "addGlobalKey", usage: "addGlobalKey <chave>", desc: "Adiciona global key (ex: boss derrotado)", category: "Mundo", playerArg: false },
-  { name: "removeGlobalKey", usage: "removeGlobalKey <chave>", desc: "Remove global key", category: "Mundo", playerArg: false },
-  { name: "globalKeys", usage: "globalKeys", desc: "Lista global keys ativas", category: "Mundo", playerArg: false },
+  { name: "addGlobalKey", usage: "addGlobalKey <key>", desc: "Adds a global key (e.g. boss defeated)", category: "World", playerArg: false },
+  { name: "removeGlobalKey", usage: "removeGlobalKey <key>", desc: "Removes a global key", category: "World", playerArg: false },
+  { name: "globalKeys", usage: "globalKeys", desc: "Lists active global keys", category: "World", playerArg: false },
 ];
 
 const COMMAND_BY_NAME = Object.fromEntries(RCON_COMMANDS.map((c) => [c.name.toLowerCase(), c]));
@@ -95,7 +95,7 @@ function applyMatch(baseParts, endsWithSpace, match, replaceIndex) {
 }
 
 /**
- * Retorna sugestões para Tab completion.
+ * Returns suggestions for Tab completion.
  * @returns {{ text: string, matches: string[], cycleIndex: number } | null}
  */
 export function getConsoleCompletions(input, players, cycleState) {
@@ -171,7 +171,7 @@ export function getConsoleCompletions(input, players, cycleState) {
   return { text, matches, cycleIndex: index };
 }
 
-/** Sufixo fantasma para preview antes do Tab. */
+/** Ghost suffix for preview before Tab. */
 export function getConsoleGhostSuffix(input, players) {
   const { trimmed, endsWithSpace, parts } = parseInput(input);
   if (!trimmed || endsWithSpace) return "";
@@ -192,7 +192,7 @@ export function getConsoleGhostSuffix(input, players) {
   return matches[0].slice(prefix.length);
 }
 
-/** Agrupa comandos filtrados por categoria (para modal). */
+/** Groups filtered commands by category (for modal). */
 export function groupCommandsByCategory(commands, search) {
   const q = (search || "").trim().toLowerCase();
   const filtered = q

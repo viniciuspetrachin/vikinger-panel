@@ -277,7 +277,7 @@ def run(cmd: list[str], timeout: int = 120) -> subprocess.CompletedProcess:
             cmd, capture_output=True, text=True, timeout=timeout, cwd=str(ROOT)
         )
     except subprocess.TimeoutExpired as e:
-        raise HTTPException(504, f"Comando expirou após {timeout}s: {' '.join(cmd)}") from e
+        raise HTTPException(504, f"Command timed out after {timeout}s: {' '.join(cmd)}") from e
 
 
 def docker(*args: str, timeout: int = 120) -> subprocess.CompletedProcess:
@@ -355,16 +355,16 @@ def safe_path(relative: str) -> Path:
     """Resolve a relative path and ensure it stays inside allowed roots."""
     rel = relative.lstrip("/").replace("\\", "/")
     if ".." in rel.split("/"):
-        raise HTTPException(400, "Caminho inválido")
+        raise HTTPException(400, "Invalid path")
     top = rel.split("/")[0] if rel else ""
     if top not in ("config", "data"):
-        raise HTTPException(403, "Acesso negado")
+        raise HTTPException(403, "Access denied")
     logical = ROOT / rel if rel else ROOT
     if not _path_is_under(logical, ROOT):
-        raise HTTPException(403, "Acesso negado")
+        raise HTTPException(403, "Access denied")
     target = logical.resolve()
     if not any(_path_is_under(target, root) for root in _allowed_path_roots()):
-        raise HTTPException(403, "Acesso negado")
+        raise HTTPException(403, "Access denied")
     return target
 
 
@@ -619,7 +619,7 @@ def read_memory_limit_gb() -> Optional[int]:
 
 def write_memory_limit_gb(gb: Optional[int]) -> None:
     if not COMPOSE_FILE.exists():
-        raise HTTPException(404, "docker-compose.yml não encontrado")
+        raise HTTPException(404, "docker-compose.yml not found")
 
     text = COMPOSE_FILE.read_text(encoding="utf-8")
     text = re.sub(r"^\s*mem_limit:.*\n", "", text, flags=re.MULTILINE)
@@ -651,11 +651,11 @@ VALHEIM_PLUS_CFG = BEPINEX_CFG_DIR / "valheim_plus.cfg"
 MAX_PLAYER_COUNT_CFG = BEPINEX_CFG_DIR / "Azumatt.MaxPlayerCount.cfg"
 
 RAM_SUGGESTIONS = [
-    {"players_min": 1, "players_max": 2, "ram_gb": 2, "notes": "Mundo novo ~1,8–2,4 GB (wiki Valheim)"},
-    {"players_min": 3, "players_max": 5, "ram_gb": 4, "notes": "Grupo pequeno vanilla"},
-    {"players_min": 6, "players_max": 10, "ram_gb": 8, "notes": "Teto vanilla (10 jogadores)"},
-    {"players_min": 11, "players_max": 20, "ram_gb": 12, "notes": "Requer mod; +1–2 GB se crossplay"},
-    {"players_min": 21, "players_max": 999, "ram_gb": 16, "notes": "Alto risco de lag; não recomendado"},
+    {"players_min": 1, "players_max": 2, "ram_gb": 2, "notes": "New world ~1.8–2.4 GB (Valheim wiki)"},
+    {"players_min": 3, "players_max": 5, "ram_gb": 4, "notes": "Small vanilla group"},
+    {"players_min": 6, "players_max": 10, "ram_gb": 8, "notes": "Vanilla cap (10 players)"},
+    {"players_min": 11, "players_max": 20, "ram_gb": 12, "notes": "Requires mod; +1–2 GB with crossplay"},
+    {"players_min": 21, "players_max": 999, "ram_gb": 16, "notes": "High lag risk; not recommended"},
 ]
 
 
@@ -776,15 +776,15 @@ def read_max_players() -> dict:
 
 def write_max_players(count: int) -> dict:
     if count < 1:
-        raise HTTPException(400, "Limite de jogadores deve ser pelo menos 1")
+        raise HTTPException(400, "Player limit must be at least 1")
     mod = detect_player_mod()
     if count > VANILLA_MAX_PLAYERS and not mod["source"]:
         raise HTTPException(
             400,
-            "Acima de 10 jogadores é preciso instalar Valheim Plus ou o mod MaxPlayerCount (BepInEx).",
+            "Above 10 players requires Valheim Plus or the MaxPlayerCount mod (BepInEx).",
         )
     if count > mod["cap"]:
-        raise HTTPException(400, f"Limite máximo permitido: {mod['cap']} jogadores")
+        raise HTTPException(400, f"Maximum allowed limit: {mod['cap']} players")
 
     write_env({"MAX_PLAYERS": str(count)})
 
@@ -813,8 +813,8 @@ def capacity_ram_warning(memory_gb: Optional[int], max_players: int) -> Optional
         return None
     if memory_gb < suggested:
         return (
-            f"Para {max_players} jogador(es), recomenda-se pelo menos {suggested} GB de RAM "
-            f"(configurado: {memory_gb} GB)."
+            f"For {max_players} player(s), at least {suggested} GB of RAM is recommended "
+            f"(configured: {memory_gb} GB)."
         )
     return None
 
@@ -886,7 +886,7 @@ def read_bepinex_compose() -> bool:
 
 def write_bepinex_compose(enabled: bool) -> None:
     if not COMPOSE_FILE.exists():
-        raise HTTPException(404, "docker-compose.yml não encontrado")
+        raise HTTPException(404, "docker-compose.yml not found")
     val = "true" if enabled else "false"
     text = COMPOSE_FILE.read_text(encoding="utf-8")
     if re.search(r"^\s*BEPINEX:", text, re.MULTILINE):
@@ -1052,11 +1052,11 @@ def read_game_version() -> dict:
 
 def trigger_game_update_check() -> str:
     if not container_running():
-        raise HTTPException(400, "Container não está rodando")
+        raise HTTPException(400, "Container is not running")
     r = docker("exec", CONTAINER_NAME, "supervisorctl", "signal", "HUP", "valheim-updater")
     output = (r.stdout + r.stderr).strip()
     if r.returncode != 0:
-        raise HTTPException(500, output or "Falha ao solicitar verificação de atualização")
+        raise HTTPException(500, output or "Failed to request update check")
     return output
 
 
@@ -1311,22 +1311,22 @@ def _rcon_settings() -> Optional[dict]:
 
 def _require_rcon() -> dict:
     if not container_running():
-        raise HTTPException(503, "Container do Valheim não está rodando")
+        raise HTTPException(503, "Valheim container is not running")
     if not is_plugin_installed(PLUGINS_DIR, PLUGINS_DISABLED_DIR):
         raise HTTPException(
             503,
-            "ValheimRcon não encontrado — reinicie o painel para reinstalar o mod integrado",
+            "ValheimRcon not found — restart the panel to reinstall the bundled mod",
         )
     if not is_mod_enabled(PLUGINS_DIR, PLUGINS_DISABLED_DIR):
         raise HTTPException(
             503,
-            "ValheimRcon está desativado — habilite o mod integrado na aba Mods e Configs",
+            "ValheimRcon is disabled — enable the bundled mod in the Mods & Configs tab",
         )
     cfg = _rcon_settings()
     if not cfg:
         raise HTTPException(
             503,
-            "RCON não configurado — defina a senha em config/bepinex/org.tristan.rcon.cfg",
+            "RCON not configured — set the password in config/bepinex/org.tristan.rcon.cfg",
         )
     return cfg
 
@@ -1401,7 +1401,7 @@ def file_tree(base: Path, prefix: str = "") -> list[dict]:
         try:
             is_dir = entry.is_dir()
         except OSError:
-            items.append({"name": entry.name, "path": rel, "type": "broken", "error": "link quebrado"})
+            items.append({"name": entry.name, "path": rel, "type": "broken", "error": "broken symlink"})
             continue
         if is_dir:
             items.append({"name": entry.name, "path": rel, "type": "dir", "children": file_tree(entry, rel)})
@@ -1409,7 +1409,7 @@ def file_tree(base: Path, prefix: str = "") -> list[dict]:
             try:
                 stat = entry.stat()
             except OSError:
-                items.append({"name": entry.name, "path": rel, "type": "broken", "error": "link quebrado"})
+                items.append({"name": entry.name, "path": rel, "type": "broken", "error": "broken symlink"})
                 continue
             items.append({
                 "name": entry.name,
@@ -1464,7 +1464,7 @@ def fetch_thunderstore_experimental_json(owner: str, name: str) -> dict:
         with urllib.request.urlopen(req, timeout=30) as resp:
             return json.loads(resp.read())
     except Exception as e:
-        raise HTTPException(400, f"Falha ao consultar Thunderstore: {e}") from e
+        raise HTTPException(400, f"Failed to query Thunderstore: {e}") from e
 
 
 def thunderstore_package_exists(owner: str, name: str) -> bool:
@@ -1506,7 +1506,7 @@ def fetch_thunderstore_package_info(owner: str, name: str) -> dict:
     latest = data.get("latest") or {}
     version = latest.get("version_number") or ""
     if not version:
-        raise HTTPException(400, f"Pacote Thunderstore sem versões: {owner}/{name}")
+        raise HTTPException(400, f"Thunderstore package has no versions: {owner}/{name}")
     return {
         "owner": owner,
         "name": name,
@@ -1527,7 +1527,7 @@ def fetch_url_bytes(url: str) -> bytes:
         with urllib.request.urlopen(req, timeout=60) as resp:
             return resp.read()
     except Exception as e:
-        raise HTTPException(400, f"Falha ao baixar: {e}") from e
+        raise HTTPException(400, f"Download failed: {e}") from e
 
 
 def scrape_thunderstore_download_from_page(owner: str, name: str) -> str:
@@ -1535,7 +1535,7 @@ def scrape_thunderstore_download_from_page(owner: str, name: str) -> str:
     html = fetch_url_bytes(page_url).decode("utf-8", errors="replace")
     match = THUNDERSTORE_PAGE_DOWNLOAD_RE.search(html)
     if not match:
-        raise HTTPException(400, f"Download não encontrado na página Thunderstore: {owner}/{name}")
+        raise HTTPException(400, f"Download not found on Thunderstore page: {owner}/{name}")
     return thunderstore_download_url(match.group("owner"), match.group("name"), match.group("version"))
 
 
@@ -1553,7 +1553,7 @@ def fetch_thunderstore_latest_download(owner: str, name: str) -> str:
 def resolve_mod_download_url(url: str) -> str:
     raw = normalize_thunderstore_url(url)
     if not raw:
-        raise HTTPException(400, "URL vazia")
+        raise HTTPException(400, "Empty URL")
 
     ror2mm = ROR2MM_RE.match(raw)
     if ror2mm:
@@ -1572,7 +1572,7 @@ def resolve_mod_download_url(url: str) -> str:
     if not raw.startswith(("http://", "https://")):
         raise HTTPException(
             400,
-            "URL inválida. Use um link http(s) do Thunderstore, CDN ou r2modman.",
+            "Invalid URL. Use an http(s) link from Thunderstore, CDN, or r2modman.",
         )
 
     return raw
@@ -1608,7 +1608,7 @@ def ensure_plugins_writable() -> None:
     if not writable():
         raise HTTPException(
             500,
-            "Sem permissão para escrever em config/bepinex/plugins. "
+            "No permission to write to config/bepinex/plugins. "
             f"Execute: sudo {FIX_PLUGINS_SCRIPT}",
         )
 
@@ -1659,10 +1659,10 @@ def extract_dlls_from_zip(data: bytes, dest: Path) -> list[str]:
         if head.startswith(b"<!doctype") or head.startswith(b"<html"):
             raise HTTPException(
                 400,
-                "A URL aponta para uma página web, não para um ZIP. "
-                "Use o link de download do Thunderstore ou a página do pacote.",
+                "The URL points to a web page, not a ZIP file. "
+                "Use the Thunderstore download link or the package page.",
             ) from e
-        raise HTTPException(400, "Arquivo ZIP inválido") from e
+        raise HTTPException(400, "Invalid ZIP file") from e
     with zf:
         for info in zf.infolist():
             if not info.filename.endswith(".dll"):
@@ -1676,8 +1676,8 @@ def extract_dlls_from_zip(data: bytes, dest: Path) -> list[str]:
             except PermissionError as e:
                 raise HTTPException(
                     500,
-                    f"Sem permissão para gravar {out.name}. "
-                    f"Execute: sudo {FIX_PLUGINS_SCRIPT}",
+                    f"No permission to write {out.name}. "
+                    f"Run: sudo {FIX_PLUGINS_SCRIPT}",
                 ) from e
             installed.append(name)
     return installed
@@ -1715,12 +1715,12 @@ def dir_size(path: Path) -> int:
 
 
 BACKUP_KIND_LABELS = {
-    "auto": "Automático",
-    "manual-world": "Manual — mundo",
-    "manual-full": "Manual — completo",
+    "auto": "Automatic",
+    "manual-world": "Manual — world",
+    "manual-full": "Manual — full",
     "manual-configs": "Manual — configs",
     "checkpoint": "Checkpoint",
-    "unknown": "Desconhecido",
+    "unknown": "Unknown",
 }
 
 BACKUP_LIST_NAMES = ("adminlist.txt", "bannedlist.txt", "permittedlist.txt")
@@ -1778,10 +1778,10 @@ def classify_backup(name: str) -> str:
 
 def validate_backup_name(name: str) -> Path:
     if ".." in name or "/" in name or "\\" in name:
-        raise HTTPException(400, "Nome inválido")
+        raise HTTPException(400, "Invalid name")
     target = BACKUPS_DIR / name
     if not target.is_file() or not str(target.resolve()).startswith(str(BACKUPS_DIR.resolve())):
-        raise HTTPException(404, "Backup não encontrado")
+        raise HTTPException(404, "Backup not found")
     return target
 
 
@@ -2041,26 +2041,26 @@ def finalize_recent_auto_backup_manifests(before_mtime: float) -> list[str]:
 def _resolve_backup_entry(arcname: str) -> tuple[Path, str]:
     arc = arcname.replace("\\", "/").lstrip("/")
     if not arc or ".." in arc.split("/"):
-        raise ValueError(f"Caminho inválido: {arcname}")
+        raise ValueError(f"Invalid path: {arcname}")
     if _is_backup_metadata_arcname(arc):
-        raise ValueError(f"Entrada não permitida: {arcname}")
+        raise ValueError(f"Entry not allowed: {arcname}")
     parts = arc.split("/")
     if len(parts) == 1:
         if parts[0] in BACKUP_LIST_NAMES:
             return CONFIG_DIR, parts[0]
         if parts[0] == ".env":
             return ENV_FILE.parent, ".env"
-        raise ValueError(f"Entrada não permitida: {arcname}")
+        raise ValueError(f"Entry not allowed: {arcname}")
     root, rest = parts[0], "/".join(parts[1:])
     if not rest:
-        raise ValueError(f"Entrada não permitida: {arcname}")
+        raise ValueError(f"Entry not allowed: {arcname}")
     if root in ("worlds", "worlds_local"):
         return WORLDS_DIR, rest
     if root == "bepinex":
         return BEPINEX_CFG_DIR, rest
     if root == "panel-data":
         return PANEL_DATA_DIR, rest
-    raise ValueError(f"Entrada não permitida: {arcname}")
+    raise ValueError(f"Entry not allowed: {arcname}")
 
 
 def inspect_backup_zip(zip_path: Path) -> list[str]:
@@ -2074,11 +2074,11 @@ def inspect_backup_zip(zip_path: Path) -> list[str]:
                 _resolve_backup_entry(info.filename)
                 names.append(info.filename)
     except zipfile.BadZipFile as e:
-        raise HTTPException(400, "Arquivo ZIP inválido") from e
+        raise HTTPException(400, "Invalid ZIP file") from e
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
     if not names:
-        raise HTTPException(400, "Backup vazio ou sem arquivos restauráveis")
+        raise HTTPException(400, "Empty backup or no restorable files")
     return names
 
 
@@ -2144,7 +2144,7 @@ def restore_backup(name: str) -> dict:
     else:
         r = restart_valheim_container()
     if r.returncode != 0:
-        raise HTTPException(500, r.stderr or r.stdout or "Erro ao reiniciar container")
+        raise HTTPException(500, r.stderr or r.stdout or "Failed to restart container")
 
     return {"ok": True, "active": name, "undo": checkpoint, "restarted": True}
 
@@ -2245,11 +2245,11 @@ def purge_old_backups(max_age_days: int | None = None) -> list[str]:
 
 def trigger_backup() -> str:
     if not container_running():
-        raise HTTPException(400, "Container não está rodando")
+        raise HTTPException(400, "Container is not running")
     r = docker("exec", CONTAINER_NAME, "supervisorctl", "signal", "HUP", "valheim-backup")
     output = (r.stdout + r.stderr).strip()
     if r.returncode != 0:
-        raise HTTPException(500, output or "Falha ao solicitar backup")
+        raise HTTPException(500, output or "Failed to request backup")
     return output
 
 
@@ -2284,14 +2284,14 @@ def backup_entries(backup_type: str) -> list[tuple[Path, str]]:
     if backup_type == "world":
         world = read_env().get("WORLD_NAME", "").strip()
         if not world:
-            raise HTTPException(400, "Nenhum mundo ativo definido (WORLD_NAME)")
+            raise HTTPException(400, "No active world defined (WORLD_NAME)")
         entries = []
         for ext in (".fwl", ".db"):
             src = WORLDS_DIR / f"{world}{ext}"
             if src.exists():
                 entries.append((src, f"worlds_local/{world}{ext}"))
         if not entries:
-            raise HTTPException(404, f"Arquivos do mundo '{world}' não encontrados")
+            raise HTTPException(404, f"World files for '{world}' not found")
         return entries
 
     if backup_type == "full":
@@ -2315,12 +2315,12 @@ def backup_entries(backup_type: str) -> list[tuple[Path, str]]:
         entries.extend(env_entry)
         return entries
 
-    raise HTTPException(400, f"Tipo de backup inválido: {backup_type}")
+    raise HTTPException(400, f"Invalid backup type: {backup_type}")
 
 
 def create_manual_backup(backup_type: str) -> str:
     if backup_type not in BACKUP_TYPES:
-        raise HTTPException(400, f"Tipo de backup inválido: {backup_type}")
+        raise HTTPException(400, f"Invalid backup type: {backup_type}")
     entries = backup_entries(backup_type)
     ts = datetime.now().strftime("%Y%m%d-%H%M%S")
     name = f"manual-{backup_type}-{ts}.zip"
@@ -2331,7 +2331,7 @@ def create_manual_backup(backup_type: str) -> str:
             out.unlink()
         except OSError:
             pass
-        raise HTTPException(400, "Nada para incluir no backup")
+        raise HTTPException(400, "Nothing to include in the backup")
     attach_backup_manifest(out, f"manual-{backup_type}")
     return name
 
@@ -2475,8 +2475,8 @@ def write_world_fwl(
             )
         raise HTTPException(
             403,
-            "Sem permissão para gravar o mundo. Rode o painel via Docker (recomendado) "
-            "ou execute no host: sudo "
+            "No permission to write the world. Run the panel via Docker (recommended) "
+            "or on the host run: sudo "
             f"{ROOT / 'scripts' / 'fix-worlds-permissions.sh'}",
         ) from e
 
@@ -2509,7 +2509,7 @@ def _write_world_fwl_via_docker(
     r = docker("cp", str(staging), container_dest, timeout=60)
     staging.unlink(missing_ok=True)
     if r.returncode != 0:
-        raise HTTPException(500, r.stderr or r.stdout or "Erro ao copiar .fwl para o container")
+        raise HTTPException(500, r.stderr or r.stdout or "Failed to copy .fwl to the container")
     return read_fwl(path)
 
 
@@ -2570,7 +2570,7 @@ def world_config_for_name(name: str) -> tuple[dict, list[str], bool]:
 def validate_world_name(name: str) -> str:
     name = name.strip()
     if not name or re.search(r"[^\w\-]", name):
-        raise HTTPException(400, "Nome inválido")
+        raise HTTPException(400, "Invalid name")
     return name
 
 
@@ -2822,7 +2822,7 @@ def build_r2modman_export_mods() -> tuple[list[dict], int]:
 def parse_version_triplet(version: str) -> tuple[int, int, int]:
     parts = version.split(".")
     if len(parts) < 3:
-        raise ValueError(f"Versão inválida para export r2modman: {version}")
+        raise ValueError(f"Invalid version for r2modman export: {version}")
     return int(parts[0]), int(parts[1]), int(parts[2])
 
 
@@ -2872,10 +2872,10 @@ def upload_r2modman_profile(payload: str) -> str:
         with urllib.request.urlopen(req, timeout=60) as resp:
             data = json.loads(resp.read())
     except Exception as e:
-        raise HTTPException(400, f"Falha ao publicar perfil r2modman: {e}") from e
+        raise HTTPException(400, f"Failed to publish r2modman profile: {e}") from e
     code = data.get("key")
     if not code:
-        raise HTTPException(400, "Resposta inválida ao publicar perfil r2modman")
+        raise HTTPException(400, "Invalid response when publishing r2modman profile")
     return code
 
 
@@ -3106,15 +3106,15 @@ def api_set_memory_limit(body: MemoryLimitUpdate):
     if body.gb is not None and (body.gb < MEMORY_MIN_GB or body.gb > MEMORY_MAX_GB):
         raise HTTPException(
             400,
-            f"Limite deve estar entre {MEMORY_MIN_GB} e {MEMORY_MAX_GB} GB, ou null para sem limite",
+            f"Limit must be between {MEMORY_MIN_GB} and {MEMORY_MAX_GB} GB, or null for unlimited",
         )
 
     raw = get_container_metrics_raw()
     warning = None
     if body.gb is not None and raw["memory_used_bytes"] > body.gb * 1024**3 * 0.85:
         warning = (
-            f"Uso atual ({raw['memory_used_bytes'] // (1024**2)} MB) está próximo ou acima "
-            f"do limite solicitado ({body.gb} GB). O container pode ser encerrado pelo Docker."
+            f"Current usage ({raw['memory_used_bytes'] // (1024**2)} MB) is close to or above "
+            f"the requested limit ({body.gb} GB). Docker may kill the container."
         )
 
     write_memory_limit_gb(body.gb)
@@ -3122,14 +3122,14 @@ def api_set_memory_limit(body: MemoryLimitUpdate):
     if body.apply:
         r = recreate_container()
         if r.returncode != 0:
-            raise HTTPException(500, r.stderr or r.stdout or "Erro ao recriar container")
+            raise HTTPException(500, r.stderr or r.stdout or "Failed to recreate container")
 
     return {
         "ok": True,
         "gb": body.gb,
         "unlimited": body.gb is None,
         "warning": warning,
-        "message": "Limite de RAM atualizado. Container recriado." if body.apply else "Limite salvo no compose.",
+        "message": "RAM limit updated. Container recreated." if body.apply else "Limit saved to compose.",
     }
 
 
@@ -3150,19 +3150,19 @@ def api_set_capacity(body: CapacityUpdate):
         if gb is not None and (gb < MEMORY_MIN_GB or gb > MEMORY_MAX_GB):
             raise HTTPException(
                 400,
-                f"Limite deve estar entre {MEMORY_MIN_GB} e {MEMORY_MAX_GB} GB, ou {MEMORY_UNLIMITED_SLIDER} para sem limite",
+                f"Limit must be between {MEMORY_MIN_GB} and {MEMORY_MAX_GB} GB, or {MEMORY_UNLIMITED_SLIDER} for unlimited",
             )
         if body.apply_memory:
             raw = get_container_metrics_raw()
             if gb is not None and raw["memory_used_bytes"] > gb * 1024**3 * 0.85:
                 memory_warning = (
-                    f"Uso atual ({raw['memory_used_bytes'] // (1024 ** 2)} MB) está próximo ou acima "
-                    f"do limite solicitado ({gb} GB). O container pode ser encerrado pelo Docker."
+                    f"Current usage ({raw['memory_used_bytes'] // (1024 ** 2)} MB) is close to or above "
+                    f"the requested limit ({gb} GB). Docker may kill the container."
                 )
             write_memory_limit_gb(gb)
             r = recreate_container()
             if r.returncode != 0:
-                raise HTTPException(500, r.stderr or r.stdout or "Erro ao recriar container")
+                raise HTTPException(500, r.stderr or r.stdout or "Failed to recreate container")
 
     if body.max_players is not None:
         write_max_players(body.max_players)
@@ -3171,16 +3171,16 @@ def api_set_capacity(body: CapacityUpdate):
     if memory_warning:
         result["memory_warning"] = memory_warning
     if body.apply_memory:
-        result["message"] = "Limite de RAM atualizado. Container recriado."
+        result["message"] = "RAM limit updated. Container recreated."
     elif body.max_players is not None:
-        result["message"] = "Limite de jogadores atualizado."
+        result["message"] = "Player limit updated."
     return result
 
 
 @app.post("/api/server/backup")
 def api_server_backup():
     output = trigger_backup()
-    return {"ok": True, "message": "Backup solicitado", "output": output}
+    return {"ok": True, "message": "Backup requested", "output": output}
 
 
 @app.post("/api/server/{action}")
@@ -3193,14 +3193,14 @@ def api_server_action(action: str):
         "resume": lambda: docker("exec", CONTAINER_NAME, "supervisorctl", "start", "valheim-server"),
     }
     if action not in actions:
-        raise HTTPException(400, f"Ação inválida: {action}")
+        raise HTTPException(400, f"Invalid action: {action}")
 
     if action in ("pause", "resume") and not container_running():
-        raise HTTPException(400, "Container não está rodando")
+        raise HTTPException(400, "Container is not running")
 
     r = actions[action]()
     if r.returncode != 0:
-        raise HTTPException(500, r.stderr or r.stdout or "Erro ao executar ação")
+        raise HTTPException(500, r.stderr or r.stdout or "Failed to execute action")
     return {"ok": True, "action": action, "output": (r.stdout + r.stderr).strip()}
 
 
@@ -3238,7 +3238,7 @@ def api_console_status():
 def api_console_command(body: ConsoleCommand):
     command = body.command.strip()
     if not command:
-        raise HTTPException(400, "Comando vazio")
+        raise HTTPException(400, "Empty command")
     _require_rcon()
     output = _run_rcon(command)
     return {"ok": True, "command": command, "output": output}
@@ -3248,11 +3248,11 @@ def api_console_command(body: ConsoleCommand):
 def api_player_action(steam_id: str, body: PlayerActionBody):
     sid = steam_id.strip()
     if not STEAM_ID_RE.match(sid):
-        raise HTTPException(400, "Steam ID inválido (esperado 17 dígitos)")
+        raise HTTPException(400, "Invalid Steam ID (expected 17 digits)")
 
     action = body.action.strip().lower()
     if action not in _PLAYER_RCON_ACTIONS:
-        raise HTTPException(400, f"Ação inválida: {action}")
+        raise HTTPException(400, f"Invalid action: {action}")
 
     _require_rcon()
     rcon_cmd = _PLAYER_RCON_ACTIONS[action](sid)
@@ -3288,7 +3288,7 @@ def api_get_serverlists():
 @app.put("/api/config/serverlists/{kind}")
 def api_put_serverlist(kind: str, body: ServerListUpdate):
     if kind not in ("admin", "banned", "permitted"):
-        raise HTTPException(400, "Tipo inválido")
+        raise HTTPException(400, "Invalid type")
     write_serverlist(kind, body.ids)
     if container_running():
         docker("exec", CONTAINER_NAME, "supervisorctl", "restart", "valheim-server")
@@ -3338,7 +3338,7 @@ async def api_upload_mod(file: UploadFile = File(...)):
     if filename.lower().endswith(".zip"):
         installed = extract_dlls_from_zip(data, PLUGINS_DIR)
         if not installed:
-            raise HTTPException(400, "Nenhum .dll encontrado no ZIP")
+            raise HTTPException(400, "No .dll found in the ZIP")
         return {"ok": True, "installed": installed}
 
     if filename.lower().endswith(".dll"):
@@ -3348,12 +3348,12 @@ async def api_upload_mod(file: UploadFile = File(...)):
         except PermissionError as e:
             raise HTTPException(
                 500,
-                f"Sem permissão para gravar {dest.name}. "
-                f"Execute: sudo {FIX_PLUGINS_SCRIPT}",
+                f"No permission to write {dest.name}. "
+                f"Run: sudo {FIX_PLUGINS_SCRIPT}",
             ) from e
         return {"ok": True, "installed": [dest.name]}
 
-    raise HTTPException(400, "Envie um arquivo .zip ou .dll")
+    raise HTTPException(400, "Upload a .zip or .dll file")
 
 
 @app.post("/api/mods/install-url")
@@ -3365,7 +3365,7 @@ async def api_install_mod_url(body: ModUrlInstall):
 
     installed = extract_dlls_from_zip(data, PLUGINS_DIR)
     if not installed:
-        raise HTTPException(400, "Nenhum .dll encontrado no pacote")
+        raise HTTPException(400, "No .dll found in the package")
 
     ref = resolve_thunderstore_ref(body.url, download_url)
     if ref:
@@ -3386,12 +3386,12 @@ async def api_install_mod_url(body: ModUrlInstall):
 @app.delete("/api/mods/{name}")
 def api_delete_mod(name: str):
     if ".." in name or "/" in name:
-        raise HTTPException(400, "Nome inválido")
+        raise HTTPException(400, "Invalid name")
     if is_protected_mod(name):
-        raise HTTPException(403, "Este mod é integrado ao painel e não pode ser removido")
+        raise HTTPException(403, "This mod is bundled with the panel and cannot be removed")
     found = find_mod(name)
     if not found:
-        raise HTTPException(404, "Mod não encontrado")
+        raise HTTPException(404, "Mod not found")
     path, _ = found
     path.unlink()
     remove_runtime_plugin(name)
@@ -3402,17 +3402,17 @@ def api_delete_mod(name: str):
 @app.post("/api/mods/{name}/toggle")
 def api_toggle_mod(name: str, body: ModToggle):
     if ".." in name or "/" in name:
-        raise HTTPException(400, "Nome inválido")
+        raise HTTPException(400, "Invalid name")
     found = find_mod(name)
     if not found:
-        raise HTTPException(404, "Mod não encontrado")
+        raise HTTPException(404, "Mod not found")
     path, currently_enabled = found
     if currently_enabled == body.enabled:
         return {
             "ok": True,
             "name": name,
             "enabled": body.enabled,
-            "message": "Sem alteração",
+            "message": "No changes",
         }
     dest_dir = PLUGINS_DIR if body.enabled else PLUGINS_DISABLED_DIR
     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -3423,21 +3423,21 @@ def api_toggle_mod(name: str, body: ModToggle):
         "ok": True,
         "name": name,
         "enabled": body.enabled,
-        "message": "Mod atualizado. Reinicie o servidor para aplicar.",
+        "message": "Mod updated. Restart the server to apply.",
     }
 
 
 @app.post("/api/mods/{name}/link")
 def api_link_mod(name: str, body: ModLink):
     if ".." in name or "/" in name:
-        raise HTTPException(400, "Nome inválido")
+        raise HTTPException(400, "Invalid name")
     if not find_mod(name):
-        raise HTTPException(404, "Mod não encontrado")
+        raise HTTPException(404, "Mod not found")
 
     normalized = normalize_thunderstore_url(body.url)
     ref = resolve_thunderstore_ref(body.url, normalized)
     if not ref:
-        raise HTTPException(400, "URL Thunderstore inválida")
+        raise HTTPException(400, "Invalid Thunderstore URL")
 
     owner, pkg_name, version = ref
     if not version:
@@ -3458,10 +3458,10 @@ def api_link_mod(name: str, body: ModLink):
 @app.post("/api/mods/{name}/check-update")
 def api_check_mod_update(name: str):
     if ".." in name or "/" in name:
-        raise HTTPException(400, "Nome inválido")
+        raise HTTPException(400, "Invalid name")
     pkg = find_package_for_dll(name)
     if not pkg:
-        raise HTTPException(404, "Mod sem vínculo Thunderstore. Use Vincular Thunderstore.")
+        raise HTTPException(404, "Mod has no Thunderstore link. Use Link Thunderstore.")
     result = check_mod_update_for_package(pkg, use_cache=False)
     return {"ok": True, "name": name, **result}
 
@@ -3469,14 +3469,14 @@ def api_check_mod_update(name: str):
 @app.post("/api/mods/{name}/update")
 def api_update_mod(name: str):
     if ".." in name or "/" in name:
-        raise HTTPException(400, "Nome inválido")
+        raise HTTPException(400, "Invalid name")
     pkg = find_package_for_dll(name)
     if not pkg:
-        raise HTTPException(404, "Mod sem vínculo Thunderstore")
+        raise HTTPException(404, "Mod has no Thunderstore link")
 
     check = check_mod_update_for_package(pkg, use_cache=False)
     if not check.get("update_available"):
-        return {"ok": True, "updated": False, "message": "Mod já está na versão mais recente"}
+        return {"ok": True, "updated": False, "message": "Mod is already on the latest version"}
 
     download_url = check.get("download_url")
     if not download_url:
@@ -3493,7 +3493,7 @@ def api_update_mod(name: str):
 
     installed = extract_dlls_from_zip(data, PLUGINS_DIR)
     if not installed:
-        raise HTTPException(400, "Nenhum .dll encontrado no pacote atualizado")
+        raise HTTPException(400, "No .dll found in the updated package")
 
     latest = check.get("latest_version") or pkg.get("version") or ""
     register_mod_package(
@@ -3508,7 +3508,7 @@ def api_update_mod(name: str):
         "updated": True,
         "installed": installed,
         "version": latest,
-        "message": "Mod atualizado. Reinicie o servidor para aplicar.",
+        "message": "Mod updated. Restart the server to apply.",
     }
 
 
@@ -3524,13 +3524,13 @@ def api_list_worlds():
 def api_switch_world(body: WorldSwitch):
     name = validate_world_name(body.world_name)
     if name not in collect_known_world_names(reconcile=False):
-        raise HTTPException(404, f"Mundo '{name}' não encontrado")
+        raise HTTPException(404, f"World '{name}' not found")
     write_env({"WORLD_NAME": name})
     remove_pending_world(name)
     if container_running():
         r = recreate_container()
         if r.returncode != 0:
-            raise HTTPException(500, r.stderr or r.stdout or "Erro ao recriar container")
+            raise HTTPException(500, r.stderr or r.stdout or "Failed to recreate container")
     return {"ok": True, "world_name": name}
 
 
@@ -3543,13 +3543,13 @@ def api_create_world(
     name = validate_world_name(name)
     fwl = WORLDS_DIR / f"{name}.fwl"
     if fwl.exists():
-        raise HTTPException(409, "Mundo já existe")
+        raise HTTPException(409, "World already exists")
     env = read_env()
     if env.get("WORLD_NAME", "").strip() == name:
-        raise HTTPException(409, "Mundo já está ativo")
+        raise HTTPException(409, "World is already active")
     pending = read_pending_worlds()
     if name in pending:
-        raise HTTPException(409, "Mundo já registrado como pendente")
+        raise HTTPException(409, "World already registered as pending")
 
     config = WorldConfig.from_dict(body.config) if body and body.config else WorldConfig()
     if body and body.seed:
@@ -3566,12 +3566,12 @@ def api_create_world(
         if container_running():
             r = recreate_container()
             if r.returncode != 0:
-                raise HTTPException(500, r.stderr or r.stdout or "Erro ao recriar container")
+                raise HTTPException(500, r.stderr or r.stdout or "Failed to recreate container")
         return {
             "ok": True,
             "world_name": name,
             "activated": True,
-            "message": "Mundo criado e ativado",
+            "message": "World created and activated",
         }
 
     add_pending_world(name)
@@ -3579,7 +3579,7 @@ def api_create_world(
         "ok": True,
         "world_name": name,
         "activated": False,
-        "message": "Mundo registrado com configurações. Ative quando quiser.",
+        "message": "World registered with settings. Activate when ready.",
     }
 
 
@@ -3587,7 +3587,7 @@ def api_create_world(
 def api_get_world_config(name: str):
     name = validate_world_name(name)
     if not world_known(name):
-        raise HTTPException(404, "Mundo não encontrado")
+        raise HTTPException(404, "World not found")
     meta = read_world_meta(name)
     stored = get_stored_world_config(name)
     details = world_config_details(meta, stored=stored)
@@ -3622,7 +3622,7 @@ def api_get_world_config(name: str):
 def api_put_world_config(name: str, body: WorldConfigUpdate):
     name = validate_world_name(name)
     if not world_known(name):
-        raise HTTPException(404, "Mundo não encontrado")
+        raise HTTPException(404, "World not found")
 
     config = WorldConfig.from_dict(body.config)
     fwl = WORLDS_DIR / f"{name}.fwl"
@@ -3650,7 +3650,7 @@ def api_put_world_config(name: str, body: WorldConfigUpdate):
     if body.restart and requires_restart:
         r = restart_valheim_container()
         if r.returncode != 0:
-            raise HTTPException(500, r.stderr or r.stdout or "Erro ao reiniciar container")
+            raise HTTPException(500, r.stderr or r.stdout or "Failed to restart container")
 
     meta_after = read_fwl(fwl)
     details = world_config_details(meta_after, stored=config)
@@ -3674,7 +3674,7 @@ def api_delete_world(name: str):
     name = validate_world_name(name)
     env = read_env()
     if env.get("WORLD_NAME") == name:
-        raise HTTPException(400, "Não é possível apagar o mundo ativo")
+        raise HTTPException(400, "Cannot delete the active world")
     deleted = []
     for ext in (".fwl", ".db", ".fwl.bak"):
         path = WORLDS_DIR / f"{name}{ext}"
@@ -3691,7 +3691,7 @@ def api_delete_world(name: str):
         deleted.append(name)
     remove_stored_world_config(name)
     if not deleted:
-        raise HTTPException(404, "Mundo não encontrado")
+        raise HTTPException(404, "World not found")
     return {"ok": True, "deleted": deleted}
 
 
@@ -3704,7 +3704,7 @@ def api_file_tree(scope: str = "config"):
         "data": DATA_DIR,
     }
     if scope not in scopes:
-        raise HTTPException(400, "Escopo inválido — use config ou data")
+        raise HTTPException(400, "Invalid scope — use config or data")
     base = scopes[scope]
     rel_prefix = scope
     return {"tree": file_tree(base, rel_prefix)}
@@ -3714,9 +3714,9 @@ def api_file_tree(scope: str = "config"):
 def api_read_file(path: str):
     target = safe_path(path)
     if not target.is_file():
-        raise HTTPException(404, "Arquivo não encontrado")
+        raise HTTPException(404, "File not found")
     if target.suffix.lower() in (".db", ".fwl", ".zip"):
-        raise HTTPException(400, "Arquivo binário — use download")
+        raise HTTPException(400, "Binary file — use download")
     content = target.read_text(errors="replace")
     return {"path": path, "content": content, "size": target.stat().st_size}
 
@@ -3725,7 +3725,7 @@ def api_read_file(path: str):
 def api_write_file(path: str, body: FileContent):
     target = safe_path(path)
     if target.suffix.lower() in (".db", ".fwl"):
-        raise HTTPException(400, "Não é possível editar arquivos binários")
+        raise HTTPException(400, "Cannot edit binary files")
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(body.content)
     return {"ok": True, "path": path}
@@ -3735,7 +3735,7 @@ def api_write_file(path: str, body: FileContent):
 def api_download_file(path: str):
     target = safe_path(path)
     if not target.is_file():
-        raise HTTPException(404, "Arquivo não encontrado")
+        raise HTTPException(404, "File not found")
     return FileResponse(target, filename=target.name)
 
 
@@ -3743,10 +3743,10 @@ def api_download_file(path: str):
 def api_delete_file(path: str):
     target = safe_path(path)
     if not target.exists():
-        raise HTTPException(404, "Não encontrado")
+        raise HTTPException(404, "Not found")
     protected = {ENV_FILE.resolve(), COMPOSE_FILE.resolve()}
     if target.resolve() in protected:
-        raise HTTPException(403, "Arquivo protegido")
+        raise HTTPException(403, "Protected file")
     if target.is_dir():
         shutil.rmtree(target)
     else:
@@ -3808,7 +3808,7 @@ def api_put_updates_config(body: UpdateConfigUpdate):
     if body.restart or bepinex_changed:
         r = recreate_container()
         if r.returncode != 0:
-            raise HTTPException(500, r.stderr or r.stdout or "Erro ao recriar container")
+            raise HTTPException(500, r.stderr or r.stdout or "Failed to recreate container")
 
     response = {
         "ok": True,
@@ -3841,7 +3841,7 @@ def api_updates_status():
 @app.post("/api/updates/check")
 def api_updates_check():
     output = trigger_game_update_check()
-    return {"ok": True, "message": "Verificação de atualização solicitada", "output": output}
+    return {"ok": True, "message": "Update check requested", "output": output}
 
 
 # ── Setup (primeiro acesso) ───────────────────────────────────────────────────
@@ -3860,7 +3860,7 @@ def api_setup_status():
 @app.post("/api/setup/complete")
 def api_setup_complete(body: SetupComplete):
     if body.mode not in ("vanilla", "bepinex"):
-        raise HTTPException(400, "Modo inválido — use 'vanilla' ou 'bepinex'")
+        raise HTTPException(400, "Invalid mode — use 'vanilla' or 'bepinex'")
 
     bepinex = body.mode == "bepinex"
     mode_result = apply_server_mode(bepinex)
@@ -3869,7 +3869,7 @@ def api_setup_complete(body: SetupComplete):
     if not bepinex and body.admin_steam_id:
         sid = body.admin_steam_id.strip()
         if not STEAM_ID_RE.match(sid):
-            raise HTTPException(400, "Steam ID inválido (17 dígitos)")
+            raise HTTPException(400, "Invalid Steam ID (17 digits)")
         write_serverlist("admin", [sid])
         admin_configured = True
 
@@ -3879,7 +3879,7 @@ def api_setup_complete(body: SetupComplete):
         world_name = validate_world_name(body.world_name.strip())
         fwl = WORLDS_DIR / f"{world_name}.fwl"
         if fwl.exists():
-            raise HTTPException(409, "Mundo já existe")
+            raise HTTPException(409, "World already exists")
         WORLDS_DIR.mkdir(parents=True, exist_ok=True)
         write_world_fwl(fwl, world_name, WorldConfig(), backup=False)
         if body.activate_world:
@@ -3897,7 +3897,7 @@ def api_setup_complete(body: SetupComplete):
 
     r = recreate_container()
     if r.returncode != 0:
-        raise HTTPException(500, r.stderr or r.stdout or "Erro ao recriar container")
+        raise HTTPException(500, r.stderr or r.stdout or "Failed to recreate container")
 
     rcon_password = None
     if mode_result.get("rcon", {}).get("created"):
@@ -3938,13 +3938,13 @@ def api_put_backup_config(body: BackupConfigUpdate):
             if age < 1:
                 raise ValueError
         except ValueError as e:
-            raise HTTPException(400, "BACKUPS_MAX_AGE deve ser um número >= 1") from e
+            raise HTTPException(400, "BACKUPS_MAX_AGE must be a number >= 1") from e
     write_env(allowed)
     purge_old_backups()
     if container_exists():
         r = restart_valheim_container()
         if r.returncode != 0:
-            raise HTTPException(500, r.stderr or r.stdout or "Erro ao reiniciar container")
+            raise HTTPException(500, r.stderr or r.stdout or "Failed to restart container")
     return {"ok": True, "values": backup_config(), "purged": True, "restarted": container_exists()}
 
 
@@ -3956,7 +3956,7 @@ def api_trigger_backup():
     manifested = finalize_recent_auto_backup_manifests(before_mtime)
     return {
         "ok": True,
-        "message": "Backup solicitado",
+        "message": "Backup requested",
         "output": output,
         "manifested": manifested,
     }
@@ -3972,7 +3972,7 @@ def api_create_backup(body: BackupCreate):
 def api_restore_latest_backup():
     name = latest_restorable_backup()
     if not name:
-        raise HTTPException(404, "Nenhum backup restaurável encontrado")
+        raise HTTPException(404, "No restorable backup found")
     result = restore_backup(name)
     return result
 
@@ -3982,7 +3982,7 @@ def api_restore_undo_backup():
     state = read_backup_state()
     undo = state.get("undo")
     if not undo:
-        raise HTTPException(404, "Nenhum checkpoint de desfazer disponível")
+        raise HTTPException(404, "No undo checkpoint available")
     result = restore_backup(undo)
     return result
 
@@ -4001,10 +4001,10 @@ def api_backup_details(name: str):
 @app.delete("/api/backups/{name}")
 def api_delete_backup(name: str):
     if ".." in name or "/" in name or "\\" in name:
-        raise HTTPException(400, "Nome inválido")
+        raise HTTPException(400, "Invalid name")
     target = BACKUPS_DIR / name
     if not target.exists() or not str(target.resolve()).startswith(str(BACKUPS_DIR.resolve())):
-        raise HTTPException(404, "Backup não encontrado")
+        raise HTTPException(404, "Backup not found")
     try:
         if target.is_dir():
             shutil.rmtree(target)
@@ -4014,17 +4014,17 @@ def api_delete_backup(name: str):
         if sidecar.is_file():
             sidecar.unlink()
     except OSError as e:
-        raise HTTPException(500, f"Falha ao apagar: {e}") from e
+        raise HTTPException(500, f"Failed to delete: {e}") from e
     return {"ok": True, "deleted": name}
 
 
 @app.get("/api/backups/{name}/download")
 def api_download_backup(name: str):
     if ".." in name or "/" in name or "\\" in name:
-        raise HTTPException(400, "Nome inválido")
+        raise HTTPException(400, "Invalid name")
     target = BACKUPS_DIR / name
     if not target.is_file() or not str(target.resolve()).startswith(str(BACKUPS_DIR.resolve())):
-        raise HTTPException(404, "Backup não encontrado")
+        raise HTTPException(404, "Backup not found")
     return FileResponse(target, filename=target.name)
 
 
@@ -4038,7 +4038,7 @@ def api_get_audit(lines: int = Query(200, ge=1, le=5000)):
 @app.get("/api/audit/download")
 def api_download_audit():
     if not AUDIT_FILE.exists():
-        raise HTTPException(404, "Nenhum log de auditoria encontrado")
+        raise HTTPException(404, "No audit log found")
     return FileResponse(AUDIT_FILE, filename="audit.jsonl", media_type="application/x-ndjson")
 
 

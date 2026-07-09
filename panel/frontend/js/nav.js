@@ -18,35 +18,35 @@ export const nav = {
   navSections: [
     {
       id: "painel",
-      label: "Painel",
-      items: [{ id: "dashboard", label: "Visão Geral", icon: icons.dashboard }],
+      label: "Panel",
+      items: [{ id: "dashboard", label: "Overview", icon: icons.dashboard }],
     },
     {
       id: "gerenciar",
-      label: "Gerenciar",
+      label: "Manage",
       items: [
-        { id: "server", label: "Servidor", icon: icons.server },
-        { id: "worlds", label: "Mundos", icon: icons.worlds },
-        { id: "mods", label: "Mods e Configs", icon: icons.mods },
+        { id: "server", label: "Server", icon: icons.server },
+        { id: "worlds", label: "Worlds", icon: icons.worlds },
+        { id: "mods", label: "Mods & Config", icon: icons.mods },
         { id: "backups", label: "Backups", icon: icons.backups },
       ],
     },
     {
       id: "ferramentas",
-      label: "Ferramentas",
+      label: "Tools",
       items: [
-        { id: "files", label: "Arquivos", icon: icons.files },
+        { id: "files", label: "Files", icon: icons.files },
         { id: "logs", label: "Logs", icon: icons.logs },
-        { id: "audit", label: "Auditoria", icon: icons.audit },
+        { id: "audit", label: "Audit", icon: icons.audit },
       ],
     },
     {
       id: "suporte",
-      label: "Suporte",
+      label: "Support",
       items: [
-        { id: "help", label: "Ajuda", icon: icons.help },
-        { id: "donation", label: "Doações", icon: icons.donation },
-        { id: "about", label: "Sobre", icon: icons.about },
+        { id: "help", label: "Help", icon: icons.help },
+        { id: "donation", label: "Support the Project", icon: icons.donation },
+        { id: "about", label: "About", icon: icons.about },
       ],
     },
   ],
