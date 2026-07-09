@@ -33,7 +33,7 @@ function panel() {
       }
       const res = await fetch(url, opts);
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.detail || data.message || `Erro ${res.status}`);
+      if (!res.ok) throw new Error(data.detail || data.message || `Error ${res.status}`);
       return data;
     },
 
@@ -45,9 +45,9 @@ function panel() {
     async copyText(text) {
       try {
         await navigator.clipboard.writeText(text);
-        this.toast("Copiado!");
+        this.toast("Copied!");
       } catch (e) {
-        this.toast("Falha ao copiar", "error");
+        this.toast("Failed to copy", "error");
       }
     },
 

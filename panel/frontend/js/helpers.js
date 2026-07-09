@@ -9,7 +9,7 @@ export function formatRateTick(bps) {
 
 export const helpers = {
   statusLabel(s) {
-    const map = { running: "Online", stopped: "Pausado", offline: "Offline", starting: "Iniciando" };
+    const map = { running: "Online", stopped: "Paused", offline: "Offline", starting: "Starting" };
     return map[s] || s;
   },
 
@@ -46,7 +46,7 @@ export const helpers = {
     return `<span class="log-msg ${msgCls}">${this.escapeHtml(line)}</span>`;
   },
 
-  formatLogHtml(text, emptyLabel = "Aguardando saída do servidor...") {
+  formatLogHtml(text, emptyLabel = "Waiting for server output...") {
     if (!text) {
       return `<span class="log-line log-empty">${this.escapeHtml(emptyLabel)}</span>`;
     }
@@ -78,7 +78,7 @@ export const helpers = {
     try {
       const d = new Date(iso);
       if (Number.isNaN(d.getTime())) return iso;
-      return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      return d.toLocaleString("en-US", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
     } catch {
       return iso;
     }

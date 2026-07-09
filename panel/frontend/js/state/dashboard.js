@@ -62,9 +62,9 @@ export const dashboard = {
   },
 
   playerActionLabel(action, steamId) {
-    if (action === "promote") return this.isPlayerAdmin(steamId) ? "Remover admin" : "Tornar admin";
-    if (action === "ban") return this.isPlayerBanned(steamId) ? "Desbanir" : "Banir";
-    if (action === "kick") return "Expulsar (kick)";
+    if (action === "promote") return this.isPlayerAdmin(steamId) ? "Remove admin" : "Make admin";
+    if (action === "ban") return this.isPlayerBanned(steamId) ? "Unban" : "Ban";
+    if (action === "kick") return "Kick";
     return action;
   },
 
@@ -74,9 +74,9 @@ export const dashboard = {
     this.closePlayerMenu();
 
     if (action === "kick") {
-      if (!confirm(`Expulsar ${label}? O jogador poderá voltar a entrar.`)) return;
+      if (!confirm(`Kick ${label}? The player can rejoin.`)) return;
     } else if (action === "ban" && !this.isPlayerBanned(sid)) {
-      if (!confirm(`Banir ${label} (${sid})? O jogador não poderá entrar até ser desbanido.`)) return;
+      if (!confirm(`Ban ${label} (${sid})? The player cannot join until unbanned.`)) return;
     } else if (action === "promote") {
       action = this.isPlayerAdmin(sid) ? "demote" : "promote";
     } else if (action === "ban") {
@@ -87,13 +87,13 @@ export const dashboard = {
       try {
         const data = await this.api("POST", `/api/players/${encodeURIComponent(sid)}/action`, { action });
         const messages = {
-          kick: `${label} expulso`,
-          ban: `${label} banido`,
-          unban: `${label} desbanido`,
-          promote: `${label} promovido a admin`,
-          demote: `${label} removido de admin`,
+          kick: `${label} kicked`,
+          ban: `${label} banned`,
+          unban: `${label} unbanned`,
+          promote: `${label} promoted to admin`,
+          demote: `${label} removed from admin`,
         };
-        this.toast(messages[action] || "Ação executada");
+        this.toast(messages[action] || "Action completed");
         if (data.synced) {
           this.playerLists[data.synced.kind] = data.synced.ids;
         } else {
@@ -108,7 +108,7 @@ export const dashboard = {
     return this.withBusy(`server:${action}`, async () => {
       try {
         await this.api("POST", `/api/server/${action}`);
-        this.toast(`Ação "${action}" executada`);
+        this.toast(`Action "${action}" completed`);
         setTimeout(() => this.refreshStatus(), 2000);
       } catch (e) { this.toast(e.message, "error"); }
     });
@@ -120,7 +120,7 @@ export const dashboard = {
 
   connectAddress() {
     const port = this.status.config?.server_port || "2456";
-    const host = window.location.hostname || "SEU_IP";
+    const host = window.location.hostname || "YOUR_IP";
     return `${host}:${port}`;
   },
 
@@ -222,7 +222,7 @@ export const dashboard = {
     const labels = this.netChartInstance.data.labels;
     const rxData = this.netChartInstance.data.datasets[0].data;
     const txData = this.netChartInstance.data.datasets[1].data;
-    const t = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    const t = new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     labels.push(t);
     rxData.push(Number(rx) || 0);
     txData.push(Number(tx) || 0);

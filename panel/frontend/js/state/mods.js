@@ -40,7 +40,7 @@ export const mods = {
     await this.withBusy("uploadMod", async () => {
       try {
         const data = await this.api("POST", "/api/mods/upload", fd);
-        this.toast(`Instalado: ${data.installed.join(", ")}`);
+        this.toast(`Installed: ${data.installed.join(", ")}`);
         await this.loadMods();
       } catch (e) { this.toast(e.message, "error"); }
     });
@@ -52,7 +52,7 @@ export const mods = {
     return this.withBusy("installModUrl", async () => {
       try {
         const data = await this.api("POST", "/api/mods/install-url", { url: this.modUrl });
-        this.toast(`Instalado: ${data.installed.join(", ")}`);
+        this.toast(`Installed: ${data.installed.join(", ")}`);
         this.modUrl = "";
         await this.loadMods();
       } catch (e) { this.toast(e.message, "error"); }
@@ -60,11 +60,11 @@ export const mods = {
   },
 
   async deleteMod(name) {
-    if (!confirm(`Remover mod ${name}?`)) return;
+    if (!confirm(`Remove mod ${name}?`)) return;
     return this.withBusy(`deleteMod:${name}`, async () => {
       try {
         await this.api("DELETE", `/api/mods/${encodeURIComponent(name)}`);
-        this.toast(`${name} removido`);
+        this.toast(`${name} removed`);
         await this.loadMods();
       } catch (e) { this.toast(e.message, "error"); }
     });
@@ -74,7 +74,7 @@ export const mods = {
     return this.withBusy(`toggleMod:${name}`, async () => {
       try {
         const data = await this.api("POST", `/api/mods/${encodeURIComponent(name)}/toggle`, { enabled });
-        this.toast(data.message || (enabled ? "Mod ativado" : "Mod desativado"));
+        this.toast(data.message || (enabled ? "Mod enabled" : "Mod disabled"));
         await this.loadMods();
       } catch (e) { this.toast(e.message, "error"); }
     });
@@ -82,10 +82,10 @@ export const mods = {
 
   modStatusLabel(status) {
     return {
-      up_to_date: "Atualizado",
-      update_available: "Atualização disponível",
-      unknown: "Origem desconhecida",
-      error: "Erro ao verificar",
+      up_to_date: "Up to date",
+      update_available: "Update available",
+      unknown: "Unknown source",
+      error: "Check failed",
     }[status] || status;
   },
 
@@ -103,8 +103,8 @@ export const mods = {
       try {
         const data = await this.api("POST", `/api/mods/${encodeURIComponent(name)}/check-update`);
         const msg = data.update_available
-          ? `Atualização disponível: v${data.installed_version} → v${data.latest_version}`
-          : "Mod está na versão mais recente";
+          ? `Update available: v${data.installed_version} → v${data.latest_version}`
+          : "Mod is on the latest version";
         this.toast(msg);
         await this.loadMods();
       } catch (e) { this.toast(e.message, "error"); }
@@ -112,11 +112,11 @@ export const mods = {
   },
 
   async updateMod(name) {
-    if (!confirm(`Atualizar ${name}? O servidor pode precisar ser reiniciado.`)) return;
+    if (!confirm(`Update ${name}? The server may need to be restarted.`)) return;
     return this.withBusy(`updateMod:${name}`, async () => {
       try {
         const data = await this.api("POST", `/api/mods/${encodeURIComponent(name)}/update`);
-        this.toast(data.message || `Mod atualizado para v${data.version}`);
+        this.toast(data.message || `Mod updated to v${data.version}`);
         await this.loadMods();
       } catch (e) { this.toast(e.message, "error"); }
     });
@@ -127,7 +127,7 @@ export const mods = {
     return this.withBusy(`linkMod:${name}`, async () => {
       try {
         await this.api("POST", `/api/mods/${encodeURIComponent(name)}/link`, { url: this.modLinkUrl });
-        this.toast("Mod vinculado ao Thunderstore");
+        this.toast("Mod linked to Thunderstore");
         this.cancelModLink();
         await this.loadMods();
       } catch (e) { this.toast(e.message, "error"); }
@@ -140,19 +140,19 @@ export const mods = {
         const res = await fetch("/api/mods/export-r2z");
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          throw new Error(err.detail || `Erro ${res.status}`);
+          throw new Error(err.detail || `Error ${res.status}`);
         }
         const blob = await res.blob();
         const disposition = res.headers.get("Content-Disposition") || "";
         const match = disposition.match(/filename="([^"]+)"/);
-        const filename = match ? match[1] : "perfil.r2z";
+        const filename = match ? match[1] : "profile.r2z";
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
         a.download = filename;
         a.click();
         URL.revokeObjectURL(url);
-        this.toast("Perfil .r2z baixado");
+        this.toast(".r2z profile downloaded");
       } catch (e) { this.toast(e.message, "error"); }
     });
   },
@@ -162,8 +162,8 @@ export const mods = {
       try {
         const data = await this.api("POST", "/api/mods/export-code");
         await navigator.clipboard.writeText(data.code);
-        const skipped = data.skipped ? ` (${data.skipped} mod(s) ignorados)` : "";
-        this.toast(`Código copiado: ${data.mods_count} mod(s)${skipped}`);
+        const skipped = data.skipped ? ` (${data.skipped} mod(s) skipped)` : "";
+        this.toast(`Code copied: ${data.mods_count} mod(s)${skipped}`);
       } catch (e) { this.toast(e.message, "error"); }
     });
   },

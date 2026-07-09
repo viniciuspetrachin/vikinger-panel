@@ -1,73 +1,63 @@
-# Licença Comercial — Vikinger Panel
+# Commercial License — Vikinger Panel
 
-O **Vikinger Panel** é distribuído sob a [Polyform Shield 1.0.0](LICENSE), que permite uso,
-modificação e contribuição gratuitos, mas **proíbe revenda** e o oferecimento do painel
-como produto ou serviço concorrente sem autorização.
+**Vikinger Panel** is distributed under [Polyform Shield 1.0.0](LICENSE), which allows
+free use, modification, and contribution, but **prohibits resale** and offering the panel
+as a competing product or service without authorization.
 
-Este documento descreve o licenciamento comercial para **provedores de hospedagem** e
-outras empresas que desejam oferecer o painel aos seus clientes.
+This document describes commercial licensing for **hosting providers** and other
+businesses that want to offer the panel to their customers.
 
-## Quem pode usar gratuitamente?
+## Who can use it for free?
 
-| Cenário | Licença necessária |
-|---------|-------------------|
-| Rodar o painel no **seu próprio** servidor Valheim (casa, VPS pessoal, amigos) | Polyform Shield (grátis) |
-| Contribuir com código, issues e documentação no GitHub | Polyform Shield (grátis) |
-| Fork para uso interno sem revender | Polyform Shield (grátis) |
-| Oferecer o painel como **serviço pago** ou incluso em planos de hospedagem | **Licença comercial** |
-| Revender, white-label ou redistribuir como produto | **Licença comercial** |
+| Scenario | License required |
+|----------|------------------|
+| Run the panel on **your own** Valheim server (home, personal VPS, friends) | Polyform Shield (free) |
+| Contribute code, issues, and documentation on GitHub | Polyform Shield (free) |
+| Fork for internal use without reselling | Polyform Shield (free) |
+| Offer the panel as a **paid service** or included in hosting plans | **Commercial license** |
+| Resell, white-label, or redistribute as a product | **Commercial license** |
 
-## Licença comercial
+## Commercial license
 
-A licença comercial autoriza provedores de hospedagem e empresas a:
+A commercial license authorizes hosting providers and businesses to:
 
-- Incluir o Vikinger Panel em planos de hospedagem de servidores Valheim
-- Oferecer o painel como recurso gerenciado aos clientes finais
-- Usar marca própria na interface (white-label), mediante acordo
-- Receber suporte prioritário e atualizações garantidas (conforme plano)
+- Include Vikinger Panel in Valheim server hosting plans
+- Offer the panel as a managed feature to end customers
+- Use custom branding in the interface (white-label), by agreement
+- Receive priority support and guaranteed updates (per agreement)
 
-### Planos (valores a definir)
+Pricing and terms are negotiated per use case (server volume, SLA, white-label, etc.).
 
-Os valores abaixo são **referência inicial** — entre em contato para proposta personalizada
-conforme volume de servidores, SLA e white-label.
+## How to request
 
-| Plano | Público | Inclui |
-|-------|---------|--------|
-| **Hosting Starter** | Pequenos provedores (até 10 servidores) | Uso comercial, atualizações, suporte por e-mail |
-| **Hosting Pro** | Provedores médios (até 50 servidores) | Tudo do Starter + white-label + prioridade |
-| **Hosting Enterprise** | Grandes provedores / ilimitado | Contrato customizado, SLA, integração |
+Send an email to **[vr.petrachin@gmail.com](mailto:vr.petrachin@gmail.com)** with:
 
-> Os preços finais serão publicados em breve. Solicite cotação antecipada se precisar
-> começar antes do lançamento público.
+1. Company name and website
+2. Estimated number of servers
+3. Business model (hosting plans, managed service, white-label, etc.)
 
-## Como solicitar
+You will receive a proposal and licensing terms.
 
-1. Envie e-mail para **licensing@viniciuspetrachin.dev** (ou o endereço configurado em
-   `PANEL_COMMERCIAL_EMAIL` no seu `.env`)
-2. Informe: nome da empresa, site, volume estimado de servidores e modelo de negócio
-3. Receba proposta, contrato e chave de licença comercial
+## Sponsorship
 
-## Doações
+If you use the panel for free and want to support development, voluntary sponsorship is
+welcome — see the **Support the Project** tab in the panel or [GitHub Sponsors](https://github.com/sponsors/viniciuspetrachin/dashboard).
 
-Se você usa o painel gratuitamente e quer apoiar o desenvolvimento, doações voluntárias
-são bem-vindas — veja a aba **Doações** no painel ou o [README](README.md#doações).
+Sponsorship **does not replace** a commercial license for hosting providers.
 
-Doações **não substituem** a licença comercial para provedores de hospedagem.
+## FAQ
 
-## Perguntas frequentes
+**Can I charge friends to run a server with the panel?**  
+Personal use and small non-profit communities usually qualify as free use. If the model is
+commercial hosting at scale, a commercial license is required.
 
-**Posso cobrar dos meus amigos para rodar um servidor com o painel?**  
-Uso pessoal e comunidades pequenas sem fins lucrativos costumam se enquadrar no uso
-gratuito. Se o modelo é comercial (hospedagem paga em escala), é necessária licença
-comercial.
+**Can I modify the code and publish my fork?**  
+Yes, as long as you keep Polyform Shield terms and do not offer the fork as a competing
+service without a commercial license.
 
-**Posso modificar o código e publicar meu fork?**  
-Sim, desde que mantenha os termos da Polyform Shield e não ofereça o fork como serviço
-concorrente sem licença comercial.
-
-**O que acontece se minha empresa violar os termos?**  
-A Polyform Shield prevê notificação e prazo de 32 dias para regularização. Uso comercial
-não autorizado pode resultar em rescisão da licença e medidas legais.
+**What happens if my company violates the terms?**  
+Polyform Shield provides notice and a 32-day period to comply. Unauthorized commercial use
+may result in license termination and legal action.
 
 ---
 

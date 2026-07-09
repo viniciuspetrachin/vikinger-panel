@@ -1,40 +1,40 @@
-# Contribuindo com o Vikinger Panel
+# Contributing to Vikinger Panel
 
-Obrigado por considerar contribuir! Este projeto é aberto para a comunidade sob a
+Thank you for considering a contribution! This project is open to the community under
 [Polyform Shield 1.0.0](LICENSE).
 
-## Antes de começar
+## Before you start
 
-- Leia o [README](README.md) e a [licença comercial](COMMERCIAL-LICENSE.md) para entender
-  o modelo de uso.
-- Contribuições são aceitas sob os **mesmos termos** da licença do projeto.
-- Issues e discussões em português ou inglês são bem-vindas.
+- Read the [README](README.md) and [commercial license](COMMERCIAL-LICENSE.md) to understand
+  the usage model.
+- Contributions are accepted under the **same terms** as the project license.
+- Issues and discussions in English or Portuguese are welcome.
 
-## Como contribuir
+## How to contribute
 
-1. **Fork** o repositório
-2. Crie uma branch: `git checkout -b feat/minha-feature`
-3. Faça suas alterações com testes
-4. Abra um **Pull Request** descrevendo o problema e a solução
+1. **Fork** the repository
+2. Create a branch: `git checkout -b feat/my-feature`
+3. Make your changes with tests
+4. Open a **Pull Request** describing the problem and solution
 
-## Desenvolvimento local
+## Local development
 
-### Pré-requisitos
+### Prerequisites
 
-- Docker e Docker Compose
+- Docker and Docker Compose
 - Python 3.12+
-- Node.js 22+ (para rebuild do frontend)
+- Node.js 22+ (for frontend rebuild)
 
-### Dev com hot-reload (recomendado)
+### Dev with hot-reload (recommended)
 
 ```bash
 ./scripts/dev.sh
 ```
 
-Sobe o painel com `uvicorn --reload` e um watcher de frontend. Editar `panel/**` reflete
-no navegador com F5, sem rebuild da imagem.
+Starts the panel with `uvicorn --reload` and a frontend watcher. Edit `panel/**` and
+refresh with F5 — no image rebuild needed.
 
-### Testes (obrigatório para features de API/UI)
+### Tests (required for API/UI features)
 
 ```bash
 cd panel
@@ -42,10 +42,10 @@ python -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/playwright install chromium
 
-# Unitários (rápido, sem browser)
+# Unit tests (fast, no browser)
 .venv/bin/pytest tests/unit -q
 
-# E2E (sobe painel hermético com docker falso)
+# E2E (hermetic panel with fake docker)
 .venv/bin/pytest tests/e2e -q
 ```
 
@@ -54,70 +54,70 @@ python -m venv .venv
 ```bash
 cd panel
 npm install
-npm run build   # gera app.css, app.bundle.js, editor.bundle.js
-npm run watch   # modo watch (usado pelo dev.sh)
+npm run build   # generates app.css, app.bundle.js, editor.bundle.js
+npm run watch   # watch mode (used by dev.sh)
 ```
 
-### Deploy de produção (Docker)
+### Production deploy (Docker)
 
-Fora do modo dev, o painel serve arquivos embarcados na imagem. Após mudanças em `panel/`,
-reconstrua o container — **F5 no navegador não basta**:
+Outside dev mode, the panel serves embedded assets. After changes in `panel/`,
+rebuild the container — **F5 alone is not enough**:
 
 ```bash
 ./scripts/reload-panel.sh           # docker compose build panel && up -d
-./scripts/reload-panel.sh --tests   # pytest unit + e2e, depois deploy
+./scripts/reload-panel.sh --tests   # pytest unit + e2e, then deploy
 ```
 
-### Convenções
+### Conventions
 
-- Rotas mutantes (`POST`/`PUT`/`DELETE`) são auditadas em `panel-data/logs/audit.jsonl`
-- Ações de UI usam `withBusy(key, fn)` — botões com `:disabled="isBusy('key')"`
-- Novas rotas: teste unitário em `tests/unit/test_api.py`
-- Novos fluxos de UI: teste E2E em `tests/e2e/test_features.py`
+- Mutating routes (`POST`/`PUT`/`DELETE`) are audited in `panel-data/logs/audit.jsonl`
+- UI actions use `withBusy(key, fn)` — buttons with `:disabled="isBusy('key')"`
+- New routes: unit test in `tests/unit/test_api.py`
+- New UI flows: E2E test in `tests/e2e/test_features.py`
 
-## CI/CD e branch protection
+## CI/CD and branch protection
 
 ### Workflows (GitHub Actions)
 
-| Workflow | Trigger | O que faz |
-|----------|---------|-----------|
-| `ci.yml` | PR e push em `main` | Roda `pytest tests/unit` e `pytest tests/e2e` |
-| `release.yml` | Push em `main` (exceto `[skip ci]`) | Testes → bump patch → build Docker → GHCR → ZIP → tag → GitHub Release |
+| Workflow | Trigger | What it does |
+|----------|---------|--------------|
+| `ci.yml` | PR and push to `main` | Runs `pytest tests/unit` and `pytest tests/e2e` |
+| `release.yml` | Push to `main` (except `[skip ci]`) | Tests → patch bump → Docker build → GHCR → ZIP → tag → GitHub Release |
 
-### Versionamento automático
+### Automatic versioning
 
-- Fonte da verdade: `panel/version.py` (`__version__`)
-- A cada release na `main`, o patch sobe automaticamente (`2.1.0` → `2.1.1`)
-- Para mudar major ou minor, edite `__version__` manualmente no commit desejado; o patch continua automático depois
-- O commit de release do bot usa `[skip ci]` para não disparar outro release em loop
+- Source of truth: `panel/version.py` (`__version__`)
+- Each release on `main` auto-increments patch (`2.1.0` → `2.1.1`)
+- To change major or minor, edit `__version__` manually in the desired commit; patch stays automatic after that
+- The bot release commit uses `[skip ci]` to avoid triggering another release loop
 
-### Proteção da branch `main` (configuração no GitHub)
+### Protecting the `main` branch (GitHub settings)
 
-Para garantir que nenhum código entre na `main` sem testes:
+To ensure no code lands on `main` without tests:
 
-1. Vá em **Settings → Branches → Add branch protection rule**
+1. Go to **Settings → Branches → Add branch protection rule**
 2. Branch name pattern: `main`
-3. Marque **Require status checks to pass before merging**
-4. Selecione o check **`test`** (job do workflow `CI`)
-5. (Recomendado) **Require a pull request before merging**
+3. Enable **Require status checks to pass before merging**
+4. Select the **`test`** check (CI workflow job)
+5. (Recommended) **Require a pull request before merging**
 
-### Pacote de release para usuários finais
+### Release package for end users
 
-O workflow `release.yml` gera um ZIP sem código-fonte em [GitHub Releases](https://github.com/viniciuspetrachin/vikinger-panel/releases), com:
+The `release.yml` workflow generates a source-free ZIP on [GitHub Releases](https://github.com/viniciuspetrachin/vikinger-panel/releases), including:
 
-- Imagem Docker pré-construída (`.tar` + publicação no GHCR)
-- `docker-compose.yml` sem `build:`
-- Scripts `start.sh` e `reload-panel.sh`
-- `README-INSTALL.md` com instruções para leigos
+- Pre-built Docker image (`.tar` + GHCR publish)
+- `docker-compose.yml` without `build:`
+- `start.sh` and `reload-panel.sh` scripts
+- `README-INSTALL.md` with step-by-step instructions
 
-Templates em `release/`; montagem via `scripts/assemble-release.sh`.
+Templates in `release/`; assembly via `scripts/assemble-release.sh`.
 
-## O que evitar
+## What to avoid
 
-- Commits com segredos (`.env`, senhas, tokens)
-- Mudanças que quebrem o modelo de licenciamento sem discussão prévia
-- PRs grandes sem issue ou contexto — prefira mudanças focadas
+- Commits with secrets (`.env`, passwords, tokens)
+- Changes that break the licensing model without prior discussion
+- Large PRs without an issue or context — prefer focused changes
 
-## Código de conduta
+## Code of conduct
 
-Seja respeitoso. Foco em feedback construtivo e colaboração.
+Be respectful. Focus on constructive feedback and collaboration.

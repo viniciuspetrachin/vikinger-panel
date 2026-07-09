@@ -13,6 +13,10 @@ REPO_URL = "https://github.com/viniciuspetrachin/vikinger-panel"
 LICENSE = "Polyform Shield 1.0.0"
 LICENSE_URL = "https://polyformproject.org/licenses/shield/1.0.0"
 
+_DEFAULT_SPONSOR_URL = "https://github.com/sponsors/viniciuspetrachin/dashboard"
+_DEFAULT_COMMERCIAL_EMAIL = "vr.petrachin@gmail.com"
+_DEFAULT_COMMERCIAL_URL = f"{REPO_URL}/blob/main/COMMERCIAL-LICENSE.md"
+
 _DONATION_ENV = (
     ("PANEL_DONATION_GITHUB", "GitHub Sponsors"),
     ("PANEL_DONATION_KOFI", "Ko-fi"),
@@ -26,15 +30,23 @@ def donation_links() -> list[dict]:
         url = os.environ.get(env_key, "").strip()
         if url:
             links.append({"id": env_key.lower(), "label": label, "url": url})
+    if not links:
+        links.append({
+            "id": "panel_donation_github",
+            "label": "GitHub Sponsors",
+            "url": _DEFAULT_SPONSOR_URL,
+        })
     return links
 
 
 def donation_info() -> dict:
+    commercial_email = os.environ.get("PANEL_COMMERCIAL_EMAIL", "").strip()
+    commercial_url = os.environ.get("PANEL_COMMERCIAL_URL", "").strip()
     return {
         "links": donation_links(),
         "pix_key": os.environ.get("PANEL_DONATION_PIX", "").strip(),
-        "commercial_email": os.environ.get("PANEL_COMMERCIAL_EMAIL", "").strip(),
-        "commercial_url": os.environ.get("PANEL_COMMERCIAL_URL", "").strip(),
+        "commercial_email": commercial_email or _DEFAULT_COMMERCIAL_EMAIL,
+        "commercial_url": commercial_url or _DEFAULT_COMMERCIAL_URL,
     }
 
 
