@@ -1,109 +1,111 @@
-# Vikinger Panel — Instalação
+# Vikinger Panel — Installation
 
-Pacote pronto para uso **sem código-fonte**. Basta Docker e Docker Compose.
+Ready-to-use package **without source code**. You only need Docker and Docker Compose.
 
-## Requisitos
+## Requirements
 
-- Linux com **Docker** e **Docker Compose** v2
-- Portas UDP **2456–2458** liberadas no firewall (jogadores externos)
-- ~4 GB de RAM (Valheim + BepInEx + painel)
-- Usuário com acesso ao `docker.sock` (grupo `docker`)
+- Linux with **Docker** and **Docker Compose** v2
+- UDP ports **2456–2458** open on the firewall (external players)
+- ~4 GB RAM (Valheim + BepInEx + panel)
+- User with access to `docker.sock` (`docker` group)
 
-## Instalação rápida
+## Quick install
 
-### 1. Extrair o pacote
+### 1. Extract the package
 
 ```bash
 unzip vikinger-panel-*-dist.zip
 cd vikinger-panel-*/
 ```
 
-### 2. Configurar o `.env`
+### 2. Configure `.env`
 
 ```bash
 cp .env.example .env
-nano .env   # ou seu editor preferido
+nano .env   # or your preferred editor
 ```
 
-| Variável | O que preencher |
-|----------|-----------------|
-| `HOST_PROJECT_DIR` | Caminho **absoluto** desta pasta (ex.: `/home/vinicius/vikinger-panel`) |
-| `DOCKER_GID` | GID do grupo docker: `getent group docker \| cut -d: -f3` |
-| `SERVER_NAME` | Nome do servidor na lista |
-| `WORLD_NAME` | Nome do mundo |
-| `SERVER_PASS` | Senha do servidor (vazio = aberto) |
-| `PANEL_PORT` | Porta HTTP do painel (padrão `8080`) |
+| Variable | What to set |
+|----------|-------------|
+| `HOST_PROJECT_DIR` | **Absolute** path to this folder (e.g. `/home/you/vikinger-panel`) |
+| `DOCKER_GID` | Docker group GID: `getent group docker \| cut -d: -f3` |
+| `SERVER_NAME` | Server name in the list |
+| `WORLD_NAME` | World name |
+| `SERVER_PASS` | Server password (empty = open) |
+| `PANEL_PORT` | Panel HTTP port (default `8080`) |
 
-### 3. Subir tudo
+### 3. Start everything
 
 ```bash
 chmod +x scripts/*.sh
 ./scripts/start.sh
 ```
 
-O script carrega a imagem Docker incluída em `images/` e sobe os dois containers:
-**valheim-server** (jogo) e **vikinger-panel** (interface web).
+The script loads the Docker image from `images/` and starts two containers:
+**valheim-server** (game) and **vikinger-panel** (web UI).
 
-### 4. Acessar o painel
+### 4. Open the panel
 
-Abra no navegador: **http://localhost:8080** (ou a porta em `PANEL_PORT`).
+Browse to **http://localhost:8080** (or your `PANEL_PORT`).
 
-Na **primeira subida**, o Valheim baixa o jogo e instala o BepInEx — pode levar vários minutos.
-Acompanhe o progresso na aba **Visão Geral** do painel.
+On the **first boot**, Valheim downloads the game and installs BepInEx — this can take
+several minutes. Watch progress on the **Overview** tab.
 
 ---
 
-## Atualizar para uma versão nova
+## Update to a new version
 
-1. Baixe o ZIP da nova release em [GitHub Releases](https://github.com/viniciuspetrachin/vikinger-panel/releases)
-2. Extraia **por cima** da pasta existente (ou migre `config/`, `data/` e `panel-data/`)
-3. Execute:
+1. Download the new release ZIP from [GitHub Releases](https://github.com/viniciuspetrachin/vikinger-panel/releases)
+2. Extract **over** the existing folder (or migrate `config/`, `data/`, `panel-data/`)
+3. Run:
 
 ```bash
 ./scripts/reload-panel.sh --load-image
 ```
 
-Seus mundos, mods e configurações em `config/`, `data/` e `panel-data/` são preservados.
+Your worlds, mods, and settings in `config/`, `data/`, and `panel-data/` are preserved.
 
 ---
 
-## Alternativa: baixar imagem pela internet
+## Alternative: pull image from the internet
 
-Se preferir não usar o arquivo `.tar` local:
+If you prefer not to use the local `.tar` file:
 
 ```bash
-# Substitua VERSION pela versão do arquivo VERSION nesta pasta
+# Replace VERSION with the version in the VERSION file in this folder
 docker pull ghcr.io/viniciuspetrachin/vikinger-panel:VERSION
 docker compose up -d
 ```
 
 ---
 
-## Comandos úteis
+## Useful commands
 
-| Comando | Descrição |
-|---------|-----------|
-| `docker compose ps` | Status dos containers |
-| `docker compose logs -f valheim` | Logs do servidor de jogo |
-| `docker compose logs -f panel` | Logs do painel |
-| `docker compose down` | Parar tudo |
-| `docker compose up -d` | Subir novamente |
-
----
-
-## Pastas importantes
-
-| Pasta | Conteúdo |
-|-------|----------|
-| `config/` | Configuração do Valheim e BepInEx |
-| `data/` | Dados do jogo (mundos, Steam, mods instalados) |
-| `panel-data/` | Auditoria, backups FWL, registry de mods |
-
-**Faça backup** de `config/`, `data/` e `panel-data/` antes de atualizações grandes.
+| Command | Description |
+|---------|-------------|
+| `docker compose ps` | Container status |
+| `docker compose logs -f valheim` | Game server logs |
+| `docker compose logs -f panel` | Panel logs |
+| `docker compose down` | Stop everything |
+| `docker compose up -d` | Start again |
 
 ---
 
-## Licença
+## Important folders
 
-Este software é distribuído sob a [Polyform Shield 1.0.0](LICENSE).
-Uso comercial requer licença separada — veja [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md).
+| Folder | Contents |
+|--------|----------|
+| `config/` | Valheim and BepInEx configuration |
+| `data/` | Game data (worlds, Steam, installed mods) |
+| `panel-data/` | Audit log, FWL backups, mod registry |
+
+**Back up** `config/`, `data/`, and `panel-data/` before major updates.
+
+---
+
+## License & support
+
+This software is distributed under [Polyform Shield 1.0.0](LICENSE).
+Commercial use requires a separate license — contact **[vr.petrachin@gmail.com](mailto:vr.petrachin@gmail.com)**.
+
+Support the project: [GitHub Sponsors](https://github.com/sponsors/viniciuspetrachin/dashboard)

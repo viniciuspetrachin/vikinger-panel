@@ -14,14 +14,14 @@ def ready_panel(page: Page, base_url: str) -> None:
         }""",
         timeout=20000,
     )
-    wizard = page.get_by_role("button", name="Confirmar e iniciar", exact=True)
+    wizard = page.get_by_role("button", name="Confirm and start", exact=True)
     if wizard.is_visible(timeout=500):
         wizard.click()
         page.wait_for_function(
             "() => !document.querySelector('body')?._x_dataStack?.[0]?.setupWizardOpen",
             timeout=15000,
         )
-        dismiss = page.get_by_role("button", name="Entendi", exact=True)
+        dismiss = page.get_by_role("button", name="Got it", exact=True)
         if dismiss.is_visible(timeout=2000):
             dismiss.click()
     page.wait_for_function(
@@ -31,5 +31,5 @@ def ready_panel(page: Page, base_url: str) -> None:
 
 
 def go_worlds(page: Page) -> None:
-    page.get_by_role("button", name="Mundos", exact=True).click()
-    expect(page.get_by_text("Configurações do Mundo")).to_be_visible(timeout=10000)
+    page.get_by_role("button", name="Worlds", exact=True).click()
+    expect(page.get_by_text("World Settings")).to_be_visible(timeout=10000)

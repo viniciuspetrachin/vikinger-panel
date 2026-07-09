@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="h-full">
+<html lang="en" class="h-full">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -21,16 +21,16 @@
     </template>
   </div>
 
-  <!-- Wizard de primeiro acesso -->
+  <!-- First-run setup wizard -->
   <div x-show="setupWizardOpen" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4" x-transition>
     <div class="bg-valheim-900 border border-valheim-gold/40 rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-5" @click.outside="">
       <div>
-        <h2 class="font-display text-xl font-bold text-valheim-gold">Configurar servidor</h2>
-        <p class="text-sm text-gray-400 mt-1">Escolha como o servidor Valheim será executado.</p>
+        <h2 class="font-display text-xl font-bold text-valheim-gold">Set up server</h2>
+        <p class="text-sm text-gray-400 mt-1">Choose how the Valheim server will run.</p>
       </div>
 
       <div>
-        <label class="block text-xs text-gray-500 mb-2">Modo do servidor</label>
+        <label class="block text-xs text-gray-500 mb-2">Server mode</label>
         <div class="flex flex-wrap gap-3">
           <label class="flex items-center gap-2 text-sm cursor-pointer">
             <input type="radio" name="setupMode" value="vanilla" x-model="setupMode" class="accent-valheim-gold" />
@@ -38,53 +38,53 @@
           </label>
           <label class="flex items-center gap-2 text-sm cursor-pointer">
             <input type="radio" name="setupMode" value="bepinex" x-model="setupMode" class="accent-valheim-gold" />
-            Com mods (BepInEx)
+            With mods (BepInEx)
           </label>
         </div>
         <p class="text-xs text-gray-600 mt-2" x-show="setupMode === 'vanilla'">
-          Sem BepInEx e sem mods. Adicione seu Steam ID como administrador abaixo.
+          No BepInEx and no mods. Add your Steam ID as administrator below.
         </p>
         <p class="text-xs text-gray-600 mt-2" x-show="setupMode === 'bepinex'">
-          Ativa BepInEx, o mod ValheimRcon integrado e gera a senha RCON automaticamente.
+          Enables BepInEx, the bundled ValheimRcon mod, and generates the RCON password automatically.
         </p>
       </div>
 
       <div x-show="setupMode === 'vanilla'">
-        <label class="block text-xs text-gray-500 mb-1">Seu Steam ID (admin)</label>
+        <label class="block text-xs text-gray-500 mb-1">Your Steam ID (admin)</label>
         <input type="text" x-model="setupAdminSteamId" placeholder="76561198000000000"
                class="w-full bg-valheim-950 border border-valheim-600 rounded-lg px-3 py-2 text-sm font-mono focus:border-valheim-gold focus:outline-none" />
-        <p class="text-xs text-gray-600 mt-1">Opcional agora — você pode editar depois em Servidor → Listas de Jogadores.</p>
+        <p class="text-xs text-gray-600 mt-1">Optional for now — you can edit later under Server → Player Lists.</p>
       </div>
 
       <div>
-        <label class="block text-xs text-gray-500 mb-1">Primeiro mundo (opcional)</label>
-        <input type="text" x-model="setupWorldName" placeholder="MeuMundo"
+        <label class="block text-xs text-gray-500 mb-1">First world (optional)</label>
+        <input type="text" x-model="setupWorldName" placeholder="MyWorld"
                class="w-full bg-valheim-950 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none" />
         <label class="flex items-center gap-2 text-xs text-gray-400 mt-2 cursor-pointer" x-show="setupWorldName.trim()">
           <input type="checkbox" x-model="setupActivateWorld" class="rounded border-valheim-600 accent-valheim-gold" />
-          Criar e ativar este mundo
+          Create and activate this world
         </label>
       </div>
 
       <button @click="completeSetup()" :disabled="isBusy('completeSetup')" class="btn btn-primary w-full">
         <span x-show="actionPending === 'completeSetup'" class="spinner"></span>
-        <span x-show="actionPending !== 'completeSetup'">Confirmar e iniciar</span>
-        <span x-show="actionPending === 'completeSetup'">Aplicando...</span>
+        <span x-show="actionPending !== 'completeSetup'">Confirm and start</span>
+        <span x-show="actionPending === 'completeSetup'">Applying...</span>
       </button>
     </div>
   </div>
 
-  <!-- Senha RCON gerada (exibir uma vez) -->
+  <!-- Generated RCON password (shown once) -->
   <div x-show="setupRconPassword" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4" x-transition>
     <div class="bg-valheim-900 border border-valheim-gold/50 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
-      <h3 class="font-display text-lg font-semibold text-valheim-gold">Senha RCON gerada</h3>
-      <p class="text-sm text-gray-400">O painel já configurou o ValheimRcon. Copie a senha — ela não será exibida novamente.</p>
+      <h3 class="font-display text-lg font-semibold text-valheim-gold">Generated RCON password</h3>
+      <p class="text-sm text-gray-400">The panel has configured ValheimRcon. Copy the password — it will not be shown again.</p>
       <div class="flex gap-2">
         <code class="flex-1 bg-valheim-950 border border-valheim-600 rounded-lg px-3 py-2 text-sm font-mono break-all" x-text="setupRconPassword"></code>
-        <button @click="copyText(setupRconPassword)" class="btn btn-sm btn-ghost shrink-0">Copiar</button>
+        <button @click="copyText(setupRconPassword)" class="btn btn-sm btn-ghost shrink-0">Copy</button>
       </div>
-      <p class="text-xs text-gray-600">Para trocar depois: edite <code class="text-gray-400">config/bepinex/org.tristan.rcon.cfg</code> ou defina <code class="text-gray-400">PANEL_RCON_PASSWORD</code> no .env.</p>
-      <button @click="dismissRconPassword()" class="btn btn-primary w-full">Entendi</button>
+      <p class="text-xs text-gray-600">To change later: edit <code class="text-gray-400">config/bepinex/org.tristan.rcon.cfg</code> or set <code class="text-gray-400">PANEL_RCON_PASSWORD</code> in .env.</p>
+      <button @click="dismissRconPassword()" class="btn btn-primary w-full">Got it</button>
     </div>
   </div>
 
@@ -116,7 +116,7 @@
         <div class="flex items-center gap-2 text-xs">
           <span class="w-2 h-2 rounded-full status-dot"
                 :class="status.container === 'running' ? 'bg-green-400' : 'bg-red-400'"></span>
-          <span class="text-gray-500" x-text="status.container === 'running' ? 'Container ativo' : 'Container parado'"></span>
+          <span class="text-gray-500" x-text="status.container === 'running' ? 'Container running' : 'Container stopped'"></span>
         </div>
         <p class="text-[10px] text-gray-600" x-show="versionInfo.version">
           v<span x-text="versionInfo.version"></span>
@@ -130,7 +130,7 @@
         <h2 class="font-display text-lg font-semibold text-gray-100" x-text="pageTitle()"></h2>
         <button @click="refreshStatus()" :disabled="actionPending === 'refreshStatus'" class="btn btn-sm btn-ghost">
           <svg class="w-4 h-4" :class="actionPending === 'refreshStatus' && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-          Atualizar
+          Refresh
         </button>
       </header>
 
@@ -140,21 +140,21 @@
         <section x-show="page === 'dashboard'" class="space-y-6">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div class="bg-valheim-800 rounded-xl p-5 border border-valheim-700">
-              <p class="text-xs text-gray-500 uppercase tracking-wider">Servidor</p>
+              <p class="text-xs text-gray-500 uppercase tracking-wider">Server</p>
               <p class="text-2xl font-bold mt-1 capitalize"
                  :class="status.server === 'running' ? 'text-green-400' : status.server === 'stopped' ? 'text-yellow-400' : 'text-red-400'"
                  x-text="statusLabel(status.server)"></p>
             </div>
             <div class="bg-valheim-800 rounded-xl p-5 border border-valheim-700">
-              <p class="text-xs text-gray-500 uppercase tracking-wider">Mundo Ativo</p>
+              <p class="text-xs text-gray-500 uppercase tracking-wider">Active World</p>
               <p class="text-2xl font-bold mt-1 text-valheim-gold"
                  x-text="status.running_world_name || status.config?.world_name || '—'"></p>
               <p x-show="status.world_reconciled?.reconciled" class="text-xs text-yellow-400 mt-1">
-                Config corrigida: <span x-text="status.world_reconciled?.from"></span> → <span x-text="status.world_reconciled?.to"></span>
+                Config corrected: <span x-text="status.world_reconciled?.from"></span> → <span x-text="status.world_reconciled?.to"></span>
               </p>
             </div>
             <div class="bg-valheim-800 rounded-xl p-5 border border-valheim-700">
-              <p class="text-xs text-gray-500 uppercase tracking-wider">Jogadores Online</p>
+              <p class="text-xs text-gray-500 uppercase tracking-wider">Players Online</p>
               <p class="text-2xl font-bold mt-1 text-green-400" x-text="status.players_count ?? players.count ?? 0"></p>
             </div>
             <div class="bg-valheim-800 rounded-xl p-5 border border-valheim-700">
@@ -162,18 +162,18 @@
               <p class="text-2xl font-bold mt-1" x-text="status.mods_count"></p>
             </div>
             <div class="bg-valheim-800 rounded-xl p-5 border border-valheim-700">
-              <p class="text-xs text-gray-500 uppercase tracking-wider">Porta</p>
+              <p class="text-xs text-gray-500 uppercase tracking-wider">Port</p>
               <p class="text-2xl font-bold mt-1" x-text="status.config?.server_port || '2456'"></p>
             </div>
           </div>
 
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-5">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="font-display text-sm font-semibold text-valheim-gold">Desempenho</h3>
+              <h3 class="font-display text-sm font-semibold text-valheim-gold">Performance</h3>
               <span class="flex items-center gap-2 text-xs text-gray-500">
                 <span class="w-2 h-2 rounded-full bg-green-400 status-dot" x-show="!metricsLoading"></span>
                 <span class="w-2 h-2 rounded-full bg-gray-500 animate-pulse" x-show="metricsLoading"></span>
-                <span x-text="metricsLoading ? 'Carregando...' : 'Tempo real'"></span>
+                <span x-text="metricsLoading ? 'Loading...' : 'Real-time'"></span>
               </span>
             </div>
 
@@ -199,17 +199,17 @@
                 </div>
               </div>
               <div class="bg-valheim-900 rounded-lg p-4 border border-valheim-700">
-                <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Disco (Valheim)</p>
+                <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Disk (Valheim)</p>
                 <p class="text-lg font-bold" x-text="metrics.disk?.total_bytes != null ? formatBytes(metrics.disk?.total_bytes) : '—'"></p>
                 <p class="text-xs text-gray-500 mt-1" x-show="metrics.disk?.total_bytes != null">
-                  jogo: <span x-text="formatBytes(metrics.disk?.game_bytes)"></span>
+                  game: <span x-text="formatBytes(metrics.disk?.game_bytes)"></span>
                   · mods: <span x-text="formatBytes(metrics.disk?.mods_bytes)"></span>
-                  · mundos: <span x-text="formatBytes(metrics.disk?.worlds_bytes)"></span>
+                  · worlds: <span x-text="formatBytes(metrics.disk?.worlds_bytes)"></span>
                   · backups: <span x-text="formatBytes(metrics.disk?.backups_bytes)"></span>
                 </p>
               </div>
               <div class="bg-valheim-900 rounded-lg p-4 border border-valheim-700">
-                <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Rede</p>
+                <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Network</p>
                 <p class="text-sm">
                   <span class="text-green-400">↓</span>
                   <span class="font-bold" x-text="formatRate(metrics.network?.rx_bps)"></span>
@@ -221,7 +221,7 @@
             </div>
 
             <button @click="onMetricsChartToggle()" class="w-full flex items-center justify-between text-left mt-4 pt-3 border-t border-valheim-700">
-              <span class="text-xs text-gray-500 uppercase tracking-wider">Tráfego de rede (gráfico)</span>
+              <span class="text-xs text-gray-500 uppercase tracking-wider">Network traffic (chart)</span>
               <span class="text-xs text-gray-500" x-text="metricsChartExpanded ? '▲' : '▼'"></span>
             </button>
             <div x-show="metricsChartExpanded" class="mt-3">
@@ -232,40 +232,40 @@
           </div>
 
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6">
-            <h3 class="font-display text-sm font-semibold text-valheim-gold mb-4">Como conectar</h3>
-            <p class="text-sm text-gray-400 mb-3">No Valheim, use <strong class="text-gray-200">Juntar-se por IP</strong> e informe:</p>
+            <h3 class="font-display text-sm font-semibold text-valheim-gold mb-4">How to connect</h3>
+            <p class="text-sm text-gray-400 mb-3">In Valheim, use <strong class="text-gray-200">Join IP</strong> and enter:</p>
             <div class="flex flex-wrap items-center gap-3">
               <code class="bg-valheim-950 border border-valheim-700 rounded-lg px-4 py-2 font-mono text-valheim-gold-light text-sm" x-text="connectAddress()"></code>
-              <button @click="copyText(connectAddress())" class="btn btn-sm btn-ghost">Copiar endereço</button>
+              <button @click="copyText(connectAddress())" class="btn btn-sm btn-ghost">Copy address</button>
             </div>
-            <p class="text-xs text-gray-500 mt-3">Senha definida na aba Servidor. Libere UDP <strong>2456–2458</strong> no roteador para acesso externo.</p>
+            <p class="text-xs text-gray-500 mt-3">Password is set on the Server tab. Open UDP <strong>2456–2458</strong> on your router for external access.</p>
           </div>
 
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-5">
             <button @click="playersExpanded = !playersExpanded" class="w-full flex items-center justify-between text-left">
-              <h3 class="font-display text-sm font-semibold text-valheim-gold">Jogadores Conectados</h3>
+              <h3 class="font-display text-sm font-semibold text-valheim-gold">Connected Players</h3>
               <span class="text-xs text-gray-500">
                 <span x-text="(players.players || []).length || players.count || 0"></span>
                 <span class="ml-2" x-text="playersExpanded ? '▲' : '▼'"></span>
               </span>
             </button>
             <div x-show="playersExpanded" class="mt-4">
-              <p x-show="!(players.players || []).length" class="text-sm text-gray-500">Nenhum jogador conectado no momento.</p>
+              <p x-show="!(players.players || []).length" class="text-sm text-gray-500">No players connected right now.</p>
               <ul x-show="(players.players || []).length" class="space-y-2">
                 <template x-for="p in players.players" :key="p.steam_id">
                   <li class="flex flex-wrap items-center gap-2 sm:gap-3 bg-valheim-900 rounded-lg px-4 py-2 text-sm relative">
                     <span class="w-2 h-2 rounded-full bg-green-400 shrink-0"></span>
                     <span class="font-medium" x-text="p.name"></span>
                     <span x-show="isPlayerAdmin(p.steam_id)" class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-valheim-gold/20 text-valheim-gold">Admin</span>
-                    <span x-show="isPlayerBanned(p.steam_id)" class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-900/40 text-red-400">Banido</span>
+                    <span x-show="isPlayerBanned(p.steam_id)" class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-900/40 text-red-400">Banned</span>
                     <span class="text-xs text-gray-500 font-mono truncate max-w-[140px] sm:max-w-none" x-text="p.steam_id" :title="p.steam_id"></span>
                     <div class="ml-auto relative player-actions-wrap">
                       <button type="button"
                         @click.stop="togglePlayerMenu(p.steam_id)"
                         :disabled="!rconStatus.available || isBusyPrefix('playerAction:' + p.steam_id + ':')"
                         class="btn btn-sm btn-ghost"
-                        :title="rconStatus.available ? 'Ações de moderação' : consoleStatusHint()">
-                        Ações ▾
+                        :title="rconStatus.available ? 'Moderation actions' : consoleStatusHint()">
+                        Actions ▾
                       </button>
                       <div x-show="playerMenuOpen === String(p.steam_id)"
                         @click.outside="closePlayerMenu()"
@@ -277,7 +277,7 @@
                           x-text="playerActionLabel('promote', p.steam_id)"></button>
                         <button type="button" class="player-actions-item"
                           @click.stop="playerAction(p.steam_id, p.name, 'kick')"
-                          :disabled="isBusy('playerAction:' + p.steam_id + ':kick')">Expulsar (kick)</button>
+                          :disabled="isBusy('playerAction:' + p.steam_id + ':kick')">Kick</button>
                         <button type="button" class="player-actions-item"
                           :class="isPlayerBanned(p.steam_id) ? '' : 'player-actions-danger'"
                           @click.stop="playerAction(p.steam_id, p.name, 'ban')"
@@ -293,22 +293,22 @@
 
 
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6">
-            <h3 class="font-display text-sm font-semibold text-valheim-gold mb-4">Controles Rápidos</h3>
+            <h3 class="font-display text-sm font-semibold text-valheim-gold mb-4">Quick Controls</h3>
             <div class="flex flex-wrap gap-3">
               <button type="button" @click="serverAction('start')" :disabled="actionPending === 'server:start'" class="btn btn-success">
-                <span x-show="actionPending === 'server:start'" class="spinner"></span><span x-show="actionPending !== 'server:start'">▶</span> Iniciar
+                <span x-show="actionPending === 'server:start'" class="spinner"></span><span x-show="actionPending !== 'server:start'">▶</span> Start
               </button>
               <button type="button" @click="serverAction('stop')" :disabled="actionPending === 'server:stop'" class="btn btn-danger">
-                <span x-show="actionPending === 'server:stop'" class="spinner"></span><span x-show="actionPending !== 'server:stop'">■</span> Parar
+                <span x-show="actionPending === 'server:stop'" class="spinner"></span><span x-show="actionPending !== 'server:stop'">■</span> Stop
               </button>
               <button type="button" @click="serverAction('restart')" :disabled="actionPending === 'server:restart'" class="btn btn-warning">
-                <span x-show="actionPending === 'server:restart'" class="spinner"></span><span x-show="actionPending !== 'server:restart'">↻</span> Reiniciar
+                <span x-show="actionPending === 'server:restart'" class="spinner"></span><span x-show="actionPending !== 'server:restart'">↻</span> Restart
               </button>
               <button type="button" @click="serverAction('pause')" :disabled="actionPending === 'server:pause'" class="btn btn-warning">
-                <span x-show="actionPending === 'server:pause'" class="spinner"></span><span x-show="actionPending !== 'server:pause'">⏸</span> Pausar
+                <span x-show="actionPending === 'server:pause'" class="spinner"></span><span x-show="actionPending !== 'server:pause'">⏸</span> Pause
               </button>
               <button type="button" @click="serverAction('resume')" :disabled="actionPending === 'server:resume'" class="btn btn-info">
-                <span x-show="actionPending === 'server:resume'" class="spinner"></span><span x-show="actionPending !== 'server:resume'">▶</span> Retomar
+                <span x-show="actionPending === 'server:resume'" class="spinner"></span><span x-show="actionPending !== 'server:resume'">▶</span> Resume
               </button>
               <button @click="openBackupModal()" class="btn btn-primary">💾 Backup</button>
             </div>
@@ -316,9 +316,9 @@
 
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="font-display text-sm font-semibold text-valheim-gold">Console do Servidor (ao vivo)</h3>
+              <h3 class="font-display text-sm font-semibold text-valheim-gold">Server Console (live)</h3>
               <span class="flex items-center gap-2 text-xs text-gray-500">
-                <span class="w-2 h-2 rounded-full bg-green-400 status-dot"></span> Tempo real
+                <span class="w-2 h-2 rounded-full bg-green-400 status-dot"></span> Real-time
               </span>
             </div>
             <div x-ref="dashConsole" class="log-viewer log-viewer-dash bg-valheim-950 border border-valheim-700 rounded-lg p-4 h-64 overflow-y-auto" x-html="formatLogHtml(dashLogs)"></div>
@@ -335,7 +335,7 @@
                     @input="consoleCompleteCycle = null"
                     @keydown.enter.prevent="sendConsoleCommand()"
                     :disabled="!rconStatus.available || consoleSending"
-                    placeholder="Comando RCON (ex: save, list, kick Nome...)"
+                    placeholder="RCON command (e.g. save, list, kick Name...)"
                     class="console-input w-full bg-transparent relative z-10 border-0 rounded-lg px-3 py-2 text-sm font-mono text-gray-200 placeholder-gray-600" />
                 </div>
                 <button type="button"
@@ -343,12 +343,12 @@
                   :disabled="!rconStatus.available || consoleSending || !(consoleInput || '').trim()"
                   class="btn btn-sm btn-primary shrink-0">
                   <span x-show="consoleSending" class="spinner"></span>
-                  <span x-show="!consoleSending">Enviar</span>
+                  <span x-show="!consoleSending">Send</span>
                 </button>
               </div>
               <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <button type="button" @click="openConsoleHelpModal()" class="btn btn-sm btn-ghost text-xs">Ver comandos disponíveis</button>
-                <span class="text-xs text-gray-600">Tab autocompleta · Enter envia · saída nos logs acima</span>
+                <button type="button" @click="openConsoleHelpModal()" class="btn btn-sm btn-ghost text-xs">View available commands</button>
+                <span class="text-xs text-gray-600">Tab autocompletes · Enter sends · output appears in the logs above</span>
               </div>
             </div>
           </div>
@@ -370,7 +370,7 @@
         <!-- SERVER CONFIG -->
         <section x-show="page === 'server'" class="space-y-6">
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4">
-            <h3 class="font-display text-sm font-semibold text-valheim-gold">Configurações do Servidor (.env)</h3>
+            <h3 class="font-display text-sm font-semibold text-valheim-gold">Server Settings (.env)</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <template x-for="field in envFields" :key="field.key">
                 <div>
@@ -380,23 +380,23 @@
                 </div>
               </template>
               <div>
-                <label class="block text-xs text-gray-500 mb-1">Mundo Ativo</label>
+                <label class="block text-xs text-gray-500 mb-1">Active World</label>
                 <select x-model="selectedWorld" @change="onWorldSelectChange()"
                         :disabled="isBusyPrefix('switchWorld:')"
                         class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none">
                   <template x-for="world in worlds" :key="world.name">
-                    <option :value="world.name" x-text="world.name + (world.pending && !world.has_db && !world.running ? ' (pendente)' : '')"></option>
+                    <option :value="world.name" x-text="world.name + (world.pending && !world.has_db && !world.running ? ' (pending)' : '')"></option>
                   </template>
                 </select>
               </div>
               <div>
-                <label class="block text-xs text-gray-500 mb-1">Senha</label>
+                <label class="block text-xs text-gray-500 mb-1">Password</label>
                 <div class="relative">
                   <input :type="showServerPass ? 'text' : 'password'" x-model="envValues.SERVER_PASS"
                          class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 pr-10 text-sm focus:border-valheim-gold focus:outline-none" />
                   <button type="button" @click="showServerPass = !showServerPass"
                           class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-valheim-gold p-1"
-                          :title="showServerPass ? 'Ocultar senha' : 'Mostrar senha'">
+                          :title="showServerPass ? 'Hide password' : 'Show password'">
                     <svg x-show="!showServerPass" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -411,59 +411,59 @@
             <div class="flex gap-3 pt-2" :class="isBusyGroup('saveEnv', 'saveEnvRestart') && 'opacity-75'">
               <button @click="saveEnv()" :disabled="isBusyGroup('saveEnv', 'saveEnvRestart')" class="btn btn-primary">
                 <span x-show="actionPending === 'saveEnv'" class="spinner"></span>
-                <span x-show="actionPending !== 'saveEnv'">Salvar Configurações</span>
-                <span x-show="actionPending === 'saveEnv'">Salvando...</span>
+                <span x-show="actionPending !== 'saveEnv'">Save Settings</span>
+                <span x-show="actionPending === 'saveEnv'">Saving...</span>
               </button>
               <button @click="saveEnv(true)" :disabled="isBusyGroup('saveEnv', 'saveEnvRestart')" class="btn btn-warning">
                 <span x-show="actionPending === 'saveEnvRestart'" class="spinner"></span>
-                <span x-show="actionPending !== 'saveEnvRestart'">Salvar e Reiniciar</span>
-                <span x-show="actionPending === 'saveEnvRestart'">Reiniciando...</span>
+                <span x-show="actionPending !== 'saveEnvRestart'">Save and Restart</span>
+                <span x-show="actionPending === 'saveEnvRestart'">Restarting...</span>
               </button>
             </div>
           </div>
 
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-5">
             <div>
-              <h3 class="font-display text-sm font-semibold text-valheim-gold">Capacidade do servidor</h3>
+              <h3 class="font-display text-sm font-semibold text-valheim-gold">Server capacity</h3>
               <p class="text-xs text-gray-500 mt-1">
-                Limite de RAM do container e quantidade máxima de jogadores.
-                <a href="https://valheim.fandom.com/wiki/Dedicated_servers" target="_blank" rel="noopener" class="text-valheim-gold-light hover:underline">Guia da wiki</a>
+                Container RAM limit and maximum player count.
+                <a href="https://valheim.fandom.com/wiki/Dedicated_servers" target="_blank" rel="noopener" class="text-valheim-gold-light hover:underline">Wiki guide</a>
               </p>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div class="space-y-3">
                 <div class="flex items-center justify-between">
-                  <label class="text-xs text-gray-500 uppercase tracking-wider">Limite de RAM</label>
+                  <label class="text-xs text-gray-500 uppercase tracking-wider">RAM limit</label>
                   <span class="text-sm font-medium text-valheim-gold" x-text="memorySliderLabel()"></span>
                 </div>
                 <input type="range" min="1" :max="memoryConfig.slider_max || 29" step="1" x-model.number="memoryGb"
                        class="w-full accent-valheim-gold" />
-                <p class="text-xs text-gray-600">Atual: <span class="text-valheim-gold" x-text="memoryLimitLabel()"></span></p>
+                <p class="text-xs text-gray-600">Current: <span class="text-valheim-gold" x-text="memoryLimitLabel()"></span></p>
                 <button @click="applyMemoryLimit()" :disabled="isBusy('applyMemory')" class="btn btn-primary">
                   <span x-show="actionPending === 'applyMemory'" class="spinner"></span>
-                  <span x-show="actionPending !== 'applyMemory'">Aplicar limite de RAM</span>
-                  <span x-show="actionPending === 'applyMemory'">Aplicando...</span>
+                  <span x-show="actionPending !== 'applyMemory'">Apply RAM limit</span>
+                  <span x-show="actionPending === 'applyMemory'">Applying...</span>
                 </button>
-                <p class="text-xs text-amber-500/80">Aplicar recria o container — jogadores conectados serão desconectados.</p>
+                <p class="text-xs text-amber-500/80">Applying recreates the container — connected players will be disconnected.</p>
               </div>
 
               <div class="space-y-3">
                 <div class="flex items-center justify-between">
-                  <label class="text-xs text-gray-500 uppercase tracking-wider">Limite de jogadores</label>
+                  <label class="text-xs text-gray-500 uppercase tracking-wider">Player limit</label>
                   <span class="text-xs text-gray-600" x-show="capacity.mod_source" x-text="'Mod: ' + capacity.mod_source"></span>
-                  <span class="text-xs text-gray-600" x-show="!capacity.mod_source">Vanilla (máx. 10)</span>
+                  <span class="text-xs text-gray-600" x-show="!capacity.mod_source">Vanilla (max. 10)</span>
                 </div>
                 <input type="range" min="1" :max="capacity.max_players_cap || 10" step="1" x-model.number="maxPlayers"
                        class="w-full accent-valheim-gold" />
-                <p class="text-sm text-valheim-gold font-medium"><span x-text="maxPlayers"></span> jogador(es)</p>
+                <p class="text-sm text-valheim-gold font-medium"><span x-text="maxPlayers"></span> player(s)</p>
                 <p class="text-xs text-amber-500/80" x-show="maxPlayers > 10 && !capacity.mod_source">
-                  Acima de 10 jogadores é preciso instalar Valheim Plus ou MaxPlayerCount na aba Mods.
+                  Above 10 players requires Valheim Plus or MaxPlayerCount on the Mods tab.
                 </p>
                 <button @click="saveMaxPlayers()" :disabled="isBusy('saveMaxPlayers')" class="btn btn-primary">
                   <span x-show="actionPending === 'saveMaxPlayers'" class="spinner"></span>
-                  <span x-show="actionPending !== 'saveMaxPlayers'">Salvar limite de jogadores</span>
-                  <span x-show="actionPending === 'saveMaxPlayers'">Salvando...</span>
+                  <span x-show="actionPending !== 'saveMaxPlayers'">Save player limit</span>
+                  <span x-show="actionPending === 'saveMaxPlayers'">Saving...</span>
                 </button>
               </div>
             </div>
@@ -474,9 +474,9 @@
               <table class="w-full text-sm text-left">
                 <thead>
                   <tr class="text-xs text-gray-500 uppercase tracking-wider border-b border-valheim-700">
-                    <th class="py-2 pr-4">Jogadores</th>
-                    <th class="py-2 pr-4">RAM sugerida</th>
-                    <th class="py-2">Notas</th>
+                    <th class="py-2 pr-4">Players</th>
+                    <th class="py-2 pr-4">Suggested RAM</th>
+                    <th class="py-2">Notes</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -496,43 +496,43 @@
 
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4"
                :class="[!bepinexEnabled && 'border-valheim-gold/30']">
-            <h3 class="font-display text-sm font-semibold text-valheim-gold">Listas de Jogadores</h3>
+            <h3 class="font-display text-sm font-semibold text-valheim-gold">Player Lists</h3>
             <p x-show="!bepinexEnabled" class="text-xs text-amber-200/90 rounded-lg border border-amber-600/30 bg-amber-950/20 px-3 py-2">
-              Em modo <b>Vanilla</b>, adicione seu Steam ID em <b>Administradores</b> para ter permissões de admin no jogo (sem console RCON do painel).
+              In <b>Vanilla</b> mode, add your Steam ID under <b>Administrators</b> for in-game admin permissions (without the panel RCON console).
             </p>
             <template x-for="list in serverLists" :key="list.key">
               <div>
                 <label class="block text-xs text-gray-500 mb-1" x-text="list.label"></label>
                 <div class="editor-toolbar">
-                  <button type="button" @click="listEditorUndo(list.key)" class="btn btn-sm btn-ghost" title="Desfazer">↶</button>
-                  <button type="button" @click="listEditorRedo(list.key)" class="btn btn-sm btn-ghost" title="Refazer">↷</button>
-                  <span x-show="listEditorDirty[list.key]" class="editor-dirty-badge">Alterações não salvas</span>
+                  <button type="button" @click="listEditorUndo(list.key)" class="btn btn-sm btn-ghost" title="Undo">↶</button>
+                  <button type="button" @click="listEditorRedo(list.key)" class="btn btn-sm btn-ghost" title="Redo">↷</button>
+                  <span x-show="listEditorDirty[list.key]" class="editor-dirty-badge">Unsaved changes</span>
                 </div>
                 <div :id="'list-editor-' + list.key" class="min-h-[120px]"></div>
               </div>
             </template>
             <button @click="saveServerLists()" :disabled="isBusy('saveServerLists')" class="btn btn-primary">
               <span x-show="actionPending === 'saveServerLists'" class="spinner"></span>
-              <span x-show="actionPending !== 'saveServerLists'">Salvar Listas</span>
-                <span x-show="actionPending === 'saveServerLists'">Salvando...</span>
+              <span x-show="actionPending !== 'saveServerLists'">Save Lists</span>
+                <span x-show="actionPending === 'saveServerLists'">Saving...</span>
             </button>
           </div>
 
-          <!-- Atualizações do jogo -->
+          <!-- Game updates -->
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4"
                :class="isBusyGroup('checkGameUpdate', 'saveUpdateConfig', 'saveUpdateConfigRestart') && 'opacity-90'">
             <div>
-              <h3 class="font-display text-sm font-semibold text-valheim-gold">Atualizações do jogo</h3>
-              <p class="text-xs text-gray-500 mt-1">Controle updates do Valheim via valheim-updater (SteamCMD).</p>
+              <h3 class="font-display text-sm font-semibold text-valheim-gold">Game updates</h3>
+              <p class="text-xs text-gray-500 mt-1">Control Valheim updates via valheim-updater (SteamCMD).</p>
             </div>
 
             <div x-show="showModsWarning()" class="rounded-lg border border-amber-600/40 bg-amber-950/30 px-4 py-3 text-sm text-amber-200">
-              Atualizações do Valheim podem quebrar mods. Faça backup antes. Verifique compatibilidade de cada mod após atualizar o jogo.
+              Valheim updates may break mods. Back up first. Check each mod's compatibility after updating the game.
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs text-gray-500 mb-2">Modo do servidor</label>
+                <label class="block text-xs text-gray-500 mb-2">Server mode</label>
                 <div class="flex flex-wrap gap-3">
                   <label class="flex items-center gap-2 text-sm cursor-pointer">
                     <input type="radio" name="serverMode" :checked="!bepinexEnabled" @change="bepinexEnabled = false"
@@ -544,14 +544,14 @@
                     <input type="radio" name="serverMode" :checked="bepinexEnabled" @change="bepinexEnabled = true"
                            :disabled="isBusyGroup('checkGameUpdate', 'saveUpdateConfig', 'saveUpdateConfigRestart')"
                            class="accent-valheim-gold" />
-                    Com mods (BepInEx)
+                    With mods (BepInEx)
                   </label>
                 </div>
-                <p class="text-xs text-gray-600 mt-1">Vanilla desativa BepInEx e desliga todos os mods. Com mods ativa BepInEx e o ValheimRcon integrado.</p>
+                <p class="text-xs text-gray-600 mt-1">Vanilla disables BepInEx and turns off all mods. With mods enables BepInEx and the bundled ValheimRcon.</p>
               </div>
 
               <div>
-                <label class="block text-xs text-gray-500 mb-1">Versão instalada</label>
+                <label class="block text-xs text-gray-500 mb-1">Installed version</label>
                 <p class="text-sm">
                   Build <span class="font-mono text-valheim-gold" x-text="gameVersion.buildid || '—'"></span>
                   <span class="text-gray-500 text-xs" x-show="gameVersion.last_updated"
@@ -569,20 +569,20 @@
                        @change="updateConfig.UPDATE_AUTO = $event.target.checked ? 'true' : 'false'"
                        :disabled="isBusyGroup('checkGameUpdate', 'saveUpdateConfig', 'saveUpdateConfigRestart')"
                        class="rounded border-valheim-600 accent-valheim-gold" />
-                Auto-atualização do jogo
+                Auto-update game
               </label>
               <label class="flex items-center gap-3 text-sm cursor-pointer">
                 <input type="checkbox" :checked="updateConfig.UPDATE_IF_IDLE === 'true'"
                        @change="updateConfig.UPDATE_IF_IDLE = $event.target.checked ? 'true' : 'false'"
                        :disabled="isBusyGroup('checkGameUpdate', 'saveUpdateConfig', 'saveUpdateConfigRestart')"
                        class="rounded border-valheim-600 accent-valheim-gold" />
-                Só quando o servidor estiver vazio
+                Only when the server is empty
               </label>
             </div>
 
             <div x-show="updateConfig.UPDATE_AUTO === 'true'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs text-gray-500 mb-1">Intervalo de verificação</label>
+                <label class="block text-xs text-gray-500 mb-1">Check interval</label>
                 <select x-model="updateIntervalPreset"
                         :disabled="isBusyGroup('checkGameUpdate', 'saveUpdateConfig', 'saveUpdateConfigRestart')"
                         class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none">
@@ -592,7 +592,7 @@
                 </select>
               </div>
               <div x-show="updateIntervalPreset === 'custom'">
-                <label class="block text-xs text-gray-500 mb-1">Cron personalizado</label>
+                <label class="block text-xs text-gray-500 mb-1">Custom cron</label>
                 <input x-model="updateCronCustom" placeholder="*/15 * * * *"
                        :disabled="isBusyGroup('checkGameUpdate', 'saveUpdateConfig', 'saveUpdateConfigRestart')"
                        class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm font-mono focus:border-valheim-gold focus:outline-none" />
@@ -602,18 +602,18 @@
             <div class="flex flex-wrap gap-3 pt-1">
               <button @click="saveUpdateConfig()" :disabled="isBusyGroup('checkGameUpdate', 'saveUpdateConfig', 'saveUpdateConfigRestart')" class="btn btn-primary">
                 <span x-show="actionPending === 'saveUpdateConfig'" class="spinner"></span>
-                <span x-show="actionPending !== 'saveUpdateConfig'">Salvar</span>
-                <span x-show="actionPending === 'saveUpdateConfig'">Salvando...</span>
+                <span x-show="actionPending !== 'saveUpdateConfig'">Save</span>
+                <span x-show="actionPending === 'saveUpdateConfig'">Saving...</span>
               </button>
               <button @click="saveUpdateConfig(true)" :disabled="isBusyGroup('checkGameUpdate', 'saveUpdateConfig', 'saveUpdateConfigRestart')" class="btn btn-warning">
                 <span x-show="actionPending === 'saveUpdateConfigRestart'" class="spinner"></span>
-                <span x-show="actionPending !== 'saveUpdateConfigRestart'">Salvar e recriar container</span>
-                <span x-show="actionPending === 'saveUpdateConfigRestart'">Recriando container...</span>
+                <span x-show="actionPending !== 'saveUpdateConfigRestart'">Save and recreate container</span>
+                <span x-show="actionPending === 'saveUpdateConfigRestart'">Recreating container...</span>
               </button>
               <button @click="checkGameUpdate()" :disabled="isBusyGroup('checkGameUpdate', 'saveUpdateConfig', 'saveUpdateConfigRestart')" class="btn btn-neutral">
                 <span x-show="actionPending === 'checkGameUpdate'" class="spinner"></span>
-                <span x-show="actionPending !== 'checkGameUpdate'">Verificar atualizações agora</span>
-                <span x-show="actionPending === 'checkGameUpdate'">Verificando...</span>
+                <span x-show="actionPending !== 'checkGameUpdate'">Check for updates now</span>
+                <span x-show="actionPending === 'checkGameUpdate'">Checking...</span>
               </button>
             </div>
           </div>
@@ -622,27 +622,27 @@
         <!-- MODS -->
         <section x-show="page === 'mods'" class="space-y-6">
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6">
-            <h3 class="font-display text-sm font-semibold text-valheim-gold mb-4">Instalar Mod</h3>
+            <h3 class="font-display text-sm font-semibold text-valheim-gold mb-4">Install Mod</h3>
             <div class="flex flex-col md:flex-row gap-3">
               <label class="btn btn-neutral cursor-pointer" :class="isBusy('uploadMod') && 'opacity-50 pointer-events-none'">
                 <span x-show="actionPending === 'uploadMod'" class="spinner"></span>
                 <span x-show="actionPending !== 'uploadMod'">📁 Upload (.zip / .dll)</span>
-                <span x-show="actionPending === 'uploadMod'">Enviando...</span>
+                <span x-show="actionPending === 'uploadMod'">Uploading...</span>
                 <input type="file" accept=".zip,.dll" class="hidden" @change="uploadMod($event)" :disabled="isBusy('uploadMod')" />
               </label>
-              <input x-model="modUrl" placeholder="URL Thunderstore (página, download ou r2modman)"
+              <input x-model="modUrl" placeholder="Thunderstore URL (page, download, or r2modman)"
                      :disabled="isBusy('installModUrl')"
                      class="flex-1 bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none" />
               <button @click="installModUrl()" :disabled="isBusy('installModUrl')" class="btn btn-primary">
                 <span x-show="actionPending === 'installModUrl'" class="spinner"></span>
-                <span x-show="actionPending !== 'installModUrl'">Instalar URL</span>
-                <span x-show="actionPending === 'installModUrl'">Instalando...</span>
+                <span x-show="actionPending !== 'installModUrl'">Install from URL</span>
+                <span x-show="actionPending === 'installModUrl'">Installing...</span>
               </button>
             </div>
           </div>
 
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-4 text-sm text-gray-400">
-            <p><strong class="text-valheim-gold">ValheimRcon</strong> vem integrado ao painel (console RCON, kick, ban e admin). Não pode ser removido, mas pode ser desativado. Console e ações de jogadores exigem BepInEx ativo e este mod habilitado.</p>
+            <p><strong class="text-valheim-gold">ValheimRcon</strong> is bundled with the panel (RCON console, kick, ban, and admin). It cannot be removed, but it can be disabled. The console and player actions require active BepInEx and this mod enabled.</p>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -653,16 +653,16 @@
                 <div class="flex-1 min-w-0">
                   <div class="flex flex-wrap items-center gap-2">
                     <p class="font-medium text-sm truncate" x-text="mod.label || mod.name"></p>
-                    <span x-show="mod.protected" class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-valheim-gold/20 text-valheim-gold">Integrado</span>
+                    <span x-show="mod.protected" class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-valheim-gold/20 text-valheim-gold">Bundled</span>
                   </div>
                   <p x-show="mod.protected" class="text-xs text-gray-500 mt-1" x-text="mod.description"></p>
                   <p x-show="mod.protected && mod.bundled_version" class="text-xs text-gray-600">v<span x-text="mod.bundled_version"></span></p>
                   <p class="text-xs text-gray-500 mt-1" x-text="formatSize(mod.size)"></p>
                   <p class="text-xs" :class="mod.enabled ? 'text-green-500' : 'text-gray-600'"
-                     x-text="mod.protected ? (mod.enabled ? 'Ativo — console e moderação disponíveis' : 'Desativado — habilite para usar console e moderação') : (mod.enabled ? 'Ativo' : 'Desativado')"></p>
-                  <p class="text-xs text-gray-600" x-text="mod.config ? 'Config: ' + mod.config : 'Sem config'"></p>
+                     x-text="mod.protected ? (mod.enabled ? 'Active — console and moderation available' : 'Disabled — enable to use console and moderation') : (mod.enabled ? 'Active' : 'Disabled')"></p>
+                  <p class="text-xs text-gray-600" x-text="mod.config ? 'Config: ' + mod.config : 'No config'"></p>
                   <p class="text-xs mt-1" x-show="mod.installed_version">
-                    Versão: <span class="font-mono" x-text="mod.installed_version"></span>
+                    Version: <span class="font-mono" x-text="mod.installed_version"></span>
                     <span x-show="mod.latest_version && mod.update_available">
                       → <span class="font-mono text-amber-400" x-text="mod.latest_version"></span>
                     </span>
@@ -677,37 +677,37 @@
                            @change="toggleMod(mod.name, $event.target.checked)"
                            :disabled="isBusy('toggleMod:' + mod.name) || (!bepinexEnabled && mod.protected)"
                            class="rounded border-valheim-600 accent-valheim-gold" />
-                    <span x-text="mod.enabled ? 'Ligado' : 'Desligado'"></span>
+                    <span x-text="mod.enabled ? 'On' : 'Off'"></span>
                   </label>
-                  <span x-show="mod.protected" class="text-[10px] text-valheim-gold/70">Integrado — não removível</span>
+                  <span x-show="mod.protected" class="text-[10px] text-valheim-gold/70">Bundled — cannot be removed</span>
                   <button x-show="mod.update_status !== 'unknown'"
                           @click="checkModUpdate(mod.name)"
                           :disabled="isBusy('checkModUpdate:' + mod.name)"
                           class="btn btn-sm btn-ghost">
                     <span x-show="actionPending === ('checkModUpdate:' + mod.name)" class="spinner"></span>
-                    <span x-show="actionPending !== ('checkModUpdate:' + mod.name)">Buscar atualizações</span>
-                <span x-show="actionPending === ('checkModUpdate:' + mod.name)">Buscando...</span>
+                    <span x-show="actionPending !== ('checkModUpdate:' + mod.name)">Check for updates</span>
+                <span x-show="actionPending === ('checkModUpdate:' + mod.name)">Checking...</span>
                   </button>
                   <button x-show="mod.update_available"
                           @click="updateMod(mod.name)"
                           :disabled="isBusy('updateMod:' + mod.name)"
                           class="btn btn-sm btn-primary">
                     <span x-show="actionPending === ('updateMod:' + mod.name)" class="spinner"></span>
-                    <span x-show="actionPending !== ('updateMod:' + mod.name)">Atualizar mod</span>
-                <span x-show="actionPending === ('updateMod:' + mod.name)">Atualizando...</span>
+                    <span x-show="actionPending !== ('updateMod:' + mod.name)">Update mod</span>
+                <span x-show="actionPending === ('updateMod:' + mod.name)">Updating...</span>
                   </button>
                   <button x-show="mod.update_status === 'unknown' && modLinkTarget !== mod.name"
                           @click="openModLink(mod.name)"
-                          class="btn btn-sm btn-ghost">Vincular Thunderstore</button>
+                          class="btn btn-sm btn-ghost">Link Thunderstore</button>
                   <div x-show="modLinkTarget === mod.name" class="flex flex-col gap-1 w-44">
-                    <input x-model="modLinkUrl" placeholder="URL Thunderstore"
+                    <input x-model="modLinkUrl" placeholder="Thunderstore URL"
                            class="bg-valheim-900 border border-valheim-600 rounded px-2 py-1 text-xs focus:border-valheim-gold focus:outline-none" />
                     <div class="flex gap-1">
                       <button @click="linkModThunderstore(mod.name)" :disabled="isBusy('linkMod:' + mod.name)"
                               class="btn btn-sm btn-primary flex-1">
                         <span x-show="actionPending === ('linkMod:' + mod.name)" class="spinner"></span>
                         <span x-show="actionPending !== ('linkMod:' + mod.name)">OK</span>
-                <span x-show="actionPending === ('linkMod:' + mod.name)">Vinculando...</span>
+                <span x-show="actionPending === ('linkMod:' + mod.name)">Linking...</span>
                       </button>
                       <button @click="cancelModLink()" class="btn btn-sm btn-ghost">✕</button>
                     </div>
@@ -715,47 +715,47 @@
                   <button x-show="mod.config" @click="editFile('config/bepinex/' + mod.config)" class="btn btn-sm btn-ghost">Config</button>
                   <button x-show="!mod.protected" @click="deleteMod(mod.name)" :disabled="isBusy('deleteMod:' + mod.name)" class="btn btn-sm btn-ghost-danger">
                     <span x-show="actionPending === ('deleteMod:' + mod.name)" class="spinner"></span>
-                    <span x-show="actionPending !== ('deleteMod:' + mod.name)">Remover</span>
-                <span x-show="actionPending === ('deleteMod:' + mod.name)">Removendo...</span>
+                    <span x-show="actionPending !== ('deleteMod:' + mod.name)">Remove</span>
+                <span x-show="actionPending === ('deleteMod:' + mod.name)">Removing...</span>
                   </button>
                 </div>
               </div>
             </template>
           </div>
-          <p x-show="!mods.length" class="text-gray-500 text-sm text-center py-8">Nenhum mod instalado</p>
+          <p x-show="!mods.length" class="text-gray-500 text-sm text-center py-8">No mods installed</p>
 
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4">
             <div>
-              <h3 class="font-display text-sm font-semibold text-valheim-gold">Exportar perfil r2modman</h3>
+              <h3 class="font-display text-sm font-semibold text-valheim-gold">Export r2modman profile</h3>
               <p class="text-xs text-gray-500 mt-1">
-                Exporta mods vinculados ao Thunderstore e configs BepInEx para importar no r2modman.
-                Mods sem vínculo são ignorados.
+                Exports mods linked to Thunderstore and BepInEx configs for import in r2modman.
+                Unlinked mods are skipped.
               </p>
               <p x-show="exportSkipped > 0" class="text-xs text-amber-400 mt-1"
-                 x-text="exportSkipped + ' mod(s) sem vínculo Thunderstore serão ignorados'"></p>
+                 x-text="exportSkipped + ' mod(s) without a Thunderstore link will be skipped'"></p>
             </div>
             <div class="flex flex-wrap gap-3">
               <button @click="downloadR2zExport()" :disabled="isBusy('downloadR2zExport')"
                       class="btn btn-neutral">
                 <span x-show="actionPending === 'downloadR2zExport'" class="spinner"></span>
-                <span x-show="actionPending !== 'downloadR2zExport'">Baixar .r2z</span>
-                <span x-show="actionPending === 'downloadR2zExport'">Gerando...</span>
+                <span x-show="actionPending !== 'downloadR2zExport'">Download .r2z</span>
+                <span x-show="actionPending === 'downloadR2zExport'">Generating...</span>
               </button>
               <button @click="copyR2modmanCode()" :disabled="isBusy('copyR2modmanCode')"
                       class="btn btn-primary">
                 <span x-show="actionPending === 'copyR2modmanCode'" class="spinner"></span>
-                <span x-show="actionPending !== 'copyR2modmanCode'">Copiar código</span>
-                <span x-show="actionPending === 'copyR2modmanCode'">Publicando...</span>
+                <span x-show="actionPending !== 'copyR2modmanCode'">Copy code</span>
+                <span x-show="actionPending === 'copyR2modmanCode'">Publishing...</span>
               </button>
             </div>
           </div>
 
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4">
             <div>
-              <h3 class="font-display text-sm font-semibold text-valheim-gold">Configs BepInEx</h3>
-              <p class="text-xs text-gray-500 mt-1">Arquivos de configuração gerados pelos mods em <code class="font-mono">config/bepinex/</code>.</p>
+              <h3 class="font-display text-sm font-semibold text-valheim-gold">BepInEx Configs</h3>
+              <p class="text-xs text-gray-500 mt-1">Configuration files generated by mods in <code class="font-mono">config/bepinex/</code>.</p>
             </div>
-            <p x-show="!bepinexConfigs.length" class="text-gray-500 text-sm text-center py-4">Nenhum arquivo de configuração encontrado</p>
+            <p x-show="!bepinexConfigs.length" class="text-gray-500 text-sm text-center py-4">No configuration files found</p>
             <div class="space-y-3">
               <template x-for="cfg in bepinexConfigs" :key="cfg.name">
                 <div class="bg-valheim-900 rounded-xl border border-valheim-700 p-4 flex items-center gap-4">
@@ -764,7 +764,7 @@
                     <p class="font-medium text-sm truncate" x-text="cfg.name"></p>
                     <p class="text-xs text-gray-500" x-text="formatSize(cfg.size) + ' · ' + cfg.modified"></p>
                   </div>
-                  <button @click="editFile(cfg.path)" class="btn btn-sm btn-primary shrink-0">Editar</button>
+                  <button @click="editFile(cfg.path)" class="btn btn-sm btn-primary shrink-0">Edit</button>
                 </div>
               </template>
             </div>
@@ -774,19 +774,19 @@
         <!-- WORLDS -->
         <section x-show="page === 'worlds'" class="space-y-6">
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6">
-            <h3 class="font-display text-sm font-semibold text-valheim-gold mb-4">Criar Novo Mundo</h3>
+            <h3 class="font-display text-sm font-semibold text-valheim-gold mb-4">Create New World</h3>
             <div class="flex flex-wrap gap-3 items-center">
-              <input x-model="newWorldName" placeholder="Nome do mundo"
+              <input x-model="newWorldName" placeholder="World name"
                      class="flex-1 min-w-[200px] bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none" />
               <button @click="createWorld(false)" :disabled="isBusyGroup('createWorld', 'createWorldActivate')" class="btn btn-primary">
                 <span x-show="actionPending === 'createWorld'" class="spinner"></span>
-                <span x-show="actionPending !== 'createWorld'">Criar</span>
-                <span x-show="actionPending === 'createWorld'">Criando...</span>
+                <span x-show="actionPending !== 'createWorld'">Create</span>
+                <span x-show="actionPending === 'createWorld'">Creating...</span>
               </button>
               <button @click="createWorld(true)" :disabled="isBusyGroup('createWorld', 'createWorldActivate')" class="btn btn-warning">
                 <span x-show="actionPending === 'createWorldActivate'" class="spinner"></span>
-                <span x-show="actionPending !== 'createWorldActivate'">Criar e Ativar</span>
-                <span x-show="actionPending === 'createWorldActivate'">Criando...</span>
+                <span x-show="actionPending !== 'createWorldActivate'">Create and Activate</span>
+                <span x-show="actionPending === 'createWorldActivate'">Creating...</span>
               </button>
             </div>
           </div>
@@ -798,7 +798,7 @@
                 <div class="text-2xl">🌍</div>
                 <div class="flex-1">
                   <p class="font-medium" x-text="world.name"></p>
-                  <p class="text-xs text-gray-500" x-text="'DB: ' + (world.has_db ? formatSize(world.db_size) : 'não criado')"></p>
+                  <p class="text-xs text-gray-500" x-text="'DB: ' + (world.has_db ? formatSize(world.db_size) : 'not created')"></p>
                   <p x-show="world.config_summary" class="text-xs text-gray-600 mt-1"
                      x-text="worldConfigBadge(world)"></p>
                 </div>
@@ -808,13 +808,13 @@
                       x-text="worldBadge(world)"></span>
                 <button x-show="!world.active" @click="switchWorld(world.name)" :disabled="isBusy('switchWorld:' + world.name)" class="btn btn-sm btn-primary">
                   <span x-show="actionPending === ('switchWorld:' + world.name)" class="spinner"></span>
-                  <span x-show="actionPending !== ('switchWorld:' + world.name)">Ativar</span>
-                <span x-show="actionPending === ('switchWorld:' + world.name)">Ativando...</span>
+                  <span x-show="actionPending !== ('switchWorld:' + world.name)">Activate</span>
+                <span x-show="actionPending === ('switchWorld:' + world.name)">Activating...</span>
                 </button>
                 <button x-show="!world.active" @click="deleteWorld(world.name)" :disabled="isBusy('deleteWorld:' + world.name)" class="btn btn-sm btn-danger">
                   <span x-show="actionPending === ('deleteWorld:' + world.name)" class="spinner"></span>
-                  <span x-show="actionPending !== ('deleteWorld:' + world.name)">Apagar</span>
-                <span x-show="actionPending === ('deleteWorld:' + world.name)">Apagando...</span>
+                  <span x-show="actionPending !== ('deleteWorld:' + world.name)">Delete</span>
+                <span x-show="actionPending === ('deleteWorld:' + world.name)">Deleting...</span>
                 </button>
               </div>
             </template>
@@ -823,8 +823,8 @@
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-6" x-ref="worldConfigPanel">
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h3 class="font-display text-sm font-semibold text-valheim-gold">Configurações do Mundo</h3>
-                <p class="text-xs text-gray-500 mt-1">Modificadores gravados no arquivo <span class="font-mono">.fwl</span> — equivalentes à tela de criação do Valheim.</p>
+                <h3 class="font-display text-sm font-semibold text-valheim-gold">World Settings</h3>
+                <p class="text-xs text-gray-500 mt-1">Modifiers saved in the <span class="font-mono">.fwl</span> file — equivalent to Valheim's world creation screen.</p>
               </div>
               <div class="flex flex-wrap gap-3 items-center">
                 <select x-model="worldConfigName" @change="loadWorldConfig()"
@@ -835,8 +835,8 @@
                 </select>
                 <button @click="loadWorldConfig()" :disabled="isBusy('loadWorldConfig')" class="btn btn-sm btn-neutral">
                   <span x-show="actionPending === 'loadWorldConfig'" class="spinner"></span>
-                  <span x-show="actionPending !== 'loadWorldConfig'">↻ Atualizar</span>
-                <span x-show="actionPending === 'loadWorldConfig'">Carregando...</span>
+                  <span x-show="actionPending !== 'loadWorldConfig'">↻ Refresh</span>
+                <span x-show="actionPending === 'loadWorldConfig'">Loading...</span>
                 </button>
               </div>
             </div>
@@ -852,30 +852,30 @@
                     <p class="font-mono text-gray-300 truncate" x-text="worldConfigMeta.uid ?? '—'"></p>
                   </div>
                   <div class="bg-valheim-900 rounded-lg p-3 border border-valheim-700/50">
-                    <p class="text-gray-500">Arquivo .fwl</p>
-                    <p class="text-gray-300" x-text="worldConfigMeta.has_fwl ? 'Sim' : 'Não'"></p>
+                    <p class="text-gray-500">.fwl file</p>
+                    <p class="text-gray-300" x-text="worldConfigMeta.has_fwl ? 'Yes' : 'No'"></p>
                   </div>
                   <div class="bg-valheim-900 rounded-lg p-3 border border-valheim-700/50">
                     <p class="text-gray-500">Save .db</p>
-                    <p class="text-gray-300" x-text="worldConfigMeta.has_db ? 'Sim' : 'Não'"></p>
+                    <p class="text-gray-300" x-text="worldConfigMeta.has_db ? 'Yes' : 'No'"></p>
                   </div>
                 </div>
 
                 <p x-show="worldConfigWarnings.length" class="text-xs text-amber-500"
                    x-text="worldConfigWarnings.join(' · ')"></p>
                 <p x-show="worldConfigRequiresRestart" class="text-xs text-amber-500">
-                  Mundo em execução — reinicie o servidor após salvar para aplicar alterações no .fwl.
+                  World is running — restart the server after saving to apply .fwl changes.
                 </p>
 
-                <!-- Preset do mundo -->
+                <!-- World preset -->
                 <div class="space-y-3">
                   <div class="flex flex-wrap items-center gap-2">
-                    <h4 class="text-sm font-semibold text-gray-200">Preset do mundo</h4>
+                    <h4 class="text-sm font-semibold text-gray-200">World preset</h4>
                     <span x-show="worldConfigPresetDetected" class="text-xs px-2 py-0.5 rounded-full bg-valheim-moss/20 text-valheim-moss border border-valheim-moss/30">
-                      Detectado do .fwl
+                      Detected from .fwl
                     </span>
                     <span x-show="worldConfigInferredPreset === '' && worldConfigModifierStrings.length" class="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                      Personalizado
+                      Custom
                     </span>
                   </div>
                   <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
@@ -892,11 +892,11 @@
                   <p x-show="worldPresetDesc()" class="text-xs text-gray-500 leading-relaxed" x-text="worldPresetDesc()"></p>
                 </div>
 
-                <!-- Valores efetivos -->
+                <!-- Effective values -->
                 <div class="rounded-xl border border-valheim-moss/30 bg-valheim-moss/5 p-4 space-y-3">
                   <div>
-                    <h4 class="text-sm font-semibold text-valheim-gold">Valores efetivos</h4>
-                    <p class="text-xs text-gray-500 mt-1">O que será aplicado no mundo após salvar (preset + overrides).</p>
+                    <h4 class="text-sm font-semibold text-valheim-gold">Effective values</h4>
+                    <p class="text-xs text-gray-500 mt-1">What will be applied to the world after saving (preset + overrides).</p>
                   </div>
                   <div class="flex flex-wrap gap-2">
                     <template x-for="row in worldEffectiveRows()" :key="'eff-' + row.key">
@@ -908,10 +908,10 @@
                   </div>
                 </div>
 
-                <!-- Modificadores individuais -->
+                <!-- Individual modifiers -->
                 <div class="space-y-3">
-                  <h4 class="text-sm font-semibold text-gray-200">Modificadores individuais</h4>
-                  <p class="text-xs text-gray-500">Deixe em «Usar preset» para herdar do preset acima, ou escolha um valor específico.</p>
+                  <h4 class="text-sm font-semibold text-gray-200">Individual modifiers</h4>
+                  <p class="text-xs text-gray-500">Leave on «Use preset» to inherit from the preset above, or choose a specific value.</p>
                   <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     <template x-for="field in worldConfigFields" :key="field.key">
                       <div class="world-modifier-card">
@@ -929,17 +929,17 @@
                       </div>
                     </template>
                     <div x-show="!worldConfigMeta.has_fwl" class="world-modifier-card">
-                      <label class="block text-sm font-medium text-gray-200 mb-2">🌱 Seed (novo mundo)</label>
-                      <input x-model="worldConfigForm.seed" placeholder="Opcional — 1-10 caracteres"
+                      <label class="block text-sm font-medium text-gray-200 mb-2">🌱 Seed (new world)</label>
+                      <input x-model="worldConfigForm.seed" placeholder="Optional — 1-10 characters"
                              class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none" />
-                      <p class="text-xs text-gray-500 mt-2">Usada apenas ao criar o arquivo .fwl pela primeira vez.</p>
+                      <p class="text-xs text-gray-500 mt-2">Used only when creating the .fwl file for the first time.</p>
                     </div>
                   </div>
                 </div>
 
-                <!-- Opções avançadas -->
+                <!-- Advanced options -->
                 <div class="space-y-3">
-                  <h4 class="text-sm font-semibold text-gray-200">Opções avançadas</h4>
+                  <h4 class="text-sm font-semibold text-gray-200">Advanced options</h4>
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <template x-for="flag in worldConfigFlags" :key="flag.key">
                       <label class="world-modifier-card flex gap-3 cursor-pointer">
@@ -955,13 +955,13 @@
                   </div>
                 </div>
 
-                <!-- Detalhes técnicos -->
+                <!-- Technical details -->
                 <details class="rounded-xl border border-valheim-700 bg-valheim-900/50">
                   <summary class="cursor-pointer px-4 py-3 text-sm text-gray-400 hover:text-gray-200">
-                    Detalhes técnicos — strings gravadas no .fwl
+                    Technical details — strings saved in .fwl
                   </summary>
                   <div class="px-4 pb-4 space-y-2">
-                    <p x-show="!worldConfigModifierStrings.length" class="text-xs text-gray-500 italic">Nenhum modificador (mundo vanilla / Normal).</p>
+                    <p x-show="!worldConfigModifierStrings.length" class="text-xs text-gray-500 italic">No modifiers (vanilla / Normal world).</p>
                     <template x-for="(line, idx) in worldConfigModifierStrings" :key="'modstr-' + idx">
                       <code class="block text-xs font-mono text-gray-400 bg-valheim-950 rounded px-2 py-1 border border-valheim-700/50" x-text="line"></code>
                     </template>
@@ -971,16 +971,16 @@
                 <div class="flex flex-wrap gap-3 pt-2 border-t border-valheim-700/50">
                   <button @click="saveWorldConfig(false)" :disabled="isBusyGroup('saveWorldConfig', 'saveWorldConfigRestart')" class="btn btn-primary">
                     <span x-show="actionPending === 'saveWorldConfig'" class="spinner"></span>
-                    <span x-show="actionPending !== 'saveWorldConfig'">Salvar configurações</span>
-                <span x-show="actionPending === 'saveWorldConfig'">Salvando...</span>
+                    <span x-show="actionPending !== 'saveWorldConfig'">Save settings</span>
+                <span x-show="actionPending === 'saveWorldConfig'">Saving...</span>
                   </button>
                   <button x-show="worldConfigRequiresRestart" @click="saveWorldConfig(true)" :disabled="isBusyGroup('saveWorldConfig', 'saveWorldConfigRestart')" class="btn btn-warning">
                     <span x-show="actionPending === 'saveWorldConfigRestart'" class="spinner"></span>
-                    <span x-show="actionPending !== 'saveWorldConfigRestart'">Salvar e reiniciar</span>
-                <span x-show="actionPending === 'saveWorldConfigRestart'">Reiniciando...</span>
+                    <span x-show="actionPending !== 'saveWorldConfigRestart'">Save and restart</span>
+                <span x-show="actionPending === 'saveWorldConfigRestart'">Restarting...</span>
                   </button>
                 </div>
-                <p class="text-xs text-gray-600">Backup automático do .fwl anterior em <span class="font-mono">panel-data/world_fwl_backups/</span> antes de cada gravação.</p>
+                <p class="text-xs text-gray-600">Automatic backup of the previous .fwl in <span class="font-mono">panel-data/world_fwl_backups/</span> before each save.</p>
               </div>
             </template>
           </div>
@@ -988,56 +988,56 @@
 
         <!-- BACKUPS -->
         <section x-show="page === 'backups'" class="space-y-6">
-          <!-- Status do backup ativo -->
+          <!-- Active backup status -->
           <div class="backup-status-banner space-y-3">
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h3 class="font-display text-sm font-semibold text-valheim-gold">Estado do servidor</h3>
+                <h3 class="font-display text-sm font-semibold text-valheim-gold">Server state</h3>
                 <p class="text-sm text-gray-300 mt-1" x-show="backupState.active">
-                  Restaurado a partir de: <span class="font-mono text-valheim-gold" x-text="backupState.active"></span>
+                  Restored from: <span class="font-mono text-valheim-gold" x-text="backupState.active"></span>
                 </p>
                 <p class="text-sm text-gray-300 mt-1" x-show="!backupState.active">
-                  Servidor em estado <strong>live</strong> — nenhum restore via painel registrado.
+                  Server in <strong>live</strong> state — no panel restore recorded.
                 </p>
                 <p class="text-xs text-gray-500 mt-1" x-show="backupState.restored_at">
-                  Último restore: <span x-text="formatDate(backupState.restored_at)"></span>
+                  Last restore: <span x-text="formatDate(backupState.restored_at)"></span>
                 </p>
               </div>
               <div class="flex flex-wrap gap-2">
                 <button @click="restoreLatestBackup()" :disabled="!backups.length || isBusyGroup('restoreLatest', 'restoreUndo')" class="btn btn-sm btn-primary">
                   <span x-show="actionPending === 'restoreLatest'" class="spinner"></span>
-                  <span x-show="actionPending !== 'restoreLatest'">Voltar ao mais recente</span>
-                  <span x-show="actionPending === 'restoreLatest'">Restaurando...</span>
+                  <span x-show="actionPending !== 'restoreLatest'">Restore latest</span>
+                  <span x-show="actionPending === 'restoreLatest'">Restoring...</span>
                 </button>
                 <button x-show="backupState.undo" @click="restoreUndoBackup()" :disabled="isBusyGroup('restoreLatest', 'restoreUndo')" class="btn btn-sm btn-warning">
                   <span x-show="actionPending === 'restoreUndo'" class="spinner"></span>
-                  <span x-show="actionPending !== 'restoreUndo'">Desfazer última restauração</span>
-                  <span x-show="actionPending === 'restoreUndo'">Desfazendo...</span>
+                  <span x-show="actionPending !== 'restoreUndo'">Undo last restore</span>
+                  <span x-show="actionPending === 'restoreUndo'">Undoing...</span>
                 </button>
               </div>
             </div>
-            <p class="text-xs text-gray-500">Restaurar sempre reinicia o servidor. Um checkpoint automático é criado antes de cada restore.</p>
+            <p class="text-xs text-gray-500">Restore always restarts the server. An automatic checkpoint is created before each restore.</p>
           </div>
 
-          <!-- Agendamento automático -->
+          <!-- Automatic scheduling -->
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4">
-            <h3 class="font-display text-sm font-semibold text-valheim-gold">Agendamento automático</h3>
+            <h3 class="font-display text-sm font-semibold text-valheim-gold">Automatic scheduling</h3>
             <div class="backup-info-box">
-              O container Valheim copia periodicamente a pasta <code class="text-gray-400">worlds_local/</code> para
-              <code class="text-gray-400">config/backups/</code>. Os arquivos aparecem como
-              <code class="text-gray-400">worlds-YYYYMMDD-HHMMSS.zip</code>. Retenção: 30 dias.
+              The Valheim container periodically copies the <code class="text-gray-400">worlds_local/</code> folder to
+              <code class="text-gray-400">config/backups/</code>. Files appear as
+              <code class="text-gray-400">worlds-YYYYMMDD-HHMMSS.zip</code>. Retention: 30 days.
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs text-gray-500 mb-1">Backups automáticos</label>
+                <label class="block text-xs text-gray-500 mb-1">Automatic backups</label>
                 <select x-model="backupConfig.BACKUPS"
                         class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none">
-                  <option value="true">Ativado</option>
-                  <option value="false">Desativado</option>
+                  <option value="true">Enabled</option>
+                  <option value="false">Disabled</option>
                 </select>
               </div>
               <div>
-                <label class="block text-xs text-gray-500 mb-1">Intervalo</label>
+                <label class="block text-xs text-gray-500 mb-1">Interval</label>
                 <select x-model="backupIntervalPreset"
                         class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none">
                   <template x-for="p in backupIntervalPresets" :key="p.id">
@@ -1046,62 +1046,62 @@
                 </select>
               </div>
               <div x-show="backupIntervalPreset === 'custom'" class="md:col-span-2">
-                <label class="block text-xs text-gray-500 mb-1">Cron personalizado</label>
+                <label class="block text-xs text-gray-500 mb-1">Custom cron</label>
                 <input x-model="backupCronCustom" placeholder="0 * * * *"
                        class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm font-mono focus:border-valheim-gold focus:outline-none" />
               </div>
               <div>
-                <label class="block text-xs text-gray-500 mb-1">Retenção</label>
-                <input type="text" value="30 dias" disabled
+                <label class="block text-xs text-gray-500 mb-1">Retention</label>
+                <input type="text" value="30 days" disabled
                        class="w-full bg-valheim-900/50 border border-valheim-600 rounded-lg px-3 py-2 text-sm text-gray-500" />
               </div>
               <div>
-                <label class="block text-xs text-gray-500 mb-1">Backup sem jogadores online</label>
+                <label class="block text-xs text-gray-500 mb-1">Backup when no players online</label>
                 <select x-model="backupConfig.BACKUPS_IF_IDLE"
                         class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none">
-                  <option value="true">Sim — faz backup mesmo vazio</option>
-                  <option value="false">Só com jogadores online</option>
+                  <option value="true">Yes — back up even when empty</option>
+                  <option value="false">Only when players are online</option>
                 </select>
-                <p class="text-xs text-gray-600 mt-1">Atual: <span x-text="backupIdleLabel()"></span></p>
+                <p class="text-xs text-gray-600 mt-1">Current: <span x-text="backupIdleLabel()"></span></p>
               </div>
             </div>
             <div class="flex flex-wrap gap-3 pt-2">
               <button @click="saveBackupConfig()" :disabled="isBusyGroup('saveBackupConfig', 'triggerBackup')" class="btn btn-warning">
                 <span x-show="actionPending === 'saveBackupConfig'" class="spinner"></span>
-                <span x-show="actionPending !== 'saveBackupConfig'">Aplicar e reiniciar</span>
-                <span x-show="actionPending === 'saveBackupConfig'">Reiniciando...</span>
+                <span x-show="actionPending !== 'saveBackupConfig'">Apply and restart</span>
+                <span x-show="actionPending === 'saveBackupConfig'">Restarting...</span>
               </button>
-              <button @click="openBackupModal()" class="btn btn-info">Criar backup manual</button>
+              <button @click="openBackupModal()" class="btn btn-info">Create manual backup</button>
               <button @click="triggerBackup()" :disabled="isBusyGroup('saveBackupConfig', 'triggerBackup')" class="btn btn-neutral"
-                      title="Executa agora o mesmo job que roda no intervalo agendado">
+                      title="Runs now the same job that runs on the scheduled interval">
                 <span x-show="actionPending === 'triggerBackup'" class="spinner"></span>
-                <span x-show="actionPending !== 'triggerBackup'">Executar agendado agora</span>
-                <span x-show="actionPending === 'triggerBackup'">Executando...</span>
+                <span x-show="actionPending !== 'triggerBackup'">Run scheduled job now</span>
+                <span x-show="actionPending === 'triggerBackup'">Running...</span>
               </button>
             </div>
           </div>
 
-          <!-- Lista de backups -->
+          <!-- Backup list -->
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6">
             <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <h3 class="font-display text-sm font-semibold text-valheim-gold">Backups armazenados</h3>
+              <h3 class="font-display text-sm font-semibold text-valheim-gold">Stored backups</h3>
               <label class="flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
                 <input type="checkbox" x-model="hideCheckpoints" class="rounded border-valheim-600" />
-                Ocultar checkpoints
+                Hide checkpoints
               </label>
             </div>
-            <p x-show="!visibleBackups().length" class="text-gray-500 text-sm text-center py-8">Nenhum backup encontrado em config/backups/</p>
+            <p x-show="!visibleBackups().length" class="text-gray-500 text-sm text-center py-8">No backups found in config/backups/</p>
             <div x-show="visibleBackups().length" class="overflow-x-auto">
               <table class="w-full text-sm">
                 <thead>
                   <tr class="text-left text-xs text-gray-500 border-b border-valheim-700">
-                    <th class="pb-2 pr-4">Tipo</th>
-                    <th class="pb-2 pr-4">Nome</th>
-                    <th class="pb-2 pr-4">Data</th>
-                    <th class="pb-2 pr-4">Idade</th>
-                    <th class="pb-2 pr-4">Tamanho</th>
+                    <th class="pb-2 pr-4">Type</th>
+                    <th class="pb-2 pr-4">Name</th>
+                    <th class="pb-2 pr-4">Date</th>
+                    <th class="pb-2 pr-4">Age</th>
+                    <th class="pb-2 pr-4">Size</th>
                     <th class="pb-2 pr-4">Mods</th>
-                    <th class="pb-2">Ações</th>
+                    <th class="pb-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1111,25 +1111,25 @@
                       <td class="py-2 pr-4">
                         <div class="flex flex-wrap items-center gap-1.5">
                           <span class="font-mono text-xs text-gray-300" x-text="b.name"></span>
-                          <span x-show="b.is_active" class="backup-badge backup-badge-active">Ativo</span>
-                          <span x-show="b.is_latest && !b.is_active" class="backup-badge backup-badge-latest">Mais recente</span>
+                          <span x-show="b.is_active" class="backup-badge backup-badge-active">Active</span>
+                          <span x-show="b.is_latest && !b.is_active" class="backup-badge backup-badge-latest">Latest</span>
                           <span x-show="b.is_checkpoint" class="backup-badge backup-badge-checkpoint">Checkpoint</span>
                         </div>
                       </td>
                       <td class="py-2 pr-4 text-xs text-gray-500" x-text="b.modified_display || formatDate(b.modified)"></td>
-                      <td class="py-2 pr-4 text-xs text-gray-500" x-text="b.age_days + ' dias'"></td>
+                      <td class="py-2 pr-4 text-xs text-gray-500" x-text="b.age_days + ' days'"></td>
                       <td class="py-2 pr-4 text-xs text-gray-500" x-text="formatSize(b.size)"></td>
-                      <td class="py-2 pr-4 text-xs text-gray-400" x-text="formatModsCount(b)" :title="b.mods_enabled_count != null ? (b.mods_enabled_count + ' ativos') : ''"></td>
+                      <td class="py-2 pr-4 text-xs text-gray-400" x-text="formatModsCount(b)" :title="b.mods_enabled_count != null ? (b.mods_enabled_count + ' active') : ''"></td>
                       <td class="py-2">
                         <div class="flex flex-wrap gap-2">
-                          <button @click="openBackupDetailsModal(b)" class="btn btn-sm btn-ghost">Detalhes</button>
+                          <button @click="openBackupDetailsModal(b)" class="btn btn-sm btn-ghost">Details</button>
                           <button @click="openRestoreModal(b)" :disabled="b.is_active || isBusy('restoreBackup:' + b.name)"
                                   class="btn btn-sm btn-primary">
-                            Voltar até aqui
+                            Restore to here
                           </button>
                           <a :href="backupDownloadUrl(b.name)" class="btn btn-sm btn-ghost">Download</a>
                           <button @click="openDeleteBackupModal(b)" :disabled="b.is_active || isBusy('deleteBackup:' + b.name)"
-                                  class="btn btn-sm btn-ghost-danger">Apagar</button>
+                                  class="btn btn-sm btn-ghost-danger">Delete</button>
                         </div>
                       </td>
                     </tr>
@@ -1150,21 +1150,21 @@
                       :disabled="isBusy('fileScope:' + s.id)">
                 <span x-show="actionPending === ('fileScope:' + s.id)" class="spinner"></span>
                 <span x-show="actionPending !== ('fileScope:' + s.id)" x-text="s.label"></span>
-                <span x-show="actionPending === ('fileScope:' + s.id)">Carregando...</span>
+                <span x-show="actionPending === ('fileScope:' + s.id)">Loading...</span>
               </button>
             </template>
           </div>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div class="file-tree-panel bg-valheim-800 rounded-xl border border-valheim-700 overflow-hidden flex flex-col max-h-[560px]">
               <div class="file-tree-header px-3 py-2 border-b border-valheim-700 text-xs font-medium text-gray-400 uppercase tracking-wide">
-                Navegador
+                Browser
               </div>
               <div class="file-tree-scroll flex-1 overflow-y-auto p-1" @click="onFileTreeClick($event)">
                 <div x-html="renderTree(fileTree, 0, fileExpandedPaths, editPath)"></div>
               </div>
             </div>
             <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-4">
-              <div x-show="!editPath" class="text-gray-500 text-sm text-center py-12">Selecione um arquivo para editar</div>
+              <div x-show="!editPath" class="text-gray-500 text-sm text-center py-12">Select a file to edit</div>
               <div x-show="editPath">
                 <div class="flex items-center justify-between mb-3">
                   <p class="text-xs text-valheim-gold font-mono truncate" x-text="editPath"></p>
@@ -1172,21 +1172,21 @@
                     <a :href="'/api/files/download?path=' + encodeURIComponent(editPath)" class="btn btn-sm btn-ghost">Download</a>
                     <button @click="saveFile()" :disabled="isBusy('saveFile')" class="btn btn-sm btn-primary">
                       <span x-show="actionPending === 'saveFile'" class="spinner"></span>
-                      <span x-show="actionPending !== 'saveFile'">Salvar</span>
-                <span x-show="actionPending === 'saveFile'">Salvando...</span>
+                      <span x-show="actionPending !== 'saveFile'">Save</span>
+                <span x-show="actionPending === 'saveFile'">Saving...</span>
                     </button>
                   </div>
                 </div>
                 <div x-show="fileEditorDraftPending" class="editor-draft-banner">
-                  <span>Rascunho local encontrado (não salvo no servidor).</span>
-                  <button type="button" @click="restoreFileDraft()" class="btn btn-sm btn-warning">Restaurar rascunho</button>
-                  <button type="button" @click="discardFileDraft()" class="btn btn-sm btn-ghost">Descartar</button>
+                  <span>Local draft found (not saved on server).</span>
+                  <button type="button" @click="restoreFileDraft()" class="btn btn-sm btn-warning">Restore draft</button>
+                  <button type="button" @click="discardFileDraft()" class="btn btn-sm btn-ghost">Discard</button>
                 </div>
                 <div class="editor-toolbar">
-                  <button type="button" @click="fileEditorUndo()" class="btn btn-sm btn-ghost" title="Desfazer">↶</button>
-                  <button type="button" @click="fileEditorRedo()" class="btn btn-sm btn-ghost" title="Refazer">↷</button>
-                  <span x-show="fileEditorDirty" id="file-editor-dirty" class="editor-dirty-badge">Alterações não salvas</span>
-                  <span class="text-xs text-gray-600 ml-auto">Ctrl+S para salvar · rascunho local a cada 2s</span>
+                  <button type="button" @click="fileEditorUndo()" class="btn btn-sm btn-ghost" title="Undo">↶</button>
+                  <button type="button" @click="fileEditorRedo()" class="btn btn-sm btn-ghost" title="Redo">↷</button>
+                  <span x-show="fileEditorDirty" id="file-editor-dirty" class="editor-dirty-badge">Unsaved changes</span>
+                  <span class="text-xs text-gray-600 ml-auto">Ctrl+S to save · local draft every 2s</span>
                 </div>
                 <div id="file-editor-host" class="min-h-[400px]"></div>
               </div>
@@ -1203,8 +1203,8 @@
                     :class="logSource === 'bepinex' && 'btn-tab-active'">BepInEx</button>
             <button @click="loadLogs()" :disabled="isBusy('loadLogs')" class="btn btn-sm btn-neutral ml-auto">
               <span x-show="actionPending === 'loadLogs'" class="spinner"></span>
-              <span x-show="actionPending !== 'loadLogs'">↻ Atualizar</span>
-                <span x-show="actionPending === 'loadLogs'">Carregando...</span>
+              <span x-show="actionPending !== 'loadLogs'">↻ Refresh</span>
+                <span x-show="actionPending === 'loadLogs'">Loading...</span>
             </button>
             <label class="flex items-center gap-2 text-xs text-gray-500">
               <input type="checkbox" x-model="logAutoRefresh" class="rounded" />
@@ -1212,7 +1212,7 @@
             </label>
           </div>
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-4 space-y-3">
-            <div x-ref="logConsole" class="log-viewer bg-valheim-900 border border-valheim-700 rounded-xl p-4 max-h-[600px] overflow-y-auto" x-html="formatLogHtml(logs, 'Nenhum log disponível.')"></div>
+            <div x-ref="logConsole" class="log-viewer bg-valheim-900 border border-valheim-700 rounded-xl p-4 max-h-[600px] overflow-y-auto" x-html="formatLogHtml(logs, 'No logs available.')"></div>
             <div class="border-t border-valheim-700 pt-3 space-y-2">
               <p x-show="!rconStatus.available && consoleStatusHint()" class="text-xs text-amber-400/90" x-text="consoleStatusHint()"></p>
               <div class="flex gap-2">
@@ -1226,7 +1226,7 @@
                     @input="consoleCompleteCycle = null"
                     @keydown.enter.prevent="sendConsoleCommand()"
                     :disabled="!rconStatus.available || consoleSending"
-                    placeholder="Comando RCON (ex: save, list, kick Nome...)"
+                    placeholder="RCON command (e.g. save, list, kick Name...)"
                     class="console-input w-full bg-transparent relative z-10 border-0 rounded-lg px-3 py-2 text-sm font-mono text-gray-200 placeholder-gray-600" />
                 </div>
                 <button type="button"
@@ -1234,23 +1234,23 @@
                   :disabled="!rconStatus.available || consoleSending || !(consoleInput || '').trim()"
                   class="btn btn-sm btn-primary shrink-0">
                   <span x-show="consoleSending" class="spinner"></span>
-                  <span x-show="!consoleSending">Enviar</span>
+                  <span x-show="!consoleSending">Send</span>
                 </button>
               </div>
               <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <button type="button" @click="openConsoleHelpModal()" class="btn btn-sm btn-ghost text-xs">Ver comandos disponíveis</button>
-                <span class="text-xs text-gray-600">Tab autocompleta · Enter envia · saída nos logs acima</span>
+                <button type="button" @click="openConsoleHelpModal()" class="btn btn-sm btn-ghost text-xs">View available commands</button>
+                <span class="text-xs text-gray-600">Tab autocompletes · Enter sends · output appears in the logs above</span>
               </div>
             </div>
           </div>
         </section>
 
 
-        <!-- AJUDA -->
+        <!-- HELP -->
         <section x-show="page === 'help'" class="space-y-6">
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6">
-            <h3 class="font-display text-sm font-semibold text-valheim-gold mb-4">Perguntas frequentes</h3>
-            <input x-model="faqSearch" placeholder="Buscar no FAQ..."
+            <h3 class="font-display text-sm font-semibold text-valheim-gold mb-4">Frequently asked questions</h3>
+            <input x-model="faqSearch" placeholder="Search FAQ..."
                    class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-4 py-2 text-sm focus:border-valheim-gold focus:outline-none" />
           </div>
           <template x-for="cat in faqFilteredCategories()" :key="cat.id">
@@ -1265,7 +1265,7 @@
             </div>
           </template>
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6">
-            <h4 class="section-title mb-4">Links úteis</h4>
+            <h4 class="section-title mb-4">Useful links</h4>
             <div class="flex flex-wrap gap-2">
               <template x-for="link in referenceLinks" :key="link.url">
                 <a :href="link.url" target="_blank" rel="noopener" class="btn btn-sm btn-ghost" x-text="link.label"></a>
@@ -1274,17 +1274,17 @@
           </div>
         </section>
 
-        <!-- DOAÇÕES -->
+        <!-- DONATIONS -->
         <section x-show="page === 'donation'" class="space-y-6">
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6">
-            <h3 class="font-display text-lg font-semibold text-valheim-gold mb-2">Apoie o projeto</h3>
+            <h3 class="font-display text-lg font-semibold text-valheim-gold mb-2">Support the project</h3>
             <p class="text-sm text-gray-400 leading-relaxed" x-text="donationPitch"></p>
           </div>
 
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4">
-            <h4 class="section-title">Doações voluntárias</h4>
-            <p class="text-sm text-gray-500">O painel é gratuito para uso pessoal. Se ele te ajuda, qualquer contribuição
-              financia novas features, correções e documentação.</p>
+            <h4 class="section-title">Voluntary donations</h4>
+            <p class="text-sm text-gray-500">The panel is free for personal use. If it helps you, any contribution
+              funds new features, fixes, and documentation.</p>
             <div x-show="hasDonationOptions()" class="flex flex-wrap gap-3">
               <template x-for="link in donationInfo.links" :key="link.id">
                 <a :href="link.url" target="_blank" rel="noopener"
@@ -1297,56 +1297,56 @@
               <p class="text-xs text-gray-500 uppercase tracking-wider mb-2">Pix (Brasil)</p>
               <div class="flex flex-wrap items-center gap-3">
                 <code class="font-mono text-sm text-valheim-gold-light break-all" x-text="donationInfo.pix_key"></code>
-                <button @click="copyText(donationInfo.pix_key)" class="btn btn-sm btn-ghost">Copiar chave</button>
+                <button @click="copyText(donationInfo.pix_key)" class="btn btn-sm btn-ghost">Copy key</button>
               </div>
             </div>
             <p x-show="!hasDonationOptions()" class="text-sm text-gray-500 italic">
-              Links de doação ainda não configurados. Defina <code class="text-gray-400">PANEL_DONATION_*</code> no
-              <code class="text-gray-400">.env</code> do servidor.
+              Donation links are not configured yet. Set <code class="text-gray-400">PANEL_DONATION_*</code> in the server
+              <code class="text-gray-400">.env</code>.
             </p>
           </div>
 
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4">
-            <h4 class="section-title">Licenciamento comercial</h4>
+            <h4 class="section-title">Commercial licensing</h4>
             <p class="text-sm text-gray-400 leading-relaxed">
-              Provedores de <strong class="text-gray-200">hospedagem</strong> que desejam oferecer este painel aos
-              clientes precisam de uma <strong class="text-gray-200">licença comercial</strong>. Revenda e white-label
-              sem autorização violam a <span class="text-valheim-gold-light" x-text="donationInfo.license || 'Polyform Shield 1.0.0'"></span>.
+              <strong class="text-gray-200">Hosting providers</strong> who want to offer this panel to
+              customers need a <strong class="text-gray-200">commercial license</strong>. Resale and white-label
+              use without authorization violate the <span class="text-valheim-gold-light" x-text="donationInfo.license || 'Polyform Shield 1.0.0'"></span>.
             </p>
             <ul class="text-sm text-gray-500 space-y-2 list-disc list-inside">
-              <li>Uso pessoal e contribuição open source: <span class="text-green-400">gratuito</span></li>
-              <li>Hospedagem comercial / revenda: <span class="text-yellow-400">licença paga</span></li>
-              <li>Doações não substituem licença comercial</li>
+              <li>Personal use and open-source contribution: <span class="text-green-400">free</span></li>
+              <li>Commercial hosting / resale: <span class="text-yellow-400">paid license</span></li>
+              <li>Donations do not replace a commercial license</li>
             </ul>
             <div class="flex flex-wrap gap-3 pt-2">
               <a x-show="donationInfo.commercial_url"
                  :href="donationInfo.commercial_url" target="_blank" rel="noopener"
-                 class="btn btn-sm btn-neutral">Ver planos comerciais</a>
+                 class="btn btn-sm btn-neutral">Request commercial license</a>
               <a x-show="donationInfo.license_url"
                  :href="donationInfo.license_url" target="_blank" rel="noopener"
-                 class="btn btn-sm btn-ghost">Texto da licença</a>
+                 class="btn btn-sm btn-ghost">License text</a>
               <a x-show="versionInfo.repo_url"
                  :href="(versionInfo.repo_url || '') + '/blob/main/COMMERCIAL-LICENSE.md'" target="_blank" rel="noopener"
                  class="btn btn-sm btn-ghost">COMMERCIAL-LICENSE.md</a>
             </div>
             <p x-show="donationInfo.commercial_email" class="text-sm text-gray-500">
-              Contato para licenciamento:
+              Licensing contact:
               <a :href="'mailto:' + donationInfo.commercial_email" class="text-valheim-gold-light hover:underline"
                  x-text="donationInfo.commercial_email"></a>
             </p>
           </div>
         </section>
 
-        <!-- SOBRE -->
+        <!-- ABOUT -->
         <section x-show="page === 'about'" class="space-y-6">
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6">
             <h3 class="font-display text-lg font-semibold text-valheim-gold mb-1">Vikinger Panel</h3>
-            <p class="text-sm text-gray-500 mb-6">Gerenciador web para servidor Valheim dockerizado</p>
+            <p class="text-sm text-gray-500 mb-6">Web manager for a dockerized Valheim server</p>
             <dl class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div><dt class="text-gray-500 text-xs uppercase tracking-wider">Versão</dt><dd class="font-mono text-valheim-gold mt-1" x-text="versionInfo.version || '—'"></dd></div>
+              <div><dt class="text-gray-500 text-xs uppercase tracking-wider">Version</dt><dd class="font-mono text-valheim-gold mt-1" x-text="versionInfo.version || '—'"></dd></div>
               <div><dt class="text-gray-500 text-xs uppercase tracking-wider">Build</dt><dd class="font-mono text-gray-300 mt-1" x-text="versionInfo.build_date || '—'"></dd></div>
               <div><dt class="text-gray-500 text-xs uppercase tracking-wider">Commit</dt><dd class="font-mono text-gray-400 mt-1 truncate" x-text="versionInfo.commit || '—'"></dd></div>
-              <div><dt class="text-gray-500 text-xs uppercase tracking-wider">Licença</dt>
+              <div><dt class="text-gray-500 text-xs uppercase tracking-wider">License</dt>
                 <dd class="text-gray-300 mt-1">
                   <a x-show="versionInfo.license_url" :href="versionInfo.license_url" target="_blank" rel="noopener"
                      class="text-valheim-gold-light hover:underline" x-text="versionInfo.license || 'Polyform Shield 1.0.0'"></a>
@@ -1355,10 +1355,10 @@
               </div>
             </dl>
             <a x-show="versionInfo.repo_url" :href="versionInfo.repo_url" target="_blank" rel="noopener"
-               class="btn btn-sm btn-ghost mt-4 inline-flex">Repositório</a>
+               class="btn btn-sm btn-ghost mt-4 inline-flex">Repository</a>
           </div>
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4">
-            <h4 class="section-title">Novidades</h4>
+            <h4 class="section-title">What's new</h4>
             <template x-for="entry in changelogHighlights" :key="entry.version">
               <div>
                 <p class="text-sm font-semibold text-gray-200 mb-2">v<span x-text="entry.version"></span></p>
@@ -1371,7 +1371,7 @@
             </template>
           </div>
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6">
-            <h4 class="section-title mb-4">Créditos</h4>
+            <h4 class="section-title mb-4">Credits</h4>
             <ul class="space-y-2 text-sm">
               <template x-for="c in credits" :key="c.label">
                 <li class="flex justify-between gap-4 border-b border-valheim-700/50 pb-2 last:border-0">
@@ -1383,33 +1383,33 @@
           </div>
         </section>
 
-        <!-- AUDITORIA -->
+        <!-- AUDIT -->
         <section x-show="page === 'audit'" class="space-y-4">
           <div class="flex items-center gap-3">
             <button @click="loadAudit()" :disabled="isBusy('loadAudit')" class="btn btn-sm btn-neutral">
               <span x-show="actionPending === 'loadAudit'" class="spinner"></span>
-              <span x-show="actionPending !== 'loadAudit'">↻ Atualizar</span>
-                <span x-show="actionPending === 'loadAudit'">Carregando...</span>
+              <span x-show="actionPending !== 'loadAudit'">↻ Refresh</span>
+                <span x-show="actionPending === 'loadAudit'">Loading...</span>
             </button>
-            <a href="/api/audit/download" class="btn btn-sm btn-ghost">Baixar log completo</a>
+            <a href="/api/audit/download" class="btn btn-sm btn-ghost">Download full log</a>
             <label class="flex items-center gap-2 text-xs text-gray-500 ml-auto">
               <input type="checkbox" x-model="auditAutoRefresh" class="rounded" />
               Auto (5s)
             </label>
           </div>
-          <p class="text-xs text-gray-500">Registro persistente de todas as ações (POST/PUT/DELETE) para diagnóstico e recuperação de erros.</p>
+          <p class="text-xs text-gray-500">Persistent log of all actions (POST/PUT/DELETE) for diagnostics and error recovery.</p>
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-4 overflow-x-auto">
-            <p x-show="!audit.length" class="text-gray-500 text-sm text-center py-8">Nenhum evento registrado</p>
+            <p x-show="!audit.length" class="text-gray-500 text-sm text-center py-8">No events recorded</p>
             <table x-show="audit.length" class="w-full text-xs">
               <thead>
                 <tr class="text-left text-gray-500 border-b border-valheim-700">
-                  <th class="pb-2 pr-4">Hora</th>
-                  <th class="pb-2 pr-4">Método</th>
-                  <th class="pb-2 pr-4">Ação</th>
+                  <th class="pb-2 pr-4">Time</th>
+                  <th class="pb-2 pr-4">Method</th>
+                  <th class="pb-2 pr-4">Action</th>
                   <th class="pb-2 pr-4">Status</th>
                   <th class="pb-2 pr-4">Dur.</th>
-                  <th class="pb-2 pr-4">Erro</th>
-                  <th class="pb-2">Detalhes</th>
+                  <th class="pb-2 pr-4">Error</th>
+                  <th class="pb-2">Details</th>
                 </tr>
               </thead>
               <tbody>
@@ -1424,7 +1424,7 @@
                     <td class="py-1.5 pr-4 text-gray-500" x-text="(e.duration_ms ?? '') + ' ms'"></td>
                     <td class="py-1.5 pr-4 text-red-400 font-mono" x-text="e.error || ''"></td>
                     <td class="py-1.5">
-                      <button @click="openAuditModal(e)" class="btn btn-sm btn-ghost">Ver</button>
+                      <button @click="openAuditModal(e)" class="btn btn-sm btn-ghost">View</button>
                     </td>
                   </tr>
                 </template>
@@ -1441,7 +1441,7 @@
   <div class="modal-overlay" x-show="auditModalOpen" x-transition @keydown.escape.window="closeAuditModal()" style="display:none">
     <div class="bg-valheim-800 rounded-xl border border-valheim-700 w-full max-w-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto" @click.outside="closeAuditModal()">
       <div class="flex items-center justify-between">
-        <h3 class="font-display text-base font-semibold text-valheim-gold">Detalhes da Auditoria</h3>
+        <h3 class="font-display text-base font-semibold text-valheim-gold">Audit details</h3>
         <button @click="closeAuditModal()" class="btn btn-sm btn-ghost">✕</button>
       </div>
       <template x-if="auditEntry">
@@ -1449,18 +1449,18 @@
           <div>
             <div class="flex items-center justify-between mb-2">
               <p class="text-xs text-gray-500 uppercase tracking-wider">Request</p>
-              <button @click="copyText(auditRequestJson(auditEntry))" class="btn btn-sm btn-ghost">Copiar request</button>
+              <button @click="copyText(auditRequestJson(auditEntry))" class="btn btn-sm btn-ghost">Copy request</button>
             </div>
             <pre class="bg-valheim-950 border border-valheim-700 rounded-lg p-3 text-xs font-mono text-gray-300 overflow-x-auto whitespace-pre-wrap" x-text="auditRequestJson(auditEntry)"></pre>
           </div>
           <div>
             <div class="flex items-center justify-between mb-2">
               <p class="text-xs text-gray-500 uppercase tracking-wider">Response</p>
-              <button @click="copyText(auditResponseJson(auditEntry))" class="btn btn-sm btn-ghost">Copiar response</button>
+              <button @click="copyText(auditResponseJson(auditEntry))" class="btn btn-sm btn-ghost">Copy response</button>
             </div>
             <pre class="bg-valheim-950 border border-valheim-700 rounded-lg p-3 text-xs font-mono text-gray-300 overflow-x-auto whitespace-pre-wrap" x-text="auditResponseJson(auditEntry)"></pre>
           </div>
-          <button @click="copyText(auditFullJson(auditEntry))" class="btn btn-sm btn-neutral">Copiar tudo</button>
+          <button @click="copyText(auditFullJson(auditEntry))" class="btn btn-sm btn-neutral">Copy all</button>
         </div>
       </template>
     </div>
@@ -1470,10 +1470,10 @@
   <div class="modal-overlay" x-show="backupModalOpen" x-transition @keydown.escape.window="closeBackupModal()" style="display:none">
     <div class="bg-valheim-800 rounded-xl border border-valheim-700 w-full max-w-md p-6 space-y-4" @click.outside="closeBackupModal()">
       <div class="flex items-center justify-between">
-        <h3 class="font-display text-base font-semibold text-valheim-gold">Criar Backup</h3>
+        <h3 class="font-display text-base font-semibold text-valheim-gold">Create Backup</h3>
         <button @click="closeBackupModal()" class="btn btn-sm btn-ghost">✕</button>
       </div>
-      <p class="text-xs text-gray-500">Escolha o tipo de backup manual para criar agora.</p>
+      <p class="text-xs text-gray-500">Choose the type of manual backup to create now.</p>
       <div class="space-y-2">
         <template x-for="t in backupTypes" :key="t.id">
           <button @click="createBackup(t.id)" :disabled="isBusy('createBackup:' + t.id)"
@@ -1481,7 +1481,7 @@
             <span class="flex items-center gap-2 font-semibold">
               <span x-show="actionPending === ('createBackup:' + t.id)" class="spinner"></span>
               <span x-show="actionPending !== ('createBackup:' + t.id)" x-text="t.label"></span>
-                <span x-show="actionPending === ('createBackup:' + t.id)">Criando backup...</span>
+                <span x-show="actionPending === ('createBackup:' + t.id)">Creating backup...</span>
             </span>
             <span class="text-xs opacity-80 font-normal" x-text="t.desc"></span>
           </button>
@@ -1494,31 +1494,31 @@
   <div class="modal-overlay" x-show="restoreModalOpen" x-transition @keydown.escape.window="closeRestoreModal()" style="display:none">
     <div class="bg-valheim-800 rounded-xl border border-valheim-700 w-full max-w-md p-6 space-y-4" @click.outside="closeRestoreModal()">
       <div class="flex items-center justify-between">
-        <h3 class="font-display text-base font-semibold text-valheim-gold">Restaurar backup</h3>
+        <h3 class="font-display text-base font-semibold text-valheim-gold">Restore backup</h3>
         <button @click="closeRestoreModal()" class="btn btn-sm btn-ghost">✕</button>
       </div>
       <template x-if="restoreTarget">
         <div class="space-y-3 text-sm">
-          <p class="text-gray-300">Voltar o servidor ao estado deste backup:</p>
+          <p class="text-gray-300">Restore the server to this backup's state:</p>
           <div class="backup-info-box space-y-1">
-            <p><span class="text-gray-500">Nome:</span> <span class="font-mono text-gray-200" x-text="restoreTarget.name"></span></p>
-            <p><span class="text-gray-500">Tipo:</span> <span x-text="restoreTarget.label"></span></p>
-            <p><span class="text-gray-500">Data:</span> <span x-text="restoreTarget.modified_display || formatDate(restoreTarget.modified)"></span></p>
+            <p><span class="text-gray-500">Name:</span> <span class="font-mono text-gray-200" x-text="restoreTarget.name"></span></p>
+            <p><span class="text-gray-500">Type:</span> <span x-text="restoreTarget.label"></span></p>
+            <p><span class="text-gray-500">Date:</span> <span x-text="restoreTarget.modified_display || formatDate(restoreTarget.modified)"></span></p>
           </div>
           <ul class="text-xs text-gray-500 list-disc pl-4 space-y-1">
-            <li>O servidor será parado e reiniciado automaticamente</li>
-            <li>Arquivos do mundo/config serão sobrescritos</li>
-            <li>Um checkpoint do estado atual será criado antes</li>
+            <li>The server will be stopped and restarted automatically</li>
+            <li>World/config files will be overwritten</li>
+            <li>A checkpoint of the current state will be created first</li>
           </ul>
         </div>
       </template>
       <div class="flex gap-3 pt-2">
-        <button @click="closeRestoreModal()" class="btn btn-ghost flex-1">Cancelar</button>
+        <button @click="closeRestoreModal()" class="btn btn-ghost flex-1">Cancel</button>
         <button @click="confirmRestoreBackup()" :disabled="!restoreTarget || isBusy('restoreBackup:' + (restoreTarget?.name || ''))"
                 class="btn btn-warning flex-1">
           <span x-show="restoreTarget && actionPending === ('restoreBackup:' + restoreTarget.name)" class="spinner"></span>
-          <span x-show="!restoreTarget || actionPending !== ('restoreBackup:' + restoreTarget.name)">Restaurar e reiniciar</span>
-          <span x-show="restoreTarget && actionPending === ('restoreBackup:' + restoreTarget.name)">Restaurando...</span>
+          <span x-show="!restoreTarget || actionPending !== ('restoreBackup:' + restoreTarget.name)">Restore and restart</span>
+          <span x-show="restoreTarget && actionPending === ('restoreBackup:' + restoreTarget.name)">Restoring...</span>
         </button>
       </div>
     </div>
@@ -1528,21 +1528,21 @@
   <div class="modal-overlay" x-show="deleteBackupModalOpen" x-transition @keydown.escape.window="closeDeleteBackupModal()" style="display:none">
     <div class="bg-valheim-800 rounded-xl border border-valheim-700 w-full max-w-md p-6 space-y-4" @click.outside="closeDeleteBackupModal()">
       <div class="flex items-center justify-between">
-        <h3 class="font-display text-base font-semibold text-red-400">Apagar backup</h3>
+        <h3 class="font-display text-base font-semibold text-red-400">Delete backup</h3>
         <button @click="closeDeleteBackupModal()" class="btn btn-sm btn-ghost">✕</button>
       </div>
       <template x-if="deleteBackupTarget">
         <p class="text-sm text-gray-300">
-          Apagar permanentemente <span class="font-mono text-gray-200" x-text="deleteBackupTarget.name"></span>?
+          Permanently delete <span class="font-mono text-gray-200" x-text="deleteBackupTarget.name"></span>?
         </p>
       </template>
       <div class="flex gap-3 pt-2">
-        <button @click="closeDeleteBackupModal()" class="btn btn-ghost flex-1">Cancelar</button>
+        <button @click="closeDeleteBackupModal()" class="btn btn-ghost flex-1">Cancel</button>
         <button @click="confirmDeleteBackup()" :disabled="!deleteBackupTarget || isBusy('deleteBackup:' + (deleteBackupTarget?.name || ''))"
                 class="btn btn-ghost-danger flex-1">
           <span x-show="deleteBackupTarget && actionPending === ('deleteBackup:' + deleteBackupTarget.name)" class="spinner"></span>
-          <span x-show="!deleteBackupTarget || actionPending !== ('deleteBackup:' + deleteBackupTarget.name)">Apagar</span>
-          <span x-show="deleteBackupTarget && actionPending === ('deleteBackup:' + deleteBackupTarget.name)">Apagando...</span>
+          <span x-show="!deleteBackupTarget || actionPending !== ('deleteBackup:' + deleteBackupTarget.name)">Delete</span>
+          <span x-show="deleteBackupTarget && actionPending === ('deleteBackup:' + deleteBackupTarget.name)">Deleting...</span>
         </button>
       </div>
     </div>
@@ -1552,37 +1552,37 @@
   <div class="modal-overlay" x-show="backupDetailsModalOpen" x-transition @keydown.escape.window="closeBackupDetailsModal()" style="display:none">
     <div class="bg-valheim-800 rounded-xl border border-valheim-700 w-full max-w-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto" @click.outside="closeBackupDetailsModal()">
       <div class="flex items-center justify-between">
-        <h3 class="font-display text-base font-semibold text-valheim-gold">Detalhes do backup</h3>
+        <h3 class="font-display text-base font-semibold text-valheim-gold">Backup details</h3>
         <button @click="closeBackupDetailsModal()" class="btn btn-sm btn-ghost">✕</button>
       </div>
       <div x-show="backupDetailsLoading" class="text-sm text-gray-500 text-center py-8">
-        <span class="spinner inline-block mr-2"></span> Carregando detalhes...
+        <span class="spinner inline-block mr-2"></span> Loading details...
       </div>
       <template x-if="backupDetails && !backupDetailsLoading">
         <div class="space-y-4">
           <div class="backup-info-box space-y-1 text-sm">
-            <p><span class="text-gray-500">Nome:</span> <span class="font-mono text-gray-200" x-text="backupDetails.name"></span></p>
-            <p><span class="text-gray-500">Tipo:</span> <span x-text="backupDetails.label"></span></p>
-            <p><span class="text-gray-500">Data:</span> <span x-text="backupDetails.modified_display || formatDate(backupDetails.modified)"></span></p>
-            <p><span class="text-gray-500">Tamanho:</span> <span x-text="formatSize(backupDetails.size)"></span></p>
-            <p x-show="backupDetails.world_name"><span class="text-gray-500">Mundo:</span> <span x-text="backupDetails.world_name"></span></p>
-            <p x-show="backupDetails.game_buildid"><span class="text-gray-500">Build Valheim:</span> <span class="font-mono" x-text="backupDetails.game_buildid"></span></p>
-            <p x-show="backupDetails.manifest_inferred" class="text-xs text-amber-400/90 pt-1">Metadados inferidos do ZIP — versões Thunderstore podem estar indisponíveis.</p>
+            <p><span class="text-gray-500">Name:</span> <span class="font-mono text-gray-200" x-text="backupDetails.name"></span></p>
+            <p><span class="text-gray-500">Type:</span> <span x-text="backupDetails.label"></span></p>
+            <p><span class="text-gray-500">Date:</span> <span x-text="backupDetails.modified_display || formatDate(backupDetails.modified)"></span></p>
+            <p><span class="text-gray-500">Size:</span> <span x-text="formatSize(backupDetails.size)"></span></p>
+            <p x-show="backupDetails.world_name"><span class="text-gray-500">World:</span> <span x-text="backupDetails.world_name"></span></p>
+            <p x-show="backupDetails.game_buildid"><span class="text-gray-500">Valheim build:</span> <span class="font-mono" x-text="backupDetails.game_buildid"></span></p>
+            <p x-show="backupDetails.manifest_inferred" class="text-xs text-amber-400/90 pt-1">Metadata inferred from ZIP — Thunderstore versions may be unavailable.</p>
           </div>
           <p x-show="backupDetailsContentsNote()" class="text-xs text-gray-500" x-text="backupDetailsContentsNote()"></p>
           <div>
             <h4 class="text-xs text-gray-500 uppercase tracking-wider mb-2">
               Mods (<span x-text="backupDetails.mods_count ?? 0"></span>)
             </h4>
-            <div x-show="!backupDetailsMods().length" class="text-sm text-gray-500 py-2">Nenhum mod registrado neste backup.</div>
+            <div x-show="!backupDetailsMods().length" class="text-sm text-gray-500 py-2">No mods recorded in this backup.</div>
             <div x-show="backupDetailsMods().length" class="overflow-x-auto">
               <table class="w-full text-xs">
                 <thead>
                   <tr class="text-left text-gray-500 border-b border-valheim-700">
                     <th class="pb-2 pr-3">Mod</th>
-                    <th class="pb-2 pr-3">Pacote</th>
-                    <th class="pb-2 pr-3">Versão</th>
-                    <th class="pb-2">Estado</th>
+                    <th class="pb-2 pr-3">Package</th>
+                    <th class="pb-2 pr-3">Version</th>
+                    <th class="pb-2">State</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1592,7 +1592,7 @@
                       <td class="py-1.5 pr-3 text-gray-400" x-text="mod.package_id || '—'"></td>
                       <td class="py-1.5 pr-3 text-gray-400" x-text="mod.version || '—'"></td>
                       <td class="py-1.5">
-                        <span class="backup-badge" :class="mod.enabled ? 'backup-badge-active' : 'backup-badge-checkpoint'" x-text="mod.enabled ? 'Ativo' : 'Desativado'"></span>
+                        <span class="backup-badge" :class="mod.enabled ? 'backup-badge-active' : 'backup-badge-checkpoint'" x-text="mod.enabled ? 'Active' : 'Disabled'"></span>
                       </td>
                     </tr>
                   </template>
@@ -1601,15 +1601,15 @@
             </div>
           </div>
           <div x-show="backupDetails.manifest?.contents">
-            <h4 class="text-xs text-gray-500 uppercase tracking-wider mb-2">Conteúdo</h4>
+            <h4 class="text-xs text-gray-500 uppercase tracking-wider mb-2">Contents</h4>
             <ul class="text-xs text-gray-400 space-y-1">
-              <li x-show="backupDetails.manifest.contents.includes_worlds">Mundos incluídos</li>
-              <li x-show="backupDetails.manifest.contents.includes_mods_dlls">DLLs de mods incluídas</li>
-              <li x-show="backupDetails.manifest.contents.includes_env">Arquivo .env incluído</li>
-              <li x-show="backupDetails.manifest.contents.has_adminlist">Lista de admins</li>
-              <li><span x-text="backupDetails.manifest.contents.file_count"></span> arquivo(s) no ZIP</li>
+              <li x-show="backupDetails.manifest.contents.includes_worlds">Worlds included</li>
+              <li x-show="backupDetails.manifest.contents.includes_mods_dlls">Mod DLLs included</li>
+              <li x-show="backupDetails.manifest.contents.includes_env">.env file included</li>
+              <li x-show="backupDetails.manifest.contents.has_adminlist">Admin list</li>
+              <li><span x-text="backupDetails.manifest.contents.file_count"></span> file(s) in ZIP</li>
               <li x-show="backupDetails.manifest.contents.world_files?.length">
-                Mundos: <span class="font-mono" x-text="backupDetails.manifest.contents.world_files.join(', ')"></span>
+                Worlds: <span class="font-mono" x-text="backupDetails.manifest.contents.world_files.join(', ')"></span>
               </li>
             </ul>
           </div>
@@ -1617,7 +1617,7 @@
             <a :href="backupDownloadUrl(backupDetails.name)" class="btn btn-sm btn-ghost">Download</a>
             <button @click="closeBackupDetailsModal(); openRestoreModal(backupDetailsTarget)"
                     :disabled="backupDetailsTarget?.is_active"
-                    class="btn btn-sm btn-primary">Restaurar</button>
+                    class="btn btn-sm btn-primary">Restore</button>
           </div>
         </div>
       </template>
@@ -1628,11 +1628,11 @@
   <div class="modal-overlay" x-show="consoleHelpModalOpen" x-transition @keydown.escape.window="closeConsoleHelpModal()" style="display:none">
     <div class="bg-valheim-800 rounded-xl border border-valheim-700 w-full max-w-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto" @click.outside="closeConsoleHelpModal()">
       <div class="flex items-center justify-between">
-        <h3 class="font-display text-base font-semibold text-valheim-gold">Comandos RCON</h3>
+        <h3 class="font-display text-base font-semibold text-valheim-gold">RCON commands</h3>
         <button @click="closeConsoleHelpModal()" class="btn btn-sm btn-ghost">✕</button>
       </div>
-      <p class="text-xs text-gray-500">Clique em um comando para preencher o console. Use <code class="text-valheim-gold-light">list</code> no servidor para ver todos os comandos instalados.</p>
-      <input x-model="consoleHelpSearch" placeholder="Buscar comando..."
+      <p class="text-xs text-gray-500">Click a command to fill the console. Use <code class="text-valheim-gold-light">list</code> on the server to see all installed commands.</p>
+      <input x-model="consoleHelpSearch" placeholder="Search command..."
              class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-4 py-2 text-sm font-mono focus:border-valheim-gold focus:outline-none" />
       <div class="space-y-4">
         <template x-for="group in consoleCommandsByCategory()" :key="group.category">
@@ -1650,10 +1650,10 @@
             </div>
           </div>
         </template>
-        <p x-show="!consoleCommandsByCategory().length" class="text-sm text-gray-500 text-center py-4">Nenhum comando encontrado.</p>
+        <p x-show="!consoleCommandsByCategory().length" class="text-sm text-gray-500 text-center py-4">No commands found.</p>
       </div>
       <p class="text-xs text-gray-600 pt-2 border-t border-valheim-700">
-        Documentação completa:
+        Full documentation:
         <a href="https://github.com/Tristan-dvr/ValheimRcon/blob/master/commands.md" target="_blank" rel="noopener" class="text-valheim-gold-light hover:underline">ValheimRcon no GitHub</a>
       </p>
     </div>

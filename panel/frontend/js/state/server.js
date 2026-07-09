@@ -18,15 +18,15 @@ export const server = {
   maxPlayers: 10,
 
   envFields: [
-    { key: "SERVER_NAME", label: "Nome do Servidor", hint: "Aparece na lista de servidores do jogo." },
-    { key: "SERVER_PUBLIC", label: "Público (true/false)", hint: "true = aparece na lista pública; false = só por conexão direta." },
-    { key: "SERVER_ARGS", label: "Argumentos extra", hint: "Ex.: -crossplay para habilitar crossplay." },
+    { key: "SERVER_NAME", label: "Server Name", hint: "Shown in the in-game server list." },
+    { key: "SERVER_PUBLIC", label: "Public (true/false)", hint: "true = listed publicly; false = direct connection only." },
+    { key: "SERVER_ARGS", label: "Extra arguments", hint: "E.g. -crossplay to enable crossplay." },
   ],
 
   serverLists: [
-    { key: "admin", label: "Administradores (Steam IDs)" },
-    { key: "banned", label: "Banidos (Steam IDs)" },
-    { key: "permitted", label: "Permitidos / whitelist (Steam IDs)" },
+    { key: "admin", label: "Administrators (Steam IDs)" },
+    { key: "banned", label: "Banned (Steam IDs)" },
+    { key: "permitted", label: "Permitted / whitelist (Steam IDs)" },
   ],
 
   async loadServerPage() {
@@ -59,8 +59,8 @@ export const server = {
 
   async applyMemoryLimit() {
     const gb = this.memoryGbForApi();
-    const label = gb ? `${gb} GB` : "Sem limite";
-    if (!confirm(`Definir limite de RAM para ${label}? O container será recriado e jogadores desconectados.`)) return;
+    const label = gb ? `${gb} GB` : "No limit";
+    if (!confirm(`Set RAM limit to ${label}? The container will be recreated and players disconnected.`)) return;
 
     return this.withBusy("applyMemory", async () => {
       try {
@@ -69,7 +69,7 @@ export const server = {
           apply_memory: true,
         });
         if (data.memory_warning) this.toast(data.memory_warning, "error");
-        this.toast(data.message || "Limite aplicado");
+        this.toast(data.message || "Limit applied");
         await this.loadCapacity();
         await this.loadMemoryConfig();
         await this.refreshStatus();
@@ -85,7 +85,7 @@ export const server = {
         this.capacity = { ...this.capacity, ...data };
         this.maxPlayers = data.max_players ?? this.maxPlayers;
         if (data.warning) this.toast(data.warning, "error");
-        this.toast(data.message || "Limite de jogadores salvo");
+        this.toast(data.message || "Player limit saved");
       } catch (e) { this.toast(e.message, "error"); }
     });
   },
@@ -129,7 +129,7 @@ export const server = {
     return this.withBusy(restart ? "saveEnvRestart" : "saveEnv", async () => {
       try {
         await this.api("PUT", "/api/config/env", { values: this.envValues });
-        this.toast("Configurações salvas!");
+        this.toast("Settings saved!");
         if (restart) await this.serverAction("restart");
         await this.loadCapacity();
       } catch (e) { this.toast(e.message, "error"); }
@@ -147,7 +147,7 @@ export const server = {
           await this.api("PUT", `/api/config/serverlists/${k}`, { ids });
           editor?.setContent(text, { markSaved: true });
         }
-        this.toast("Listas salvas! Servidor reiniciado se estava online.");
+        this.toast("Lists saved! Server restarted if it was online.");
       } catch (e) { this.toast(e.message, "error"); }
     });
   },
