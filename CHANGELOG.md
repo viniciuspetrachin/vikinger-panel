@@ -16,6 +16,12 @@ All notable changes to this project will be documented in this file.
 - **Modo dev com hot-reload:** `docker-compose.dev.yml` + `scripts/dev.sh` (uvicorn `--reload` + watcher Tailwind/esbuild). Editar `panel/**` reflete no navegador com F5, sem rebuild.
 - `server/docker-compose.standalone.yml` para rodar só o servidor.
 
+## [2.1.1]
+
+### Changed
+
+- Release automático v2.1.1.
+
 ## [Unreleased]
 
 ### Added
