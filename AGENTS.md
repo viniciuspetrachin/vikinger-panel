@@ -58,3 +58,22 @@ No modo de produção o painel serve arquivos embarcados na imagem; F5 não bast
 
 - Bundles em `panel/static/*.bundle.js` — gerados por `npm run build`, edite `panel/frontend/`
 - `config/` e `data/` — dados de runtime do jogo (gitignored)
+
+## Cursor Cloud specific instructions
+
+Ambiente/dev do painel (`panel/`): Python 3.12 + Node 22 já disponíveis. As deps são
+instaladas pelo update script (venv em `panel/.venv`, `npm install`, browser do Playwright).
+
+- **Não há Docker daemon na VM.** `scripts/dev.sh` e `scripts/reload-panel.sh` dependem de
+  `docker compose` e **não funcionam** aqui. Para desenvolver, rode o backend direto:
+  `panel/.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8080 --reload` (a partir de `panel/`).
+- **Testes não precisam de Docker nem do servidor Valheim:** os unitários mockam `docker`/`docker_compose`
+  e os E2E injetam um executável `docker` falso. Rode com o venv: `panel/.venv/bin/pytest tests/unit`
+  e `panel/.venv/bin/pytest tests/e2e` (E2E leva ~1 min; exige o browser do Playwright já instalado).
+- **Rodar o painel de verdade sem Docker:** aponte `VALHEIM_PANEL_ROOT` para uma árvore semeada
+  (`config/`, `data/`, `.env`, `docker-compose.yml`) e coloque um `docker` falso no `PATH` — igual ao
+  `panel/tests/e2e/conftest.py` (`_seed_root` + `FAKE_DOCKER`). Use `VIKINGER_TEST_RCON=1` para dispensar RCON.
+  Sem isso, ações que chamam `docker` retornam erro (não há daemon).
+- Salvar em **Servidor → Salvar Configurações** dispara um recarregamento completo da SPA
+  (overlay de loading) — comportamento normal, não é bug.
+- Os bundles em `panel/static/` são determinísticos: `npm run build` reproduz os arquivos já commitados.
