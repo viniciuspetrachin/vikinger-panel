@@ -6,12 +6,17 @@ import time
 import pytest
 from playwright.sync_api import Page, expect
 
+from helpers import go_worlds, ready_panel
+
 pytestmark = pytest.mark.e2e
 
 
 def _boot(page: Page, base_url: str) -> None:
-    page.goto(base_url)
-    page.wait_for_selector("[x-cloak]", state="detached")
+    ready_panel(page, base_url)
+
+
+def _go_worlds(page: Page) -> None:
+    go_worlds(page)
 
 
 def test_dashboard_live_console(page: Page, base_url: str) -> None:
@@ -33,8 +38,16 @@ def test_dashboard_console_preserves_scroll(page: Page, base_url: str) -> None:
         "() => { const el = document.querySelector('[x-ref=\"dashConsole\"]'); return el && el.scrollHeight > el.clientHeight + 10; }",
         timeout=8000,
     )
+    logs_get = lambda r: "/api/logs" in r.url and r.request.method == "GET"  # noqa: E731
+    # Drena refresh em voo (captura scroll antigo e restaura no fim após o await da API).
+    with page.expect_response(logs_get, timeout=8000):
+        pass
+    page.wait_for_timeout(400)
     page.evaluate("() => { const el = document.querySelector('[x-ref=\"dashConsole\"]'); if (el) el.scrollTop = 0; }")
-    page.wait_for_timeout(5500)
+    # Próximo poll (5s) deve preservar scroll no topo, não auto-rolar para o fim.
+    with page.expect_response(logs_get, timeout=8000):
+        page.wait_for_timeout(6000)
+    page.wait_for_timeout(400)
     scroll_top = page.evaluate("() => document.querySelector('[x-ref=\"dashConsole\"]')?.scrollTop ?? -1")
     scroll_max = page.evaluate(
         "() => { const el = document.querySelector('[x-ref=\"dashConsole\"]'); return el ? el.scrollHeight - el.clientHeight : 0; }"
@@ -59,14 +72,15 @@ def test_logs_tab_no_supervisord_prefix(page: Page, base_url: str) -> None:
 def test_loading_disables_button(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     btn = page.get_by_role("button", name="↻ Reiniciar", exact=True)
+    expect(btn).to_be_enabled(timeout=5000)
     btn.click()
     page.wait_for_function(
-        "() => document.querySelector('[x-data]')._x_dataStack[0].actionPending === 'server:restart'",
+        "() => document.querySelector('body')._x_dataStack[0].actionPending === 'server:restart'",
         timeout=8000,
     )
     page.wait_for_function(
-        "() => !document.querySelector('[x-data]')._x_dataStack[0].actionPending",
-        timeout=8000,
+        "() => !document.querySelector('body')._x_dataStack[0].actionPending",
+        timeout=12000,
     )
 
 
@@ -83,6 +97,7 @@ def test_double_click_prevented(page: Page, base_url: str) -> None:
 
     page.route("**/api/server/start", handle)
     btn = page.get_by_role("button", name="▶ Iniciar", exact=True)
+    expect(btn).to_be_enabled(timeout=5000)
     btn.click()
     btn.click()
     page.wait_for_timeout(800)
@@ -166,7 +181,9 @@ def test_backup_dashboard_button_opens_modal(page: Page, base_url: str) -> None:
 
 def test_audit_records_action(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    page.get_by_role("button", name="↻ Reiniciar", exact=True).click()
+    btn = page.get_by_role("button", name="↻ Reiniciar", exact=True)
+    expect(btn).to_be_enabled(timeout=5000)
+    btn.click()
     page.wait_for_timeout(3500)  # aguarda ação concluir e ser registrada
 
     page.get_by_role("button", name="Auditoria", exact=True).click()
@@ -226,7 +243,7 @@ def test_file_editor_undo(page: Page, base_url: str) -> None:
 
 def test_world_config_open_from_list(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    page.get_by_role("button", name="Mundos", exact=True).click()
+    _go_worlds(page)
     expect(page.get_by_role("button", name="Salvar configurações", exact=True)).to_be_visible(timeout=8000)
     world_row = page.locator(".bg-valheim-800.rounded-xl.p-5").filter(
         has=page.locator("p.font-medium", has_text="TestWorld")
@@ -245,7 +262,7 @@ def test_world_config_open_from_list(page: Page, base_url: str) -> None:
 
 def test_world_config_after_create(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    page.get_by_role("button", name="Mundos", exact=True).click()
+    _go_worlds(page)
     expect(page.get_by_text("Valores efetivos")).to_be_visible(timeout=10000)
     world_name = "E2eCfgWorld"
     page.locator("input[x-model='newWorldName']").fill(world_name)
@@ -267,7 +284,7 @@ def test_world_config_after_create(page: Page, base_url: str) -> None:
 
 def test_world_config_panel(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    page.get_by_role("button", name="Mundos", exact=True).click()
+    _go_worlds(page)
     expect(page.get_by_text("Configurações do Mundo")).to_be_visible()
     expect(page.get_by_text("Valores efetivos")).to_be_visible()
     expect(page.get_by_text("Preset do mundo")).to_be_visible()

@@ -75,6 +75,30 @@ docker compose up -d --build
 
 Abra **http://localhost:8080** (ou a porta definida em `PANEL_PORT`).
 
+### Instalação sem código-fonte (usuário final)
+
+Para quem só quer rodar o servidor, sem clonar o repositório, baixe o pacote ZIP em
+**[GitHub Releases](https://github.com/viniciuspetrachin/vikinger-panel/releases)**.
+O pacote inclui a imagem Docker pré-construída e um guia passo a passo (`README-INSTALL.md`).
+
+---
+
+## CI/CD e releases
+
+Cada merge na branch `main` dispara automaticamente:
+
+1. **Testes** (unitários + E2E com Playwright)
+2. **Versionamento** — incremento automático do patch (`2.1.0` → `2.1.1`; major/minor só mudam se você editar manualmente em `panel/version.py`)
+3. **Git tag** `vX.Y.Z` e **GitHub Release** com:
+   - ZIP pronto para leigos (sem código-fonte)
+   - Arquivo `.tar` da imagem Docker
+4. **Imagem no GHCR:** `ghcr.io/viniciuspetrachin/vikinger-panel:X.Y.Z`
+
+Pull requests para `main` rodam os mesmos testes via GitHub Actions. Configure **branch protection**
+no repositório para exigir o check `test` antes do merge — veja [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
 ### Variáveis importantes
 
 | Variável | Descrição |
