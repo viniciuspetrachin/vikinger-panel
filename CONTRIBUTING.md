@@ -75,6 +75,43 @@ reconstrua o container — **F5 no navegador não basta**:
 - Novas rotas: teste unitário em `tests/unit/test_api.py`
 - Novos fluxos de UI: teste E2E em `tests/e2e/test_features.py`
 
+## CI/CD e branch protection
+
+### Workflows (GitHub Actions)
+
+| Workflow | Trigger | O que faz |
+|----------|---------|-----------|
+| `ci.yml` | PR e push em `main` | Roda `pytest tests/unit` e `pytest tests/e2e` |
+| `release.yml` | Push em `main` (exceto `[skip ci]`) | Testes → bump patch → build Docker → GHCR → ZIP → tag → GitHub Release |
+
+### Versionamento automático
+
+- Fonte da verdade: `panel/version.py` (`__version__`)
+- A cada release na `main`, o patch sobe automaticamente (`2.1.0` → `2.1.1`)
+- Para mudar major ou minor, edite `__version__` manualmente no commit desejado; o patch continua automático depois
+- O commit de release do bot usa `[skip ci]` para não disparar outro release em loop
+
+### Proteção da branch `main` (configuração no GitHub)
+
+Para garantir que nenhum código entre na `main` sem testes:
+
+1. Vá em **Settings → Branches → Add branch protection rule**
+2. Branch name pattern: `main`
+3. Marque **Require status checks to pass before merging**
+4. Selecione o check **`test`** (job do workflow `CI`)
+5. (Recomendado) **Require a pull request before merging**
+
+### Pacote de release para usuários finais
+
+O workflow `release.yml` gera um ZIP sem código-fonte em [GitHub Releases](https://github.com/viniciuspetrachin/vikinger-panel/releases), com:
+
+- Imagem Docker pré-construída (`.tar` + publicação no GHCR)
+- `docker-compose.yml` sem `build:`
+- Scripts `start.sh` e `reload-panel.sh`
+- `README-INSTALL.md` com instruções para leigos
+
+Templates em `release/`; montagem via `scripts/assemble-release.sh`.
+
 ## O que evitar
 
 - Commits com segredos (`.env`, senhas, tokens)

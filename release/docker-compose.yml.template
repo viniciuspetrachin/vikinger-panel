@@ -1,0 +1,46 @@
+# Vikinger Panel — distribuição sem código-fonte (release {{VERSION}})
+# Imagem pré-construída: ghcr.io/{{GHCR_OWNER}}/vikinger-panel:{{VERSION}}
+
+services:
+  valheim:
+    image: lloesche/valheim-server:latest
+    container_name: valheim-server
+    restart: unless-stopped
+    cap_add:
+      - sys_nice
+    stop_grace_period: 120s
+    ports:
+      - "2456-2458:2456-2458/udp"
+    volumes:
+      - ${HOST_PROJECT_DIR:-.}/config:/config
+      - ${HOST_PROJECT_DIR:-.}/data:/opt/valheim
+    env_file:
+      - .env
+    environment:
+      BEPINEX: "true"
+      SERVER_PORT: "2456"
+      TZ: America/Sao_Paulo
+      PUID: "1000"
+      PGID: "1000"
+
+  panel:
+    image: ghcr.io/{{GHCR_OWNER}}/vikinger-panel:{{VERSION}}
+    container_name: vikinger-panel
+    restart: unless-stopped
+    group_add:
+      - "${DOCKER_GID:-999}"
+    ports:
+      - "${PANEL_PORT:-8080}:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${HOST_PROJECT_DIR:-.}:${HOST_PROJECT_DIR:-.}
+    environment:
+      VALHEIM_PANEL_ROOT: ${HOST_PROJECT_DIR:-.}
+      PANEL_UID: "1000"
+      PANEL_GID: "1000"
+      DOCKER_GID: "${DOCKER_GID:-999}"
+      PANEL_BUILD_DATE: "{{BUILD_DATE}}"
+      PANEL_GIT_COMMIT: "{{GIT_COMMIT}}"
+    working_dir: /app
+    depends_on:
+      - valheim
