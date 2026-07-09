@@ -277,6 +277,80 @@
     padding: 1rem;
   }
 
+  /* ── File tree (Finder-style) ── */
+  .file-tree-panel { min-height: 320px; }
+  .file-tree-scroll { font-size: 0.8125rem; }
+  .file-tree-empty {
+    padding: 1.5rem 0.75rem;
+    text-align: center;
+    color: #6b7280;
+    font-size: 0.75rem;
+  }
+  .file-tree-row {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    width: 100%;
+    padding: 0.3125rem 0.5rem 0.3125rem calc(0.5rem + var(--file-depth, 0px));
+    border: none;
+    border-radius: 0.375rem;
+    background: transparent;
+    color: #d1d5db;
+    text-align: left;
+    cursor: default;
+    line-height: 1.25;
+    transition: background 0.12s ease;
+  }
+  button.file-tree-row { cursor: pointer; }
+  button.file-tree-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .file-tree-row--selected {
+    background: rgba(201, 162, 39, 0.18) !important;
+    color: #f3e8c8;
+  }
+  .file-tree-row--selected .file-tree-icon-folder { color: #e8c547; }
+  .file-tree-chevron {
+    flex: 0 0 1rem;
+    width: 1rem;
+    height: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    transition: transform 0.15s ease;
+  }
+  .file-tree-chevron.is-expanded { transform: rotate(90deg); }
+  .file-tree-chevron-spacer { visibility: hidden; }
+  .file-tree-chevron-svg { width: 0.75rem; height: 0.75rem; }
+  .file-tree-icon {
+    flex: 0 0 1rem;
+    width: 1rem;
+    height: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .file-tree-svg { width: 0.875rem; height: 0.875rem; }
+  .file-tree-icon-folder { color: #60a5fa; }
+  .file-tree-icon-file { color: #9ca3af; }
+  .file-tree-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .file-tree-meta {
+    flex: 0 0 auto;
+    font-size: 0.6875rem;
+    color: #6b7280;
+    font-variant-numeric: tabular-nums;
+    margin-left: 0.5rem;
+  }
+  .file-tree-children { display: block; }
+  .file-tree-broken { opacity: 0.85; cursor: default; }
+
   /* ── Editor ── */
   .file-btn { width: 100%; justify-content: flex-start; text-align: left; }
   .cm-editor { border: 1px solid #2a3d35; border-radius: 0.5rem; overflow: hidden; }

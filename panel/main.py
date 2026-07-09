@@ -324,8 +324,8 @@ def recreate_container() -> subprocess.CompletedProcess:
 
 
 def _allowed_path_roots() -> tuple[Path, ...]:
-    """Raízes permitidas após resolve() — inclui config/data symlinkados fora de ROOT."""
-    roots: list[Path] = [ROOT.resolve()]
+    """Raízes permitidas para a API de arquivos — só config/ e data/ (symlinks incluídos)."""
+    roots: list[Path] = []
     for d in (CONFIG_DIR, DATA_DIR):
         try:
             if d.exists() or d.is_symlink():
@@ -356,6 +356,9 @@ def safe_path(relative: str) -> Path:
     rel = relative.lstrip("/").replace("\\", "/")
     if ".." in rel.split("/"):
         raise HTTPException(400, "Caminho inválido")
+    top = rel.split("/")[0] if rel else ""
+    if top not in ("config", "data"):
+        raise HTTPException(403, "Acesso negado")
     logical = ROOT / rel if rel else ROOT
     if not _path_is_under(logical, ROOT):
         raise HTTPException(403, "Acesso negado")
@@ -3698,11 +3701,12 @@ def api_delete_world(name: str):
 def api_file_tree(scope: str = "config"):
     scopes = {
         "config": CONFIG_DIR,
-        "data": ROOT / "data",
-        "root": ROOT,
+        "data": DATA_DIR,
     }
-    base = scopes.get(scope, CONFIG_DIR)
-    rel_prefix = {"config": "config", "data": "data", "root": ""}[scope]
+    if scope not in scopes:
+        raise HTTPException(400, "Escopo inválido — use config ou data")
+    base = scopes[scope]
+    rel_prefix = scope
     return {"tree": file_tree(base, rel_prefix)}
 
 

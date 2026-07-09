@@ -1143,20 +1143,25 @@
         <!-- FILES -->
         <section x-show="page === 'files'" class="space-y-4">
           <div class="flex gap-3 mb-4">
-            <template x-for="s in ['config', 'data', 'root']" :key="s">
-              <button @click="fileScope = s; loadFileTree()"
+            <template x-for="s in fileScopes" :key="s.id">
+              <button @click="fileScope = s.id; loadFileTree()"
                       class="btn-tab flex items-center gap-2"
-                      :class="fileScope === s && 'btn-tab-active'"
-                      :disabled="isBusy('fileScope:' + s)">
-                <span x-show="actionPending === ('fileScope:' + s)" class="spinner"></span>
-                <span x-show="actionPending !== ('fileScope:' + s)" x-text="s"></span>
-                <span x-show="actionPending === ('fileScope:' + s)">Carregando...</span>
+                      :class="fileScope === s.id && 'btn-tab-active'"
+                      :disabled="isBusy('fileScope:' + s.id)">
+                <span x-show="actionPending === ('fileScope:' + s.id)" class="spinner"></span>
+                <span x-show="actionPending !== ('fileScope:' + s.id)" x-text="s.label"></span>
+                <span x-show="actionPending === ('fileScope:' + s.id)">Carregando...</span>
               </button>
             </template>
           </div>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-4 max-h-[500px] overflow-y-auto" @click="onFileClick($event)">
-              <div x-html="renderTree(fileTree)"></div>
+            <div class="file-tree-panel bg-valheim-800 rounded-xl border border-valheim-700 overflow-hidden flex flex-col max-h-[560px]">
+              <div class="file-tree-header px-3 py-2 border-b border-valheim-700 text-xs font-medium text-gray-400 uppercase tracking-wide">
+                Navegador
+              </div>
+              <div class="file-tree-scroll flex-1 overflow-y-auto p-1" @click="onFileTreeClick($event)">
+                <div x-html="renderTree(fileTree, 0, fileExpandedPaths, editPath)"></div>
+              </div>
             </div>
             <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-4">
               <div x-show="!editPath" class="text-gray-500 text-sm text-center py-12">Selecione um arquivo para editar</div>

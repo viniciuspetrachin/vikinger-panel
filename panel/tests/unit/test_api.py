@@ -1085,6 +1085,11 @@ def test_file_tree(client):
     assert isinstance(r.json()["tree"], list)
 
 
+def test_file_tree_root_scope_rejected(client):
+    r = client.get("/api/files/tree?scope=root")
+    assert r.status_code == 400
+
+
 def test_file_read_write(client):
     client.put("/api/files/write?path=config/note.txt", json={"content": "hello"})
     r = client.get("/api/files/read?path=config/note.txt")

@@ -82,7 +82,7 @@ function panel() {
       if (this.page === "worlds") await this.loadWorldsPage();
       if (this.page === "backups") await this.loadBackups();
       if (this.page === "files") {
-        await this.loadFileTree();
+        await this._fetchFileTree();
         this.$nextTick(() => {
           if (this.editPath && this.editContent) this.mountFileEditor(this.editContent);
         });

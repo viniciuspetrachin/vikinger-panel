@@ -181,12 +181,18 @@ def test_logs_auto_refresh_default_on(page: Page, base_url: str) -> None:
     expect(checkbox).to_be_checked()
 
 
+def _open_sample_mod_cfg(page: Page) -> None:
+    page.wait_for_selector('.file-tree-folder[data-path="config/bepinex"]', timeout=10000)
+    page.locator('.file-tree-folder[data-path="config/bepinex"]').click()
+    page.wait_for_selector('.file-tree-file[data-path="config/bepinex/sample.mod.cfg"]', timeout=5000)
+    page.locator('.file-tree-file[data-path="config/bepinex/sample.mod.cfg"]').click()
+
+
 def test_file_editor_codemirror(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     page.wait_for_function("() => typeof window.PanelEditor !== 'undefined'", timeout=20000)
     page.get_by_role("button", name="Arquivos", exact=True).click()
-    page.wait_for_selector(".file-btn", timeout=10000)
-    page.locator('.file-btn[data-path*="sample.mod.cfg"]').click()
+    _open_sample_mod_cfg(page)
     page.wait_for_function(
         "() => document.querySelector('[x-data]')._x_dataStack[0].editPath && document.querySelector('.cm-editor')",
         timeout=25000,
@@ -202,8 +208,7 @@ def test_file_editor_undo(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     page.wait_for_function("() => typeof window.PanelEditor !== 'undefined'", timeout=20000)
     page.get_by_role("button", name="Arquivos", exact=True).click()
-    page.wait_for_selector(".file-btn", timeout=10000)
-    page.locator('.file-btn[data-path*="sample.mod.cfg"]').click()
+    _open_sample_mod_cfg(page)
     page.wait_for_function(
         "() => document.querySelector('.cm-editor')",
         timeout=25000,

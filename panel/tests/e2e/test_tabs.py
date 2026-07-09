@@ -71,7 +71,7 @@ def test_files_all_scopes(page: Page, base_url: str) -> None:
     page.wait_for_selector("[x-cloak]", state="detached")
     goto_tab(page, "Arquivos")
 
-    for scope in ("config", "data", "root"):
+    for scope in ("Config", "Data"):
         page.get_by_role("button", name=scope, exact=True).click()
         page.wait_for_timeout(400)
         assert_no_error_toast(page)
