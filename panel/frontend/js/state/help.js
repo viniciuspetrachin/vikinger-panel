@@ -61,6 +61,16 @@ export const help = {
         { q: "How do I back up right now?", a: "Click <b>Create manual backup</b> and choose the type: Active world (quick), Full, or Configs only." },
         { q: "How do I restore a backup?", a: "In the backup list, click <b>Restore to here</b> on the desired point. The panel creates a checkpoint, restores files, and restarts the server. Use <b>Restore to latest</b> or <b>Undo last restore</b> to go back." },
         { q: "What is Run scheduled now?", a: "Manually triggers the same backup job that runs on the configured interval — different from <b>Create manual backup</b>, which lets you choose scope (world, full, or configs)." },
+        { q: "Can I limit how much disk backups use?", a: "Yes. On the <b>Server</b> tab, under <b>Backup disk usage</b>, enable the limit and set a maximum size in GB. When exceeded, the oldest backups are deleted first (disabled by default)." },
+        { q: "What does Clear all backups now do?", a: "On the <b>Server</b> tab, this irreversibly deletes every backup ZIP in <code>config/backups/</code>, except backups tied to an active restore or undo checkpoint." },
+      ],
+    },
+    {
+      id: "files",
+      label: "Files",
+      items: [
+        { q: "How do I find a specific file quickly?", a: "On the <b>Files</b> tab, use the search box to filter by file name. Matching files appear in a flat list for fast access." },
+        { q: "What are the file type filters?", a: "Click chips such as <b>Config</b>, <b>DLLs</b>, <b>Plugins</b>, or <b>Worlds</b> to narrow the tree to common file types — useful when you only need to edit a few configs or mod files." },
       ],
     },
     {

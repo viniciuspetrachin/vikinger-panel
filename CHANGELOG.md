@@ -32,6 +32,8 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Files tab:** search by file name with type filter chips (Config, DLLs, Plugins, Worlds, Lists, Backups, Logs).
+- **Server tab:** optional backup disk usage limit with automatic pruning of oldest ZIPs; **Clear all backups now** action (irreversible, preserves restore checkpoints).
 - Aba **Mods**: bloco **Atualizações do jogo** com modo vanilla/modded (BepInEx), auto-update, intervalo cron, verificação manual e aviso sobre compatibilidade de mods.
 - API `/api/updates/*` para config, status e trigger do `valheim-updater`.
 - Registro Thunderstore (`panel-data/mods-registry.json`) e endpoints por mod: vincular, buscar e aplicar atualizações.

@@ -494,6 +494,60 @@
             </div>
           </div>
 
+          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4">
+            <div>
+              <h3 class="font-display text-sm font-semibold text-valheim-gold">Backup disk usage</h3>
+              <p class="text-xs text-gray-500 mt-1">
+                Optional cap on <code class="text-gray-400">config/backups/</code> ZIP files.
+                When enabled, oldest backups are deleted first when the limit is exceeded.
+                Disabled by default — backups grow until disk space runs out.
+              </p>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <label class="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" x-model="backupStorageLimit.enabled" class="rounded border-valheim-600" />
+                Limit backup disk usage
+              </label>
+              <span class="text-xs text-gray-500" x-text="formatBytes(backupStorageStatus().used_bytes) + ' used'"></span>
+            </div>
+
+            <div x-show="backupStorageLimit.enabled" class="space-y-3">
+              <div class="flex flex-wrap items-end gap-3">
+                <div>
+                  <label class="block text-xs text-gray-500 mb-1">Maximum size (GB)</label>
+                  <input type="number" min="0.1" step="0.5" x-model.number="backupStorageLimit.max_gb"
+                         class="w-32 bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none" />
+                </div>
+                <button @click="saveBackupStorageLimit()" :disabled="isBusy('saveBackupStorageLimit')" class="btn btn-primary">
+                  <span x-show="actionPending === 'saveBackupStorageLimit'" class="spinner"></span>
+                  <span x-show="actionPending !== 'saveBackupStorageLimit'">Save limit</span>
+                  <span x-show="actionPending === 'saveBackupStorageLimit'">Saving...</span>
+                </button>
+              </div>
+              <div x-show="backupStorageStatus().max_bytes" class="space-y-1">
+                <div class="flex justify-between text-xs text-gray-500">
+                  <span x-text="formatBytes(backupStorageStatus().used_bytes)"></span>
+                  <span x-text="formatBytes(backupStorageStatus().max_bytes)"></span>
+                </div>
+                <div class="h-2 rounded-full bg-valheim-900 overflow-hidden">
+                  <div class="h-full rounded-full transition-all"
+                       :class="backupStorageBarClass()"
+                       :style="'width:' + Math.min(backupStoragePct() || 0, 100) + '%'"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-valheim-700/80">
+              <button type="button" @click="openPurgeAllBackupsModal()" class="btn btn-danger btn-sm">
+                Clear all backups now
+              </button>
+              <p class="text-xs text-gray-600 mt-2">
+                Irreversible — deletes every backup ZIP except those tied to an active restore or undo checkpoint.
+              </p>
+            </div>
+          </div>
+
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4"
                :class="[!bepinexEnabled && 'border-valheim-gold/30']">
             <h3 class="font-display text-sm font-semibold text-valheim-gold">Player Lists</h3>
@@ -1154,13 +1208,46 @@
               </button>
             </template>
           </div>
+          <div class="file-search-bar bg-valheim-800 rounded-xl border border-valheim-700 p-3 space-y-3">
+            <div class="flex flex-col sm:flex-row gap-2">
+              <input type="search" x-model="fileSearchQuery" @input="syncFileSearchExpansion()"
+                     placeholder="Search by file name..."
+                     class="flex-1 bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none" />
+              <p class="text-xs text-gray-500 self-center whitespace-nowrap" x-show="fileSearchActive()">
+                <span x-text="fileSearchMatchCount()"></span>
+                <span x-text="fileSearchMatchCount() === 1 ? ' match' : ' matches'"></span>
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <template x-for="f in fileTypeFilters" :key="f.id || 'all'">
+                <button type="button" @click="setFileTypeFilter(f.id)"
+                        class="btn-tab btn-tab-sm"
+                        :class="fileTypeFilter === f.id && 'btn-tab-active'"
+                        x-text="f.label"></button>
+              </template>
+            </div>
+          </div>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div class="file-tree-panel bg-valheim-800 rounded-xl border border-valheim-700 overflow-hidden flex flex-col max-h-[560px]">
               <div class="file-tree-header px-3 py-2 border-b border-valheim-700 text-xs font-medium text-gray-400 uppercase tracking-wide">
                 Browser
               </div>
               <div class="file-tree-scroll flex-1 overflow-y-auto p-1" @click="onFileTreeClick($event)">
-                <div x-html="renderTree(fileTree, 0, fileExpandedPaths, editPath)"></div>
+                <div x-show="!fileSearchActive()" x-html="renderTree(fileTree, 0, fileExpandedPaths, editPath)"></div>
+                <div x-show="fileSearchActive() && flatFileMatches().length" class="file-flat-list">
+                  <template x-for="item in flatFileMatches()" :key="item.path">
+                    <button type="button" class="file-tree-row file-tree-file"
+                            :class="editPath === item.path && 'file-tree-row--selected'"
+                            :data-path="item.path" @click="editFile(item.path)">
+                      <span class="file-tree-chevron file-tree-chevron-spacer"></span>
+                      <span class="file-tree-name font-mono text-xs" x-text="item.path"></span>
+                      <span class="file-tree-meta" x-text="formatSize(item.size)"></span>
+                    </button>
+                  </template>
+                </div>
+                <div x-show="fileSearchActive() && !flatFileMatches().length">
+                  <p class="file-tree-empty">No matches</p>
+                </div>
               </div>
             </div>
             <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-4">
@@ -1543,6 +1630,31 @@
           <span x-show="deleteBackupTarget && actionPending === ('deleteBackup:' + deleteBackupTarget.name)" class="spinner"></span>
           <span x-show="!deleteBackupTarget || actionPending !== ('deleteBackup:' + deleteBackupTarget.name)">Delete</span>
           <span x-show="deleteBackupTarget && actionPending === ('deleteBackup:' + deleteBackupTarget.name)">Deleting...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Purge All Backups Modal -->
+  <div class="modal-overlay" x-show="purgeAllBackupsModalOpen" x-transition @keydown.escape.window="closePurgeAllBackupsModal()" style="display:none">
+    <div class="bg-valheim-800 rounded-xl border border-red-800/50 w-full max-w-md p-6 space-y-4" @click.outside="closePurgeAllBackupsModal()">
+      <div class="flex items-center justify-between">
+        <h3 class="font-display text-base font-semibold text-red-400">Clear all backups</h3>
+        <button @click="closePurgeAllBackupsModal()" class="btn btn-sm btn-ghost">✕</button>
+      </div>
+      <p class="text-sm text-gray-300">
+        This action is <strong>irreversible</strong>. Every backup ZIP in
+        <code class="text-gray-400">config/backups/</code> will be deleted.
+      </p>
+      <p class="text-xs text-amber-200/90 rounded-lg border border-amber-600/30 bg-amber-950/20 px-3 py-2">
+        Backups linked to an active restore or undo checkpoint are preserved.
+      </p>
+      <div class="flex gap-3 pt-2">
+        <button @click="closePurgeAllBackupsModal()" class="btn btn-ghost flex-1">Cancel</button>
+        <button @click="confirmPurgeAllBackups()" :disabled="isBusy('purgeAllBackups')" class="btn btn-ghost-danger flex-1">
+          <span x-show="actionPending === 'purgeAllBackups'" class="spinner"></span>
+          <span x-show="actionPending !== 'purgeAllBackups'">Delete all</span>
+          <span x-show="actionPending === 'purgeAllBackups'">Deleting...</span>
         </button>
       </div>
     </div>

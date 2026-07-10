@@ -81,6 +81,8 @@ def env_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "SETUP_FILE", panel_data / "setup.json")
     monkeypatch.setattr(main, "APP_MANIFEST_PATH", data / "dl" / "server" / "steamapps" / "appmanifest_896660.acf")
 
+    main.configure_storage_limits()
+
     monkeypatch.setattr(main, "container_running", lambda: True)
     monkeypatch.setattr(main, "get_container_world_name", lambda: "TestWorld")
     monkeypatch.setattr(main, "supervisor_status", lambda: {"valheim-server": "RUNNING"})
@@ -163,6 +165,8 @@ def fresh_env_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "SETUP_FILE", panel_data / "setup.json")
     monkeypatch.setattr(main, "APP_MANIFEST_PATH", data / "dl" / "server" / "steamapps" / "appmanifest_896660.acf")
 
+    main.configure_storage_limits()
+
     monkeypatch.setattr(main, "container_running", lambda: False)
     monkeypatch.setattr(main, "get_container_world_name", lambda: None)
     monkeypatch.setattr(main, "supervisor_status", lambda: {"valheim-server": "STOPPED"})
@@ -180,11 +184,13 @@ def fresh_env_dir(tmp_path, monkeypatch):
 
 @pytest.fixture
 def fresh_client(fresh_env_dir):
+    main.configure_storage_limits()
     with TestClient(main.app) as c:
         yield c
 
 
 @pytest.fixture
 def client(env_dir):
+    main.configure_storage_limits()
     with TestClient(main.app) as c:
         yield c

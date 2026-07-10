@@ -38,6 +38,7 @@ from rcon_client import (
     is_protected_mod,
 )
 from version import __version__, version_info
+import storage_limits
 
 logger = logging.getLogger("vikinger-panel")
 logging.basicConfig(level=logging.INFO)
@@ -123,6 +124,7 @@ def ensure_panel_data_dirs() -> None:
 @app.on_event("startup")
 def _on_startup() -> None:
     ensure_panel_data_dirs()
+    configure_storage_limits()
     try:
         copied = ensure_bundled_mods(
             bundled_dir=BUNDLED_MODS_DIR,
@@ -146,6 +148,48 @@ async def unhandled_exception_handler(_request: Request, exc: Exception):
         return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
     logger.exception("Erro não tratado: %s", exc)
     return JSONResponse(status_code=500, content={"detail": str(exc)})
+
+
+def configure_storage_limits() -> None:
+    storage_limits.configure(
+        limits_file=PANEL_DATA_DIR / "storage_limits.json",
+        backups_dir=BACKUPS_DIR,
+        fwl_backup_dir=FWL_BACKUP_DIR,
+        logs_dir=LOGS_DIR,
+        audit_file=AUDIT_FILE,
+        get_protected_backups=get_protected_backups,
+        write_audit=write_audit,
+        dir_size_bytes=dir_size_bytes,
+    )
+
+
+def get_protected_backups() -> set[str]:
+    state = read_backup_state()
+    protected = set()
+    for key in ("active", "undo"):
+        name = state.get(key)
+        if name:
+            protected.add(name)
+    return protected
+
+
+def get_storage_monitor_usage() -> dict:
+    return {
+        "game": {"used_bytes": dir_size_bytes(DATA_DIR / "dl"), "label": "game"},
+        "mods": {
+            "used_bytes": dir_size_bytes(PLUGINS_DIR) + dir_size_bytes(RUNTIME_PLUGINS_DIR),
+            "label": "mods",
+        },
+        "worlds": {"used_bytes": dir_size_bytes(WORLDS_DIR), "label": "worlds"},
+    }
+
+
+def run_backup_retention() -> None:
+    purge_old_backups()
+    max_count = int(backup_config().get("BACKUPS_MAX_COUNT", "0") or "0")
+    if max_count > 0:
+        _purge_backups_by_count(max_count)
+    storage_limits.enforce_storage_limit("backups")
 
 
 # ── Audit log ────────────────────────────────────────────────────────────────
@@ -2243,6 +2287,30 @@ def purge_old_backups(max_age_days: int | None = None) -> list[str]:
     return deleted
 
 
+def _purge_backups_by_count(max_count: int) -> list[str]:
+    if max_count <= 0 or not BACKUPS_DIR.exists():
+        return []
+    protected = get_protected_backups()
+    zips: list[tuple[float, Path]] = []
+    for item in BACKUPS_DIR.iterdir():
+        if not item.is_file() or not item.name.endswith(".zip"):
+            continue
+        if item.name in protected:
+            continue
+        try:
+            zips.append((item.stat().st_mtime, item))
+        except OSError:
+            continue
+    zips.sort(key=lambda x: x[0], reverse=True)
+    if len(zips) <= max_count:
+        return []
+    deleted = []
+    for _, path in zips[max_count:]:
+        if storage_limits.delete_backup_zip(path) > 0:
+            deleted.append(path.name)
+    return deleted
+
+
 def trigger_backup() -> str:
     if not container_running():
         raise HTTPException(400, "Container is not running")
@@ -2333,6 +2401,7 @@ def create_manual_backup(backup_type: str) -> str:
             pass
         raise HTTPException(400, "Nothing to include in the backup")
     attach_backup_manifest(out, f"manual-{backup_type}")
+    run_backup_retention()
     return name
 
 
@@ -2954,6 +3023,20 @@ class BackupCreate(BaseModel):
     type: str
 
 
+class StorageLimitsUpdate(BaseModel):
+    backups: Optional[dict] = None
+    fwl_backups: Optional[dict] = None
+    logs: Optional[dict] = None
+
+
+class StorageEnforceRequest(BaseModel):
+    category: Optional[str] = None
+
+
+class PurgeAllBackupsRequest(BaseModel):
+    confirm: bool = False
+
+
 class ModToggle(BaseModel):
     enabled: bool
 
@@ -3073,7 +3156,7 @@ def api_metrics(light: bool = Query(False)):
             "unlimited": compose_limit_gb is None and raw["memory_limit_bytes"] == memory_limit_bytes,
             "percent": round(memory_pct, 1),
         },
-        "disk": disk,
+        "disk": {**disk, "limits": storage_limits.disk_limits_summary()},
         "network": {
             "rx_bytes_total": raw["net_rx_bytes"],
             "tx_bytes_total": raw["net_tx_bytes"],
@@ -3920,7 +4003,7 @@ def api_setup_complete(body: SetupComplete):
 
 @app.get("/api/backups")
 def api_list_backups():
-    purge_old_backups()
+    run_backup_retention()
     return {"backups": list_backups(), "config": backup_config(), "state": read_backup_state()}
 
 
@@ -3940,7 +4023,7 @@ def api_put_backup_config(body: BackupConfigUpdate):
         except ValueError as e:
             raise HTTPException(400, "BACKUPS_MAX_AGE must be a number >= 1") from e
     write_env(allowed)
-    purge_old_backups()
+    run_backup_retention()
     if container_exists():
         r = restart_valheim_container()
         if r.returncode != 0:
@@ -3954,6 +4037,7 @@ def api_trigger_backup():
     output = trigger_backup()
     time.sleep(3)
     manifested = finalize_recent_auto_backup_manifests(before_mtime)
+    run_backup_retention()
     return {
         "ok": True,
         "message": "Backup requested",
@@ -4026,6 +4110,49 @@ def api_download_backup(name: str):
     if not target.is_file() or not str(target.resolve()).startswith(str(BACKUPS_DIR.resolve())):
         raise HTTPException(404, "Backup not found")
     return FileResponse(target, filename=target.name)
+
+
+# ── Storage limits ───────────────────────────────────────────────────────────
+
+@app.get("/api/storage")
+def api_get_storage():
+    configure_storage_limits()
+    return storage_limits.storage_overview(get_storage_monitor_usage())
+
+
+@app.put("/api/storage/limits")
+def api_put_storage_limits(body: StorageLimitsUpdate):
+    configure_storage_limits()
+    current = storage_limits.read_storage_limits()
+    payload = dict(current)
+    for key in storage_limits.CATEGORIES:
+        raw = getattr(body, key, None)
+        if raw is not None:
+            payload[key] = raw
+    limits = storage_limits.write_storage_limits(payload)
+    enforced = storage_limits.enforce_all_storage_limits()
+    return {"ok": True, "limits": limits, "enforced": enforced}
+
+
+@app.post("/api/storage/enforce")
+def api_enforce_storage(body: StorageEnforceRequest):
+    configure_storage_limits()
+    if body.category:
+        if body.category not in storage_limits.CATEGORIES:
+            raise HTTPException(400, f"Invalid category: {body.category}")
+        enforced = {body.category: storage_limits.enforce_storage_limit(body.category)}
+    else:
+        enforced = storage_limits.enforce_all_storage_limits()
+    return {"ok": True, "enforced": enforced}
+
+
+@app.post("/api/backups/purge-all")
+def api_purge_all_backups(body: PurgeAllBackupsRequest):
+    if not body.confirm:
+        raise HTTPException(400, "confirm=true is required")
+    configure_storage_limits()
+    result = storage_limits.purge_all_backups()
+    return {"ok": True, **result}
 
 
 # ── Audit ────────────────────────────────────────────────────────────────────
