@@ -9,6 +9,9 @@
 # Uso:
 #   ./scripts/dev.sh              # sobe e segue os logs de panel + assets
 #   ./scripts/dev.sh --no-logs    # sobe em background e retorna ao shell
+#
+# Para subir automaticamente no boot:
+#   ./scripts/install-dev-service.sh
 
 set -euo pipefail
 
@@ -23,6 +26,10 @@ for arg in "$@"; do
     --no-logs) FOLLOW=false ;;
     -h|--help)
       echo "Uso: $0 [--no-logs]"
+      echo ""
+      echo "  --no-logs   Sobe o stack e retorna (sem seguir logs)"
+      echo ""
+      echo "Boot automatico: ./scripts/install-dev-service.sh"
       exit 0
       ;;
     *)
@@ -32,21 +39,7 @@ for arg in "$@"; do
   esac
 done
 
-echo "==> Subindo containers em modo dev (build da imagem se necessario)..."
-docker compose "${FILES[@]}" up -d --build
-
-PORT="${PANEL_PORT:-8080}"
-if [[ -f .env ]]; then
-  val="$(grep -E '^PANEL_PORT=' .env 2>/dev/null | cut -d= -f2- | tr -d '"' | tr -d "'")"
-  [[ -n "$val" ]] && PORT="$val"
-fi
-
-echo ""
-echo "Modo dev ativo:"
-echo "  Painel:   http://localhost:${PORT}"
-echo "  Backend:  uvicorn --reload (edite panel/*.py -> recarrega)"
-echo "  Frontend: watcher Tailwind + esbuild (edite panel/frontend/** -> F5)"
-echo ""
+"$ROOT/scripts/dev-up.sh"
 
 if $FOLLOW; then
   echo "Seguindo logs (Ctrl+C sai; os containers continuam rodando)..."

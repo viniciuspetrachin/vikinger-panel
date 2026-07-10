@@ -36,7 +36,7 @@ export const nav = {
       label: "Tools",
       items: [
         { id: "files", label: "Files", icon: icons.files },
-        { id: "logs", label: "Logs", icon: icons.logs },
+        { id: "logs", label: "Console", icon: icons.logs },
         { id: "audit", label: "Audit", icon: icons.audit },
       ],
     },

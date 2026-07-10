@@ -3,6 +3,8 @@
 import re
 import time
 
+import re
+
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -58,7 +60,7 @@ def test_dashboard_console_preserves_scroll(page: Page, base_url: str) -> None:
 
 def test_logs_tab_no_supervisord_prefix(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    page.get_by_role("button", name="Logs", exact=True).click()
+    page.get_by_role("navigation").get_by_role("button", name="Console", exact=True).click()
     page.wait_for_timeout(500)
     console = page.locator("[x-ref='logConsole']")
     expect(console).to_contain_text(re.compile("World loaded|TestPlayer"), timeout=8000)
@@ -193,16 +195,17 @@ def test_audit_records_action(page: Page, base_url: str) -> None:
 
 def test_logs_auto_refresh_default_on(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    page.get_by_role("button", name="Logs", exact=True).click()
+    page.get_by_role("navigation").get_by_role("button", name="Console", exact=True).click()
     checkbox = page.locator("input[x-model='logAutoRefresh']")
     expect(checkbox).to_be_checked()
 
 
 def _open_sample_mod_cfg(page: Page) -> None:
+    tree = page.locator(".file-tree-scroll")
     page.wait_for_selector('.file-tree-folder[data-path="config/bepinex"]', timeout=10000)
-    page.locator('.file-tree-folder[data-path="config/bepinex"]').click()
+    tree.locator('.file-tree-folder[data-path="config/bepinex"]').click()
     page.wait_for_selector('.file-tree-file[data-path="config/bepinex/sample.mod.cfg"]', timeout=5000)
-    page.locator('.file-tree-file[data-path="config/bepinex/sample.mod.cfg"]').click()
+    tree.locator('.file-tree-file[data-path="config/bepinex/sample.mod.cfg"]').first.click()
 
 
 def test_file_editor_codemirror(page: Page, base_url: str) -> None:
@@ -525,8 +528,28 @@ def test_server_backup_disk_limit_section(page: Page, base_url: str) -> None:
     page.get_by_role("button", name="Server", exact=True).click()
     page.wait_for_timeout(800)
     expect(page.get_by_role("heading", name="Backup disk usage")).to_be_visible()
+    card = page.locator("div.bg-valheim-800").filter(
+        has=page.get_by_role("heading", name="Backup disk usage")
+    )
+    select = page.get_by_label("Total backup limit")
+    expect(select).to_be_visible()
+    expect(select).to_be_enabled()
+    expect(select).to_have_value("0")
+    expect(select.locator("option")).to_have_count(8)
     expect(page.get_by_role("button", name="Clear all backups now")).to_be_visible()
-    checkbox = page.get_by_label("Limit backup disk usage")
-    expect(checkbox).not_to_be_checked()
-    checkbox.check()
-    expect(page.get_by_role("button", name="Save limit")).to_be_visible()
+
+    usage_panel = card.locator(".rounded-lg.border").filter(has_text="Current usage")
+    expect(usage_panel.get_by_text("Unlimited", exact=True)).to_be_visible()
+
+    usage_value = usage_panel.locator("p.text-2xl")
+    expect(usage_value).not_to_have_text("Loading…", timeout=10000)
+    expect(usage_value).to_have_text(re.compile(r"\d+(\.\d+)?\s*(B|KB|MB|GB)"))
+
+    select.select_option("10")
+    page.get_by_role("button", name="Save backup limit").click()
+    expect(usage_panel.get_by_text("10 GB", exact=True)).to_be_visible(timeout=10000)
+
+    select.select_option("0")
+    page.get_by_role("button", name="Save backup limit").click()
+    expect(usage_panel.get_by_text("Unlimited", exact=True)).to_be_visible(timeout=10000)
+    expect(page.get_by_role("button", name="Save backup limit")).to_be_visible()

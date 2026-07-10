@@ -12,7 +12,7 @@ TAB_LABELS = [
     "Mods & Config",
     "Backups",
     "Files",
-    "Logs",
+    "Console",
     "Audit",
     "Help",
     "About",
@@ -20,7 +20,7 @@ TAB_LABELS = [
 
 
 def goto_tab(page: Page, label: str) -> None:
-    page.get_by_role("button", name=label, exact=True).click()
+    page.get_by_role("navigation").get_by_role("button", name=label, exact=True).click()
     page.wait_for_timeout(500)
 
 
@@ -72,7 +72,7 @@ def test_files_all_scopes(page: Page, base_url: str) -> None:
     goto_tab(page, "Files")
 
     for scope in ("Config", "Data"):
-        page.get_by_role("button", name=scope, exact=True).click()
+        page.locator("button.btn-tab.flex").filter(has_text=scope).first.click()
         page.wait_for_timeout(400)
         assert_no_error_toast(page)
 
@@ -80,7 +80,7 @@ def test_files_all_scopes(page: Page, base_url: str) -> None:
 def test_logs_sources(page: Page, base_url: str) -> None:
     page.goto(base_url)
     page.wait_for_selector("[x-cloak]", state="detached")
-    goto_tab(page, "Logs")
+    goto_tab(page, "Console")
 
     for source in ("Docker", "BepInEx"):
         page.get_by_role("button", name=source, exact=True).click()

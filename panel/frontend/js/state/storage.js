@@ -2,21 +2,64 @@
 
 export const storage = {
   storageData: null,
-  backupStorageLimit: { enabled: false, max_gb: 2 },
+  storageLoadError: null,
+  backupStorageMaxGb: 0,
+  backupStoragePresets: [
+    { value: 1, label: "1 GB" },
+    { value: 2, label: "2 GB" },
+    { value: 5, label: "5 GB" },
+    { value: 10, label: "10 GB" },
+    { value: 20, label: "20 GB" },
+    { value: 50, label: "50 GB" },
+    { value: 100, label: "100 GB" },
+  ],
   purgeAllBackupsModalOpen: false,
 
+  backupStorageLimitEnabled() {
+    return this.backupStorageMaxGb > 0;
+  },
+
+  _resolveBackupMaxGb(maxGb) {
+    const preset = this.backupStoragePresets.find((p) => p.value === maxGb);
+    return preset ? preset.value : maxGb;
+  },
+
   async loadStorageLimits() {
+    this.storageLoadError = null;
     try {
       const data = await this.api("GET", "/api/storage");
       this.storageData = data;
       const cfg = data.limits?.backups || { enabled: false, max_gb: null };
-      this.backupStorageLimit = {
-        enabled: !!cfg.enabled,
-        max_gb: cfg.max_gb ?? 2,
-      };
+      if (!cfg.enabled || cfg.max_gb == null) {
+        this.backupStorageMaxGb = 0;
+      } else {
+        this.backupStorageMaxGb = this._resolveBackupMaxGb(cfg.max_gb);
+      }
     } catch (e) {
+      this.storageLoadError = "Could not load usage";
       this.toast(e.message, "error");
     }
+  },
+
+  backupStorageLimitLabel() {
+    if (!this.backupStorageLimitEnabled()) return "Unlimited";
+    return `${this.backupStorageMaxGb} GB`;
+  },
+
+  backupStorageUsedLabel() {
+    if (this.storageLoadError) return this.storageLoadError;
+    if (!this.storageData) return "Loading…";
+    return this.formatBytes(this.backupStorageStatus().used_bytes);
+  },
+
+  backupStorageUsageDetail() {
+    if (this.storageLoadError) return "";
+    if (!this.storageData) return "Loading…";
+    const used = this.formatBytes(this.backupStorageStatus().used_bytes);
+    if (!this.backupStorageLimitEnabled()) {
+      return `${used} used (no limit)`;
+    }
+    return `${used} of ${this.backupStorageMaxGb} GB`;
   },
 
   backupStorageStatus() {
@@ -28,11 +71,19 @@ export const storage = {
     };
   },
 
+  backupStorageMaxBytes() {
+    const status = this.backupStorageStatus();
+    if (status.max_bytes) return status.max_bytes;
+    if (!this.backupStorageLimitEnabled()) return null;
+    return this.backupStorageMaxGb * 1024 ** 3;
+  },
+
   backupStoragePct() {
     const status = this.backupStorageStatus();
-    if (status.percent != null) return status.percent;
-    if (!status.max_bytes) return null;
-    return Math.round((status.used_bytes / status.max_bytes) * 1000) / 10;
+    if (status.percent != null && status.max_bytes) return status.percent;
+    const maxBytes = this.backupStorageMaxBytes();
+    if (!maxBytes) return null;
+    return Math.round((status.used_bytes / maxBytes) * 1000) / 10;
   },
 
   backupStorageBarClass() {
@@ -42,11 +93,11 @@ export const storage = {
   async saveBackupStorageLimit() {
     return this.withBusy("saveBackupStorageLimit", async () => {
       try {
-        const cfg = this.backupStorageLimit;
+        const maxGb = Number(this.backupStorageMaxGb);
         const payload = {
           backups: {
-            enabled: !!cfg.enabled,
-            max_gb: cfg.enabled && cfg.max_gb > 0 ? Number(cfg.max_gb) : null,
+            enabled: maxGb > 0,
+            max_gb: maxGb > 0 ? maxGb : null,
           },
         };
         await this.api("PUT", "/api/storage/limits", payload);

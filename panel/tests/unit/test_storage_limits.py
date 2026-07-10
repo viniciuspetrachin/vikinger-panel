@@ -19,6 +19,40 @@ def test_storage_get(client):
     assert "categories" in body
     assert "backups" in body["categories"]
     assert "monitor" in body
+    assert "limits" in body
+    assert "backups" in body["limits"]
+    backups = body["categories"]["backups"]
+    assert isinstance(backups["used_bytes"], int)
+    assert backups["used_bytes"] >= 0
+
+
+def test_storage_put_unlimited(client, env_dir):
+    client.put(
+        "/api/storage/limits",
+        json={"backups": {"enabled": True, "max_gb": 5}},
+    )
+    r = client.put(
+        "/api/storage/limits",
+        json={"backups": {"enabled": False, "max_gb": None}},
+    )
+    assert r.status_code == 200
+    limits = r.json()["limits"]["backups"]
+    assert limits["enabled"] is False
+    assert limits["max_gb"] is None
+
+    r2 = client.get("/api/storage")
+    assert r2.status_code == 200
+    status = r2.json()["categories"]["backups"]
+    assert status["enabled"] is False
+    assert status["max_bytes"] is None
+
+
+def test_storage_get_after_backup_created(client, env_dir):
+    backups = env_dir["backups"]
+    _write_backup(backups / "worlds-20250101-120000.zip", b"x" * 2048)
+    r = client.get("/api/storage")
+    assert r.status_code == 200
+    assert r.json()["categories"]["backups"]["used_bytes"] > 0
 
 
 def test_storage_put_limits(client, env_dir):
