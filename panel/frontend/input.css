@@ -278,6 +278,14 @@
   }
 
   /* ── File tree (Finder-style) ── */
+  .file-search-bar .btn-tab-sm {
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+  }
+  .file-flat-list .file-tree-row {
+    --file-depth: 0px;
+    width: 100%;
+  }
   .file-tree-panel { min-height: 320px; }
   .file-tree-scroll { font-size: 0.8125rem; }
   .file-tree-empty {

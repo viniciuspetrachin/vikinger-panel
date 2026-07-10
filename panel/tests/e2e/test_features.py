@@ -500,3 +500,33 @@ def test_server_check_game_update_shows_loading(page: Page, base_url: str) -> No
         "() => !document.querySelector('[x-data]')._x_dataStack[0].actionPending",
         timeout=8000,
     )
+
+
+def test_file_search_by_name(page: Page, base_url: str) -> None:
+    _boot(page, base_url)
+    page.get_by_role("button", name="Files", exact=True).click()
+    page.wait_for_timeout(800)
+    page.get_by_placeholder("Search by file name...").fill("sample")
+    page.wait_for_timeout(400)
+    expect(page.get_by_text("config/bepinex/sample.mod.cfg")).to_be_visible(timeout=5000)
+
+
+def test_file_search_config_filter(page: Page, base_url: str) -> None:
+    _boot(page, base_url)
+    page.get_by_role("button", name="Files", exact=True).click()
+    page.wait_for_timeout(800)
+    page.locator(".file-search-bar button.btn-tab-sm", has_text="Config").click()
+    page.wait_for_timeout(400)
+    expect(page.get_by_text("config/bepinex/sample.mod.cfg")).to_be_visible(timeout=5000)
+
+
+def test_server_backup_disk_limit_section(page: Page, base_url: str) -> None:
+    _boot(page, base_url)
+    page.get_by_role("button", name="Server", exact=True).click()
+    page.wait_for_timeout(800)
+    expect(page.get_by_role("heading", name="Backup disk usage")).to_be_visible()
+    expect(page.get_by_role("button", name="Clear all backups now")).to_be_visible()
+    checkbox = page.get_by_label("Limit backup disk usage")
+    expect(checkbox).not_to_be_checked()
+    checkbox.check()
+    expect(page.get_by_role("button", name="Save limit")).to_be_visible()

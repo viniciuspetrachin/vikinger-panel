@@ -33,7 +33,7 @@ export const server = {
     await this.loadWorlds();
     await this.loadUpdatesPage();
     await this.loadEnv();
-    await Promise.all([this.loadMemoryConfig(), this.loadCapacity()]);
+    await Promise.all([this.loadMemoryConfig(), this.loadCapacity(), this.loadStorageLimits()]);
     this.selectedWorld = this.envValues.WORLD_NAME || this.worlds.find((w) => w.active)?.name || "";
     this.$nextTick(() => this.mountListEditors());
   },

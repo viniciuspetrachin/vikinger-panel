@@ -15,6 +15,7 @@ import { help } from "./state/help.js";
 import { donation } from "./state/donation.js";
 import { about } from "./state/about.js";
 import { setup } from "./state/setup.js";
+import { storage } from "./state/storage.js";
 
 function panel() {
   const core = {
@@ -149,6 +150,7 @@ function panel() {
     donation,
     about,
     setup,
+    storage,
     core,
   );
 }

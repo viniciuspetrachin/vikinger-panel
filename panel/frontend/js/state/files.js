@@ -15,6 +15,9 @@ const CHEVRON_SVG =
   '<path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06z"/>' +
   "</svg>";
 
+const CONFIG_EXTS = new Set([".cfg", ".ini", ".json", ".yaml", ".yml", ".xml", ".prefs", ".env"]);
+const LIST_FILES = new Set(["adminlist.txt", "bannedlist.txt", "permittedlist.txt"]);
+
 export const files = {
   fileScope: "config",
   fileScopes: [
@@ -23,6 +26,18 @@ export const files = {
   ],
   fileTree: [],
   fileExpandedPaths: {},
+  fileSearchQuery: "",
+  fileTypeFilter: "",
+  fileTypeFilters: [
+    { id: "", label: "All" },
+    { id: "config", label: "Config" },
+    { id: "dll", label: "DLLs" },
+    { id: "plugin", label: "Plugins" },
+    { id: "world", label: "Worlds" },
+    { id: "list", label: "Lists" },
+    { id: "backup", label: "Backups" },
+    { id: "log", label: "Logs" },
+  ],
   editPath: "",
   editContent: "",
   fileEditorDirty: false,
@@ -49,6 +64,106 @@ export const files = {
     });
   },
 
+  setFileTypeFilter(id) {
+    this.fileTypeFilter = id;
+    this.syncFileSearchExpansion();
+  },
+
+  fileSearchActive() {
+    const q = (this.fileSearchQuery || "").trim();
+    return !!q || !!this.fileTypeFilter;
+  },
+
+  classifyFileItem(item) {
+    if (item.type !== "file") return null;
+    const path = (item.path || "").toLowerCase();
+    const name = (item.name || "").toLowerCase();
+    const ext = name.includes(".") ? name.slice(name.lastIndexOf(".")) : "";
+    if (ext === ".dll") return "dll";
+    if (path.includes("/plugins/")) return "plugin";
+    if (ext === ".fwl" || ext === ".db" || path.includes("worlds_local/")) return "world";
+    if (LIST_FILES.has(name)) return "list";
+    if (ext === ".zip" && path.includes("backups/")) return "backup";
+    if (ext === ".log") return "log";
+    if (CONFIG_EXTS.has(ext)) return "config";
+    return null;
+  },
+
+  fileMatchesFilter(item) {
+    if (item.type !== "file") return false;
+    const q = (this.fileSearchQuery || "").trim().toLowerCase();
+    const typeFilter = this.fileTypeFilter || "";
+    if (typeFilter && this.classifyFileItem(item) !== typeFilter) return false;
+    if (!q) return true;
+    const name = (item.name || "").toLowerCase();
+    const path = (item.path || "").toLowerCase();
+    return name.includes(q) || path.includes(q);
+  },
+
+  filterFileTree(tree, query, typeFilter) {
+    void query;
+    void typeFilter;
+    if (!this.fileSearchActive()) return tree;
+    const out = [];
+    for (const item of tree || []) {
+      if (item.type === "dir") {
+        const children = this.filterFileTree(item.children || [], query, typeFilter);
+        if (children.length) {
+          out.push({ ...item, children });
+        }
+      } else if (this.fileMatchesFilter(item)) {
+        out.push(item);
+      }
+    }
+    return out;
+  },
+
+  filteredFileTree() {
+    return this.filterFileTree(this.fileTree, this.fileSearchQuery, this.fileTypeFilter);
+  },
+
+  _collectExpandPaths(items, acc = new Set()) {
+    for (const item of items || []) {
+      if (item.type === "dir") {
+        acc.add(item.path);
+        this._collectExpandPaths(item.children, acc);
+      }
+    }
+    return acc;
+  },
+
+  syncFileSearchExpansion() {
+    if (!this.fileSearchActive()) return;
+    const paths = this._collectExpandPaths(this.filteredFileTree());
+    const next = { ...this.fileExpandedPaths };
+    for (const p of paths) next[p] = true;
+    this.fileExpandedPaths = next;
+  },
+
+  fileSearchMatchCount() {
+    let count = 0;
+    const walk = (items) => {
+      for (const item of items || []) {
+        if (item.type === "file") count += 1;
+        else if (item.type === "dir") walk(item.children);
+      }
+    };
+    walk(this.filteredFileTree());
+    return count;
+  },
+
+  flatFileMatches() {
+    const matches = [];
+    const walk = (items) => {
+      for (const item of items || []) {
+        if (item.type === "file") matches.push(item);
+        else if (item.type === "dir") walk(item.children);
+      }
+    };
+    walk(this.filteredFileTree());
+    return matches;
+  },
+
   isFileFolderExpanded(path) {
     return !!this.fileExpandedPaths[path];
   },
@@ -64,6 +179,9 @@ export const files = {
     void _expanded;
     void _selected;
     if (!items?.length) {
+      if (depth === 0 && this.fileSearchActive()) {
+        return '<p class="file-tree-empty">No matches</p>';
+      }
       return depth === 0 ? '<p class="file-tree-empty">Empty folder</p>' : "";
     }
     const cls = depth === 0 ? "file-tree" : "file-tree-children";
