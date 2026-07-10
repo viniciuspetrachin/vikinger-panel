@@ -9,6 +9,7 @@
 
 services:
   panel:
+    restart: unless-stopped
     volumes:
       # Codigo-fonte montado por cima da imagem: editar panel/** reflete na hora.
       - ./panel:/app

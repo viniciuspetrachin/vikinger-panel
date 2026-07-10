@@ -13,7 +13,7 @@ export const about = {
       "Complete UI/UX overhaul with section-based navigation.",
       "New Help (searchable FAQ), Support the Project, and About/Version screens.",
       "Polyform Shield license — free use, no commercial resale without authorization.",
-      "Metrics on Overview; capacity (RAM and players) on Server tab; Tools with Files, Logs, and Audit.",
+      "Metrics on Overview; capacity (RAM and players) on Server tab; Tools with Files, Console, and Audit.",
       "100% dockerized, no permission headaches; local assets (no CDN).",
     ] },
   ],

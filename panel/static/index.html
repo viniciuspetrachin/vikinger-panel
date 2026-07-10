@@ -499,44 +499,63 @@
               <h3 class="font-display text-sm font-semibold text-valheim-gold">Backup disk usage</h3>
               <p class="text-xs text-gray-500 mt-1">
                 Optional cap on <code class="text-gray-400">config/backups/</code> ZIP files.
-                When enabled, oldest backups are deleted first when the limit is exceeded.
-                Disabled by default — backups grow until disk space runs out.
+                Choose <span class="text-valheim-gold font-medium">Unlimited</span> to keep all backups,
+                or pick a size — oldest backups are deleted first when the limit is exceeded.
               </p>
             </div>
 
-            <div class="flex items-center gap-3">
-              <label class="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="checkbox" x-model="backupStorageLimit.enabled" class="rounded border-valheim-600" />
-                Limit backup disk usage
-              </label>
-              <span class="text-xs text-gray-500" x-text="formatBytes(backupStorageStatus().used_bytes) + ' used'"></span>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-xs text-gray-500 mb-1" for="backup-storage-limit-select">Total backup limit</label>
+                  <select id="backup-storage-limit-select"
+                          x-model.number="backupStorageMaxGb"
+                          aria-label="Total backup limit"
+                          class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none">
+                    <option value="0">Unlimited</option>
+                    <option value="1">1 GB</option>
+                    <option value="2">2 GB</option>
+                    <option value="5">5 GB</option>
+                    <option value="10">10 GB</option>
+                    <option value="20">20 GB</option>
+                    <option value="50">50 GB</option>
+                    <option value="100">100 GB</option>
+                  </select>
+                  <p class="text-xs text-gray-600 mt-1" x-show="!backupStorageLimitEnabled()">
+                    Backups are kept until disk space runs out.
+                  </p>
+                  <p class="text-xs text-gray-600 mt-1" x-show="backupStorageLimitEnabled()">
+                    Oldest backups are deleted first when usage exceeds the limit above.
+                  </p>
+                </div>
+              </div>
+
+              <div class="rounded-lg border border-valheim-700 bg-valheim-900/50 p-4 space-y-3">
+                <div class="flex justify-between text-xs text-gray-500 uppercase tracking-wider">
+                  <span>Current usage</span>
+                  <span x-text="backupStorageLimitLabel()"></span>
+                </div>
+                <p class="text-2xl font-semibold text-valheim-gold"
+                   x-text="storageData ? formatBytes(backupStorageStatus().used_bytes) : (storageLoadError || 'Loading\u2026')"></p>
+                <p class="text-sm text-gray-400" x-text="backupStorageUsageDetail()"></p>
+                <div x-show="backupStorageLimitEnabled() && backupStorageMaxBytes()" class="space-y-1 pt-1">
+                  <div class="h-2.5 rounded-full bg-valheim-950 overflow-hidden border border-valheim-700/80">
+                    <div class="h-full rounded-full transition-all metric-bar-fill"
+                         :class="backupStorageBarClass()"
+                         :style="'width:' + Math.min(backupStoragePct() || 0, 100) + '%'"></div>
+                  </div>
+                  <p class="text-xs text-gray-500 text-right" x-show="backupStoragePct() != null">
+                    <span x-text="(backupStoragePct() || 0) + '%'"></span> of limit
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <div x-show="backupStorageLimit.enabled" class="space-y-3">
-              <div class="flex flex-wrap items-end gap-3">
-                <div>
-                  <label class="block text-xs text-gray-500 mb-1">Maximum size (GB)</label>
-                  <input type="number" min="0.1" step="0.5" x-model.number="backupStorageLimit.max_gb"
-                         class="w-32 bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none" />
-                </div>
-                <button @click="saveBackupStorageLimit()" :disabled="isBusy('saveBackupStorageLimit')" class="btn btn-primary">
-                  <span x-show="actionPending === 'saveBackupStorageLimit'" class="spinner"></span>
-                  <span x-show="actionPending !== 'saveBackupStorageLimit'">Save limit</span>
-                  <span x-show="actionPending === 'saveBackupStorageLimit'">Saving...</span>
-                </button>
-              </div>
-              <div x-show="backupStorageStatus().max_bytes" class="space-y-1">
-                <div class="flex justify-between text-xs text-gray-500">
-                  <span x-text="formatBytes(backupStorageStatus().used_bytes)"></span>
-                  <span x-text="formatBytes(backupStorageStatus().max_bytes)"></span>
-                </div>
-                <div class="h-2 rounded-full bg-valheim-900 overflow-hidden">
-                  <div class="h-full rounded-full transition-all"
-                       :class="backupStorageBarClass()"
-                       :style="'width:' + Math.min(backupStoragePct() || 0, 100) + '%'"></div>
-                </div>
-              </div>
-            </div>
+            <button @click="saveBackupStorageLimit()" :disabled="isBusy('saveBackupStorageLimit')" class="btn btn-primary">
+              <span x-show="actionPending === 'saveBackupStorageLimit'" class="spinner"></span>
+              <span x-show="actionPending !== 'saveBackupStorageLimit'">Save backup limit</span>
+              <span x-show="actionPending === 'saveBackupStorageLimit'">Saving...</span>
+            </button>
 
             <div class="pt-2 border-t border-valheim-700/80">
               <button type="button" @click="openPurgeAllBackupsModal()" class="btn btn-danger btn-sm">
