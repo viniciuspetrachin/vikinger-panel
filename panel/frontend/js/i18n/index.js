@@ -44,6 +44,8 @@ export function resolveLocale(apiDefault) {
   return FALLBACK_LOCALE;
 }
 
+_locale = resolveLocale(null);
+
 function lookup(messages, key) {
   if (!messages || !key) return undefined;
   const parts = key.split(".");
@@ -112,7 +114,11 @@ export function setLocale(locale, { persist = true } = {}) {
 
 export function initI18n(apiDefault, onChange) {
   _onChange = onChange;
-  _locale = resolveLocale(apiDefault);
+  const resolved = resolveLocale(apiDefault);
+  if (resolved !== _locale) {
+    _locale = resolved;
+    _localeVersion += 1;
+  }
   document.documentElement.lang = _locale;
   document.title = t("meta.appTitle");
 }
@@ -123,8 +129,8 @@ export function createI18nMixin(onChange) {
   const translateObj = tObj;
 
   return {
-    locale: FALLBACK_LOCALE,
-    localeVersion: 0,
+    locale: getLocale(),
+    localeVersion: getLocaleVersion(),
     locales: SUPPORTED_LOCALES,
 
     initI18nFromApi(apiDefault) {
@@ -140,16 +146,19 @@ export function createI18nMixin(onChange) {
 
     t(key, params) {
       void this.localeVersion;
+      void this.locale;
       return translate(key, params);
     },
 
     tHtml(key, params) {
       void this.localeVersion;
+      void this.locale;
       return translateHtml(key, params);
     },
 
     tObj(key) {
       void this.localeVersion;
+      void this.locale;
       return translateObj(key);
     },
 
