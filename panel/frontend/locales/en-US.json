@@ -162,13 +162,17 @@
       "playerPromoted": "{label} promoted to admin",
       "playerDemoted": "{label} removed from admin",
       "serverActionCompleted": "Action \"{action}\" completed",
-      "checkRequested": "Check requested"
+      "checkRequested": "Check requested",
+      "modsCheckAllSummary": "Checked {checked} package(s): {updates} update(s) available, {errors} error(s)",
+      "modsUpdateAllSummary": "Updated {updated} package(s), {failed} failed, {skipped} already up to date",
+      "modsNoLinkedPackages": "No mods linked to Thunderstore"
     },
     "confirm": {
       "kickPlayer": "Kick {label}? The player can rejoin.",
       "banPlayer": "Ban {label} ({steamId})? The player cannot join until unbanned.",
       "removeMod": "Remove mod {name}?",
       "updateMod": "Update {name}? The server may need to be restarted.",
+      "updateAllMods": "Update all packages below? The server may need to be restarted.\n\n{packages}",
       "removeOrphanedConfig": "Remove orphaned config {names}?",
       "removeOrphanedConfigs": "Remove {count} orphaned config file(s)?\n\n{names}",
       "activateWorldNew": "Activate world \"{name}\"? The server will restart and a NEW (empty) world will be created.",
@@ -1047,8 +1051,11 @@
     "noConfig": "No config",
     "version": "Version",
     "checkUpdates": "Check for updates",
+    "checkAllUpdates": "Check all for updates",
     "updateMod": "Update mod",
+    "updateAllMods": "Update all mods",
     "linkThunderstore": "Link Thunderstore",
+    "dependencyHint": "BepInEx dependency — update via the main package (e.g. YamlDotNet.dll)",
     "linkUrlPlaceholder": "Thunderstore URL",
     "configBtn": "Config",
     "remove": "Remove",
@@ -1074,6 +1081,7 @@
       "up_to_date": "Up to date",
       "update_available": "Update available",
       "unknown": "Unknown source",
+      "dependency": "BepInEx dependency",
       "error": "Check failed"
     }
   },

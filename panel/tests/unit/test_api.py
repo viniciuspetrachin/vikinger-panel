@@ -605,6 +605,104 @@ def test_check_mod_update(client, env_dir, monkeypatch):
     assert body["latest_version"] == "2.0.0"
 
 
+def test_link_unlinkable_mod_rejected(client, env_dir):
+    (env_dir["plugins"] / "YamlDotNetDetector.dll").write_text("x")
+    r = client.post(
+        "/api/mods/YamlDotNetDetector.dll/link",
+        json={"url": "https://thunderstore.io/c/valheim/p/ValheimModding/YamlDotNet/"},
+    )
+    assert r.status_code == 400
+
+
+def test_list_mods_unlinkable_dependency(client, env_dir):
+    (env_dir["plugins"] / "YamlDotNetDetector.dll").write_text("x")
+    mods = client.get("/api/mods").json()["mods"]
+    detector = next(m for m in mods if m["name"] == "YamlDotNetDetector.dll")
+    assert detector["linkable"] is False
+    assert detector["update_status"] == "dependency"
+
+
+def test_check_all_mod_updates(client, env_dir, monkeypatch):
+    (env_dir["plugins"] / "alpha.dll").write_text("x")
+    (env_dir["plugins"] / "beta.dll").write_text("x")
+    main.register_mod_package("mvp", "Alpha", "1.0.0", ["alpha.dll"], "http://test")
+    main.register_mod_package("mvp", "Beta", "1.0.0", ["beta.dll"], "http://test")
+
+    def fake_fetch(owner, name):
+        latest = "2.0.0" if name == "Alpha" else "1.0.0"
+        return {
+            "owner": owner,
+            "name": name,
+            "latest_version": latest,
+            "download_url": "https://example.test/mod.zip",
+        }
+
+    monkeypatch.setattr(main, "fetch_thunderstore_package_info", fake_fetch)
+    r = client.post("/api/mods/check-updates")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["checked"] == 2
+    assert body["updates_available"] == 1
+    assert body["up_to_date"] == 1
+    assert body["errors"] == 0
+
+
+def test_check_all_mod_updates_empty_registry(client):
+    r = client.post("/api/mods/check-updates")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["checked"] == 0
+    assert "No linked" in body["message"]
+
+
+def test_update_all_mods(client, env_dir, monkeypatch):
+    (env_dir["plugins"] / "serverside.dll").write_text("x")
+    main.register_mod_package("mvp", "Serverside_Simulations", "1.0.0", ["serverside.dll"], "http://test")
+    zip_data = _mod_zip_bytes()
+    monkeypatch.setattr(
+        main,
+        "fetch_thunderstore_package_info",
+        lambda owner, name: {
+            "owner": owner,
+            "name": name,
+            "latest_version": "2.0.0",
+            "download_url": "https://example.test/mod.zip",
+        },
+    )
+    monkeypatch.setattr(main, "download_mod_bytes", lambda url: zip_data)
+
+    r = client.post("/api/mods/update-all")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["updated"] == 1
+    assert body["failed"] == 0
+    assert body["skipped"] == 0
+    pkg = main.find_package_for_dll("serverside.dll")
+    assert pkg["version"] == "2.0.0"
+
+
+def test_update_all_skips_up_to_date(client, env_dir, monkeypatch):
+    (env_dir["plugins"] / "serverside.dll").write_text("x")
+    main.register_mod_package("mvp", "Serverside_Simulations", "2.0.0", ["serverside.dll"], "http://test")
+    monkeypatch.setattr(
+        main,
+        "fetch_thunderstore_package_info",
+        lambda owner, name: {
+            "owner": owner,
+            "name": name,
+            "latest_version": "2.0.0",
+            "download_url": "https://example.test/mod.zip",
+        },
+    )
+
+    r = client.post("/api/mods/update-all")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["updated"] == 0
+    assert body["skipped"] == 1
+    assert body["failed"] == 0
+
+
 def test_fetch_thunderstore_package_info_experimental(monkeypatch):
     monkeypatch.setattr(
         main,

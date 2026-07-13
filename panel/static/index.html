@@ -713,6 +713,22 @@
             <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
               <h3 class="font-display text-sm font-semibold text-valheim-gold" x-text="t('mods.installedTitle')">Installed mods</h3>
               <div class="flex flex-wrap items-center gap-3">
+                <div class="flex flex-wrap gap-2">
+                  <button @click="checkAllModUpdates()"
+                          :disabled="!linkedPackageCount() || isBusy('checkAllModUpdates')"
+                          class="btn btn-sm btn-ghost">
+                    <span x-show="actionPending === 'checkAllModUpdates'" class="spinner"></span>
+                    <span x-show="actionPending !== 'checkAllModUpdates'" x-text="t('mods.checkAllUpdates')">Check all for updates</span>
+                    <span x-show="actionPending === 'checkAllModUpdates'" x-text="t('common.loading.checking')">Checking...</span>
+                  </button>
+                  <button @click="updateAllMods()"
+                          :disabled="!pendingPackageUpdates().length || isBusy('updateAllMods')"
+                          class="btn btn-sm btn-primary">
+                    <span x-show="actionPending === 'updateAllMods'" class="spinner"></span>
+                    <span x-show="actionPending !== 'updateAllMods'" x-text="t('mods.updateAllMods')">Update all mods</span>
+                    <span x-show="actionPending === 'updateAllMods'" x-text="t('common.loading.updating')">Updating...</span>
+                  </button>
+                </div>
                 <div class="flex gap-1">
                   <button @click="modsSetViewMode('cards')" class="btn btn-sm btn-tab"
                           :class="modsViewMode === 'cards' && 'btn-tab-active'"
@@ -756,6 +772,8 @@
                   </p>
                   <p class="text-xs mt-1" :class="modStatusClass(mod.update_status)"
                      x-text="modStatusLabel(mod.update_status)"></p>
+                  <p x-show="mod.update_status === 'dependency'" class="text-xs text-gray-600 mt-0.5"
+                     x-text="t('mods.dependencyHint')"></p>
                 </div>
                 <div class="flex flex-col gap-1 shrink-0">
                   <label class="flex items-center gap-2 text-xs text-gray-400 cursor-pointer"
@@ -783,7 +801,7 @@
                     <span x-show="actionPending !== ('updateMod:' + mod.name)" x-text="t('mods.updateMod')">Update mod</span>
                 <span x-show="actionPending === ('updateMod:' + mod.name)" x-text="t('common.loading.updating')">Updating...</span>
                   </button>
-                  <button x-show="mod.update_status === 'unknown' && modLinkTarget !== mod.name"
+                  <button x-show="mod.update_status === 'unknown' && mod.linkable !== false && modLinkTarget !== mod.name"
                           @click="openModLink(mod.name)"
                           class="btn btn-sm btn-ghost" x-text="t('mods.linkThunderstore')">Link Thunderstore</button>
                   <div x-show="modLinkTarget === mod.name" class="flex flex-col gap-1 w-44">
@@ -861,7 +879,7 @@
                                   @click="updateMod(mod.name)"
                                   :disabled="isBusy('updateMod:' + mod.name)"
                                   class="btn btn-sm btn-primary" x-text="t('mods.updateMod')">Update</button>
-                          <button x-show="mod.update_status === 'unknown' && modLinkTarget !== mod.name"
+                          <button x-show="mod.update_status === 'unknown' && mod.linkable !== false && modLinkTarget !== mod.name"
                                   @click="openModLink(mod.name)"
                                   class="btn btn-sm btn-ghost" x-text="t('mods.linkThunderstore')">Link</button>
                           <button x-show="mod.config" @click="editFile('config/bepinex/' + mod.config)"

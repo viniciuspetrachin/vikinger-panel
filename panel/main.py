@@ -105,6 +105,7 @@ _SIZE_UNIT = {
 
 LOGS_DIR = PANEL_DATA_DIR / "logs"
 MODS_REGISTRY_FILE = PANEL_DATA_DIR / "mods-registry.json"
+UNLINKABLE_DLLS = frozenset({"YamlDotNetDetector.dll"})
 SETUP_FILE = PANEL_DATA_DIR / "setup.json"
 APP_MANIFEST_PATH = DATA_DIR / "dl" / "server" / "steamapps" / "appmanifest_896660.acf"
 AUDIT_FILE = LOGS_DIR / "audit.jsonl"
@@ -1299,15 +1300,21 @@ def check_mod_update_for_package(pkg: dict, use_cache: bool = True) -> dict:
     return result
 
 
+def is_unlinkable_mod(name: str) -> bool:
+    return name in UNLINKABLE_DLLS
+
+
 def enrich_mod_entry(entry: dict) -> dict:
     pkg = find_package_for_dll(entry["name"])
     if not pkg:
+        unlinkable = is_unlinkable_mod(entry["name"])
         entry.update({
             "package_id": None,
             "installed_version": None,
             "latest_version": None,
             "update_available": False,
-            "update_status": "unknown",
+            "update_status": "dependency" if unlinkable else "unknown",
+            "linkable": not unlinkable,
         })
         return entry
     entry.update({
@@ -1316,12 +1323,155 @@ def enrich_mod_entry(entry: dict) -> dict:
         "latest_version": pkg.get("latest_version") or pkg.get("version"),
         "update_available": pkg.get("update_status") == "update_available",
         "update_status": pkg.get("update_status", "unknown"),
+        "linkable": True,
     })
     return entry
 
 
 def list_mods_enriched() -> list[dict]:
     return [enrich_mod_entry(m) for m in list_mods_data()]
+
+
+def apply_mod_package_update(pkg: dict) -> dict:
+    check = check_mod_update_for_package(pkg, use_cache=False)
+    if not check.get("update_available"):
+        return {
+            "package_id": pkg.get("id"),
+            "updated": False,
+            "message": "Mod is already on the latest version",
+        }
+
+    download_url = check.get("download_url")
+    if not download_url:
+        info = fetch_thunderstore_package_info(pkg["owner"], pkg["name"])
+        download_url = info["download_url"]
+
+    ensure_plugins_writable()
+    data = download_mod_bytes(download_url)
+    for dll in pkg.get("dlls") or []:
+        for enabled in (True, False):
+            path = mod_path(dll, enabled)
+            if path.exists():
+                path.unlink()
+
+    installed = extract_dlls_from_zip(data, PLUGINS_DIR)
+    if not installed:
+        raise HTTPException(400, "No .dll found in the updated package")
+
+    latest = check.get("latest_version") or pkg.get("version") or ""
+    register_mod_package(
+        pkg["owner"],
+        pkg["name"],
+        latest,
+        installed,
+        pkg.get("source_url") or "",
+    )
+    return {
+        "package_id": pkg.get("id"),
+        "updated": True,
+        "installed": installed,
+        "version": latest,
+        "message": "Mod updated. Restart the server to apply.",
+    }
+
+
+def check_all_mod_updates() -> dict:
+    packages = read_mods_registry().get("packages", [])
+    if not packages:
+        return {
+            "ok": True,
+            "checked": 0,
+            "updates_available": 0,
+            "up_to_date": 0,
+            "errors": 0,
+            "results": [],
+            "message": "No linked Thunderstore packages",
+        }
+
+    results: list[dict] = []
+    updates_available = 0
+    up_to_date = 0
+    errors = 0
+    for pkg in packages:
+        result = check_mod_update_for_package(pkg, use_cache=False)
+        status = result.get("update_status")
+        if status == "error":
+            errors += 1
+        elif result.get("update_available"):
+            updates_available += 1
+        else:
+            up_to_date += 1
+        results.append({
+            "package_id": pkg.get("id"),
+            **result,
+        })
+
+    return {
+        "ok": True,
+        "checked": len(packages),
+        "updates_available": updates_available,
+        "up_to_date": up_to_date,
+        "errors": errors,
+        "results": results,
+    }
+
+
+def update_all_mod_packages() -> dict:
+    packages = read_mods_registry().get("packages", [])
+    if not packages:
+        return {
+            "ok": True,
+            "updated": 0,
+            "failed": 0,
+            "skipped": 0,
+            "results": [],
+            "message": "No linked Thunderstore packages",
+        }
+
+    results: list[dict] = []
+    updated = 0
+    failed = 0
+    skipped = 0
+    for pkg in packages:
+        package_id = pkg.get("id")
+        try:
+            check = check_mod_update_for_package(pkg, use_cache=False)
+            if not check.get("update_available"):
+                skipped += 1
+                results.append({
+                    "package_id": package_id,
+                    "updated": False,
+                    "message": "Already on the latest version",
+                })
+                continue
+            result = apply_mod_package_update(pkg)
+            if result.get("updated"):
+                updated += 1
+            else:
+                skipped += 1
+            results.append(result)
+        except HTTPException as exc:
+            failed += 1
+            results.append({
+                "package_id": package_id,
+                "updated": False,
+                "error": exc.detail,
+            })
+        except Exception as exc:
+            failed += 1
+            results.append({
+                "package_id": package_id,
+                "updated": False,
+                "error": str(exc),
+            })
+
+    return {
+        "ok": True,
+        "updated": updated,
+        "failed": failed,
+        "skipped": skipped,
+        "results": results,
+    }
 
 
 def get_logs(lines: int = 100) -> str:
@@ -3567,6 +3717,8 @@ def api_toggle_mod(name: str, body: ModToggle):
 def api_link_mod(name: str, body: ModLink):
     if ".." in name or "/" in name:
         raise HTTPException(400, "Invalid name")
+    if is_unlinkable_mod(name):
+        raise HTTPException(400, "This DLL is a BepInEx dependency and cannot be linked to Thunderstore")
     if not find_mod(name):
         raise HTTPException(404, "Mod not found")
 
@@ -3610,42 +3762,18 @@ def api_update_mod(name: str):
     if not pkg:
         raise HTTPException(404, "Mod has no Thunderstore link")
 
-    check = check_mod_update_for_package(pkg, use_cache=False)
-    if not check.get("update_available"):
-        return {"ok": True, "updated": False, "message": "Mod is already on the latest version"}
+    result = apply_mod_package_update(pkg)
+    return {"ok": True, **result}
 
-    download_url = check.get("download_url")
-    if not download_url:
-        info = fetch_thunderstore_package_info(pkg["owner"], pkg["name"])
-        download_url = info["download_url"]
 
-    ensure_plugins_writable()
-    data = download_mod_bytes(download_url)
-    for dll in pkg.get("dlls") or []:
-        for enabled in (True, False):
-            path = mod_path(dll, enabled)
-            if path.exists():
-                path.unlink()
+@app.post("/api/mods/check-updates")
+def api_check_all_mod_updates():
+    return check_all_mod_updates()
 
-    installed = extract_dlls_from_zip(data, PLUGINS_DIR)
-    if not installed:
-        raise HTTPException(400, "No .dll found in the updated package")
 
-    latest = check.get("latest_version") or pkg.get("version") or ""
-    register_mod_package(
-        pkg["owner"],
-        pkg["name"],
-        latest,
-        installed,
-        pkg.get("source_url") or "",
-    )
-    return {
-        "ok": True,
-        "updated": True,
-        "installed": installed,
-        "version": latest,
-        "message": "Mod updated. Restart the server to apply.",
-    }
+@app.post("/api/mods/update-all")
+def api_update_all_mods():
+    return update_all_mod_packages()
 
 
 # ── Worlds ───────────────────────────────────────────────────────────────────
