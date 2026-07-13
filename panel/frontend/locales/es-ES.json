@@ -162,13 +162,17 @@
       "playerPromoted": "{label} ascendido a administrador",
       "playerDemoted": "{label} eliminado del administrador",
       "serverActionCompleted": "Acción \"{action}\" completada",
-      "checkRequested": "Cheque solicitado"
+      "checkRequested": "Cheque solicitado",
+      "modsCheckAllSummary": "Comprobados {checked} paquete(s): {updates} actualización(es) disponible(s), {errors} error(es)",
+      "modsUpdateAllSummary": "Actualizados {updated} paquete(s), {failed} fallidos, {skipped} ya actualizados",
+      "modsNoLinkedPackages": "Ningún mod vinculado a Thunderstore"
     },
     "confirm": {
       "kickPlayer": "¿Patear a {label}? El jugador puede volver a unirse.",
       "banPlayer": "¿Prohibir {label} ({steamId})? El jugador no puede unirse hasta que sea liberado.",
       "removeMod": "¿Quitar mod {name}?",
       "updateMod": "¿Actualizar {name}? Es posible que sea necesario reiniciar el servidor.",
+      "updateAllMods": "¿Actualizar todos los paquetes siguientes? Es posible que sea necesario reiniciar el servidor.\n\n{packages}",
       "removeOrphanedConfig": "¿Eliminar la configuración huérfana {names}?",
       "removeOrphanedConfigs": "¿Eliminar {count} archivos de configuración huérfanos?\n\n{names}",
       "activateWorldNew": "¿Activar el mundo \"{name}\"? El servidor se reiniciará y se creará un mundo NUEVO (vacío).",
@@ -1047,8 +1051,11 @@
     "noConfig": "Sin configuración",
     "version": "Versión",
     "checkUpdates": "Buscar actualizaciones",
-    "updateMod": "Actualizar modo",
+    "checkAllUpdates": "Comprobar todos",
+    "updateMod": "Actualizar mod",
+    "updateAllMods": "Actualizar todos",
     "linkThunderstore": "Enlace Thunderstore",
+    "dependencyHint": "Dependencia de BepInEx — actualizar mediante el paquete principal (ej. YamlDotNet.dll)",
     "linkUrlPlaceholder": "URL de la tienda Thunder",
     "configBtn": "configuración",
     "remove": "Eliminar",
@@ -1074,6 +1081,7 @@
       "up_to_date": "A hoy",
       "update_available": "Actualización disponible",
       "unknown": "Fuente desconocida",
+      "dependency": "Dependencia BepInEx",
       "error": "Verificación fallida"
     }
   },

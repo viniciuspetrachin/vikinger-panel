@@ -162,13 +162,17 @@
       "playerPromoted": "{label} zum Administrator befördert",
       "playerDemoted": "{label} aus dem Admin entfernt",
       "serverActionCompleted": "Aktion „{action}“ abgeschlossen",
-      "checkRequested": "Scheck angefordert"
+      "checkRequested": "Scheck angefordert",
+      "modsCheckAllSummary": "{checked} Paket(e) geprüft: {updates} Update(s) verfügbar, {errors} Fehler",
+      "modsUpdateAllSummary": "{updated} Paket(e) aktualisiert, {failed} fehlgeschlagen, {skipped} bereits aktuell",
+      "modsNoLinkedPackages": "Keine Mods mit Thunderstore-Verknüpfung"
     },
     "confirm": {
       "kickPlayer": "Tritt {label}? Der Spieler kann wieder beitreten.",
       "banPlayer": "Verbot {label} ({steamId})? Der Spieler kann nicht beitreten, bis die Sperre aufgehoben wird.",
       "removeMod": "Mod {name} entfernen?",
       "updateMod": "{name} aktualisieren? Möglicherweise muss der Server neu gestartet werden.",
+      "updateAllMods": "Alle Pakete unten aktualisieren? Möglicherweise muss der Server neu gestartet werden.\n\n{packages}",
       "removeOrphanedConfig": "Verwaiste Konfiguration {names} entfernen?",
       "removeOrphanedConfigs": "{count} verwaiste Konfigurationsdatei(en) entfernen?\n\n{names}",
       "activateWorldNew": "Welt „{name}“ aktivieren? Der Server wird neu gestartet und eine NEUE (leere) Welt wird erstellt.",
@@ -1047,8 +1051,11 @@
     "noConfig": "Keine Konfiguration",
     "version": "Version",
     "checkUpdates": "Suchen Sie nach Updates",
+    "checkAllUpdates": "Alle auf Updates prüfen",
     "updateMod": "Mod aktualisieren",
+    "updateAllMods": "Alle Mods aktualisieren",
     "linkThunderstore": "Link Thunderstore",
+    "dependencyHint": "BepInEx-Abhängigkeit — über das Hauptpaket aktualisieren (z. B. YamlDotNet.dll)",
     "linkUrlPlaceholder": "Thunderstore-URL",
     "configBtn": "Konfig",
     "remove": "Entfernen",
@@ -1074,6 +1081,7 @@
       "up_to_date": "Auf dem neuesten Stand",
       "update_available": "Update verfügbar",
       "unknown": "Unbekannte Quelle",
+      "dependency": "BepInEx-Abhängigkeit",
       "error": "Prüfung fehlgeschlagen"
     }
   },

@@ -162,13 +162,17 @@
       "playerPromoted": "{label} повышен до администратора",
       "playerDemoted": "{label} удален из администратора",
       "serverActionCompleted": "Действие \"{action}\" завершено",
-      "checkRequested": "Запрошен чек"
+      "checkRequested": "Запрошен чек",
+      "modsCheckAllSummary": "Проверено пакетов: {checked}, доступно обновлений: {updates}, ошибок: {errors}",
+      "modsUpdateAllSummary": "Обновлено: {updated}, ошибок: {failed}, уже актуально: {skipped}",
+      "modsNoLinkedPackages": "Нет модов, связанных с Thunderstore"
     },
     "confirm": {
       "kickPlayer": "Пнуть {label}? Игрок может вернуться.",
       "banPlayer": "Забанить {label} ({steamId})? Игрок не может присоединиться, пока его не разбанят.",
       "removeMod": "Удалить мод {name}?",
       "updateMod": "Обновить {name}? Возможно, потребуется перезагрузить сервер.",
+      "updateAllMods": "Обновить все пакеты ниже? Возможно, потребуется перезагрузить сервер.\n\n{packages}",
       "removeOrphanedConfig": "Удалить потерянную конфигурацию {names}?",
       "removeOrphanedConfigs": "Удалить {count} потерянные файлы конфигурации?\n\n{names}",
       "activateWorldNew": "Активировать мир \"{name}\"? Сервер перезапустится и будет создан НОВЫЙ (пустой) мир.",
@@ -1047,8 +1051,11 @@
     "noConfig": "Нет конфигурации",
     "version": "Версия",
     "checkUpdates": "Проверьте наличие обновлений",
+    "checkAllUpdates": "Проверить все",
     "updateMod": "Обновить мод",
+    "updateAllMods": "Обновить все",
     "linkThunderstore": "Ссылка на Thunderstore",
+    "dependencyHint": "Зависимость BepInEx — обновляйте через основной пакет (напр. YamlDotNet.dll)",
     "linkUrlPlaceholder": "URL-адрес магазина Thunderstore",
     "configBtn": "Конфигурация",
     "remove": "Удалять",
@@ -1074,6 +1081,7 @@
       "up_to_date": "До настоящего времени",
       "update_available": "Доступно обновление",
       "unknown": "Неизвестный источник",
+      "dependency": "Зависимость BepInEx",
       "error": "Проверка не удалась"
     }
   },

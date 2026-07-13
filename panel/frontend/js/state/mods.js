@@ -20,7 +20,7 @@ export const mods = {
   },
 
   updateExportSkipped() {
-    this.exportSkipped = this.mods.filter((m) => m.update_status === "unknown").length;
+    this.exportSkipped = this.mods.filter((m) => m.update_status === "unknown" && m.linkable !== false).length;
   },
 
   async loadMods() {
@@ -174,8 +174,65 @@ export const mods = {
       up_to_date: "text-green-500",
       update_available: "text-amber-400",
       unknown: "text-gray-500",
+      dependency: "text-gray-500",
       error: "text-red-400",
     }[status] || "text-gray-500";
+  },
+
+  isUnlinkableMod(mod) {
+    return mod.linkable === false;
+  },
+
+  linkedPackageCount() {
+    return new Set(this.mods.filter((m) => m.package_id).map((m) => m.package_id)).size;
+  },
+
+  pendingPackageUpdates() {
+    const seen = new Set();
+    const packages = [];
+    for (const mod of this.mods) {
+      if (mod.update_available && mod.package_id && !seen.has(mod.package_id)) {
+        seen.add(mod.package_id);
+        packages.push(mod.package_id);
+      }
+    }
+    return packages;
+  },
+
+  async checkAllModUpdates() {
+    return this.withBusy("checkAllModUpdates", async () => {
+      try {
+        const data = await this.api("POST", "/api/mods/check-updates");
+        if (!data.checked) {
+          this.toast(this.t("common.toasts.modsNoLinkedPackages"));
+          return;
+        }
+        this.toast(this.t("common.toasts.modsCheckAllSummary", {
+          checked: data.checked,
+          updates: data.updates_available,
+          errors: data.errors,
+        }));
+        await this.loadMods();
+      } catch (e) { this.toast(e.message, "error"); }
+    });
+  },
+
+  async updateAllMods() {
+    const packages = this.pendingPackageUpdates();
+    if (!packages.length) return;
+    const msg = this.t("common.confirm.updateAllMods", { packages: packages.join("\n") });
+    if (!confirm(msg)) return;
+    return this.withBusy("updateAllMods", async () => {
+      try {
+        const data = await this.api("POST", "/api/mods/update-all");
+        this.toast(this.t("common.toasts.modsUpdateAllSummary", {
+          updated: data.updated,
+          failed: data.failed,
+          skipped: data.skipped,
+        }));
+        await this.loadMods();
+      } catch (e) { this.toast(e.message, "error"); }
+    });
   },
 
   async checkModUpdate(name) {

@@ -162,13 +162,17 @@
       "playerPromoted": "{label} promovido a administrador",
       "playerDemoted": "{label} removido do administrador",
       "serverActionCompleted": "Ação \"{action}\" concluída",
-      "checkRequested": "Cheque solicitado"
+      "checkRequested": "Cheque solicitado",
+      "modsCheckAllSummary": "Verificados {checked} pacote(s): {updates} atualização(ões) disponível(eis), {errors} erro(s)",
+      "modsUpdateAllSummary": "Atualizados {updated} pacote(s), {failed} falha(s), {skipped} já atualizados",
+      "modsNoLinkedPackages": "Nenhum mod vinculado ao Thunderstore"
     },
     "confirm": {
       "kickPlayer": "Chutar {label}? O jogador pode voltar.",
       "banPlayer": "Banir {label} ({steamId})? O jogador não pode entrar até que seja desbanido.",
       "removeMod": "Remover mod {name}?",
       "updateMod": "Atualizar {name}? O servidor pode precisar ser reiniciado.",
+      "updateAllMods": "Atualizar todos os pacotes abaixo? O servidor pode precisar ser reiniciado.\n\n{packages}",
       "removeOrphanedConfig": "Remover configuração órfã {names}?",
       "removeOrphanedConfigs": "Remover {count} arquivo(s) de configuração órfão(s)?\n\n{names}",
       "activateWorldNew": "Ativar mundo \"{name}\"? O servidor será reiniciado e um NOVO mundo (vazio) será criado.",
@@ -1047,8 +1051,11 @@
     "noConfig": "Sem configuração",
     "version": "Versão",
     "checkUpdates": "Verifique se há atualizações",
+    "checkAllUpdates": "Verificar todos",
     "updateMod": "Atualizar mod",
+    "updateAllMods": "Atualizar todos",
     "linkThunderstore": "Link Thunderstore",
+    "dependencyHint": "Dependência BepInEx — atualize pelo pacote principal (ex.: YamlDotNet.dll)",
     "linkUrlPlaceholder": "URL do Thunderstore",
     "configBtn": "Configuração",
     "remove": "Remover",
@@ -1074,6 +1081,7 @@
       "up_to_date": "Atualizado",
       "update_available": "Atualização disponível",
       "unknown": "Fonte desconhecida",
+      "dependency": "Dependência BepInEx",
       "error": "Falha na verificação"
     }
   },
