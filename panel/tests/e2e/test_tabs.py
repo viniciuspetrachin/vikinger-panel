@@ -5,22 +5,22 @@ from playwright.sync_api import Page, expect
 
 pytestmark = pytest.mark.e2e
 
-TAB_LABELS = [
-    "Overview",
-    "Server",
-    "Worlds",
-    "Mods & Config",
-    "Backups",
-    "Files",
-    "Console",
-    "Audit",
-    "Help",
-    "About",
+TAB_IDS = [
+    "dashboard",
+    "server",
+    "worlds",
+    "mods",
+    "backups",
+    "files",
+    "logs",
+    "audit",
+    "help",
+    "about",
 ]
 
 
-def goto_tab(page: Page, label: str) -> None:
-    page.get_by_role("navigation").get_by_role("button", name=label, exact=True).click()
+def goto_tab(page: Page, tab_id: str) -> None:
+    page.locator(f'[data-nav-id="{tab_id}"]').click()
     page.wait_for_timeout(500)
 
 
@@ -32,25 +32,26 @@ def test_all_tabs_load_without_500(page: Page, base_url: str) -> None:
     page.goto(base_url)
     page.wait_for_selector("[x-cloak]", state="detached")
 
-    for label in TAB_LABELS:
-        goto_tab(page, label)
+    for tab_id in TAB_IDS:
+        goto_tab(page, tab_id)
         assert_no_error_toast(page)
 
 
 def test_help_faq_search(page: Page, base_url: str) -> None:
     page.goto(base_url)
     page.wait_for_selector("[x-cloak]", state="detached")
-    goto_tab(page, "Help")
+    goto_tab(page, "help")
 
-    expect(page.get_by_placeholder("Search FAQ...")).to_be_visible()
-    page.get_by_placeholder("Search FAQ...").fill("crossplay")
+    search = page.locator('input[placeholder*="FAQ"]')
+    expect(search).to_be_visible()
+    search.fill("crossplay")
     expect(page.get_by_text("How do I enable crossplay")).to_be_visible()
 
 
 def test_about_version(page: Page, base_url: str) -> None:
     page.goto(base_url)
     page.wait_for_selector("[x-cloak]", state="detached")
-    goto_tab(page, "About")
+    goto_tab(page, "about")
 
     expect(page.get_by_role("main").get_by_role("heading", name="Vikinger Panel")).to_be_visible()
     expect(page.get_by_text("What's new")).to_be_visible()
@@ -69,7 +70,7 @@ def test_dashboard_connect_block(page: Page, base_url: str) -> None:
 def test_files_all_scopes(page: Page, base_url: str) -> None:
     page.goto(base_url)
     page.wait_for_selector("[x-cloak]", state="detached")
-    goto_tab(page, "Files")
+    goto_tab(page, "files")
 
     for scope in ("Config", "Data"):
         page.locator("button.btn-tab.flex").filter(has_text=scope).first.click()
@@ -80,7 +81,7 @@ def test_files_all_scopes(page: Page, base_url: str) -> None:
 def test_logs_sources(page: Page, base_url: str) -> None:
     page.goto(base_url)
     page.wait_for_selector("[x-cloak]", state="detached")
-    goto_tab(page, "Console")
+    goto_tab(page, "logs")
 
     for source in ("Docker", "BepInEx"):
         page.get_by_role("button", name=source, exact=True).click()
@@ -91,7 +92,7 @@ def test_logs_sources(page: Page, base_url: str) -> None:
 def test_backups_tab_content(page: Page, base_url: str) -> None:
     page.goto(base_url)
     page.wait_for_selector("[x-cloak]", state="detached")
-    goto_tab(page, "Backups")
+    goto_tab(page, "backups")
 
     expect(page.get_by_role("heading", name="Automatic scheduling")).to_be_visible()
     expect(page.get_by_role("heading", name="Stored backups")).to_be_visible()

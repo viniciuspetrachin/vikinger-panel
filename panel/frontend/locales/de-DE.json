@@ -1,0 +1,1312 @@
+{
+  "meta": {
+    "locale": "de-DE",
+    "appTitle": "Vikinger Panel",
+    "appSubtitle": "PsyDev Server-Manager"
+  },
+  "nav": {
+    "sections": {
+      "painel": "Panel",
+      "gerenciar": "Verwalten",
+      "ferramentas": "Werkzeuge",
+      "suporte": "Support"
+    },
+    "items": {
+      "dashboard": "Übersicht",
+      "server": "Server",
+      "worlds": "Welten",
+      "mods": "Mods & Config",
+      "backups": "Backups",
+      "files": "Dateien",
+      "logs": "Konsole",
+      "audit": "Audit",
+      "help": "Hilfe",
+      "donation": "Projekt unterstützen",
+      "about": "Über"
+    },
+    "sidebar": {
+      "containerRunning": "Container läuft",
+      "containerStopped": "Container gestoppt"
+    },
+    "refresh": "Aktualisieren"
+  },
+  "common": {
+    "actions": {
+      "copy": "Kopie",
+      "cancel": "Stornieren",
+      "save": "Speichern",
+      "delete": "Löschen",
+      "edit": "Bearbeiten",
+      "download": "Herunterladen",
+      "close": "✕",
+      "view": "Sicht",
+      "ok": "OK",
+      "send": "Schicken",
+      "undo": "Rückgängig machen",
+      "redo": "Wiederholen",
+      "find": "Finden",
+      "gotIt": "Habe es",
+      "confirmAndStart": "Bestätigen und starten",
+      "copyAddress": "Adresse kopieren",
+      "copyKey": "Schlüssel kopieren",
+      "copyCode": "Code kopieren",
+      "copyRequest": "Kopieranfrage",
+      "copyResponse": "Antwort kopieren",
+      "copyAll": "Alles kopieren",
+      "restoreDraft": "Entwurf wiederherstellen",
+      "discard": "Verwerfen"
+    },
+    "loading": {
+      "loading": "Laden...",
+      "loadingEllipsis": "Laden…",
+      "applying": "Bewerben...",
+      "saving": "Sparen...",
+      "restarting": "Neustart...",
+      "creating": "Erstellen...",
+      "activating": "Aktivieren...",
+      "deleting": "Löschen...",
+      "removing": "Entfernen...",
+      "uploading": "Hochladen...",
+      "installing": "Installieren...",
+      "checking": "Überprüfung...",
+      "updating": "Aktualisierung...",
+      "linking": "Verlinkung...",
+      "generating": "Generieren...",
+      "publishing": "Veröffentlichung...",
+      "running": "Läuft...",
+      "restoring": "Wiederherstellung...",
+      "undoing": "Verderben...",
+      "recreatingContainer": "Container wird neu erstellt..."
+    },
+    "status": {
+      "online": "Online",
+      "paused": "Angehalten",
+      "offline": "Offline",
+      "starting": "Beginnt",
+      "realTime": "Echtzeit",
+      "emDash": null,
+      "yes": "Ja",
+      "no": "NEIN",
+      "on": "An",
+      "off": "Aus",
+      "enabled": "Ermöglicht",
+      "disabled": "Deaktiviert",
+      "active": "Aktiv",
+      "unlimited": "Unbegrenzt",
+      "noLimit": "Keine Begrenzung",
+      "hostSuffix": "(Gastgeber)",
+      "pending": "(ausstehend)",
+      "days": "{count} Tage",
+      "day": "{count} Tag",
+      "match": "übereinstimmen",
+      "matches": "Streichhölzer",
+      "matchEs": "Übereinstimmung(en)",
+      "ofLimit": "der Grenze",
+      "players": "Spieler",
+      "mod": "Mod",
+      "mods": "Mods",
+      "ms": "ms"
+    },
+    "toasts": {
+      "copied": "Kopiert!",
+      "failedToCopy": "Kopieren fehlgeschlagen",
+      "actionCompleted": "Aktion abgeschlossen",
+      "fileSaved": "Datei gespeichert!",
+      "settingsSaved": "Einstellungen gespeichert!",
+      "listsSaved": "Listen gespeichert! Server wurde neu gestartet, wenn er online war.",
+      "limitApplied": "Limit angewendet",
+      "playerLimitSaved": "Spielerlimit gespeichert",
+      "backupLimitSaved": "Sicherungslimit gespeichert und Bereinigung angewendet",
+      "updateSettingsSaved": "Update-Einstellungen gespeichert!",
+      "configSavedRecreated": "Konfiguration gespeichert und Container neu erstellt!",
+      "backupConfigApplied": "Konfiguration angewendet und Container neu gestartet!",
+      "worldSettingsSaved": "Welteinstellungen gespeichert",
+      "worldSettingsSavedRestart": "Einstellungen gespeichert und Server neu gestartet",
+      "serverConfiguredVanilla": "Server im Vanilla-Modus konfiguriert",
+      "serverConfiguredBepinex": "Mit BepInEx konfigurierter Server",
+      "rconPasswordGenerated": "RCON-Passwort generiert – kopieren Sie es, bevor Sie den Hinweis schließen",
+      "installed": "Installiert: {names}",
+      "modRemoved": "{name} entfernt",
+      "modEnabled": "Mod aktiviert",
+      "modDisabled": "Mod deaktiviert",
+      "modLinked": "Mod mit Thunderstore verknüpft",
+      "modUpdated": "Mod aktualisiert auf v{version}",
+      "modOnLatest": "Mod ist auf der neuesten Version",
+      "modUpdateAvailable": "Update verfügbar: v{installed} → v{latest}",
+      "orphanedConfigsRemoved": "{count} verwaiste Konfiguration(en) entfernt",
+      "r2zDownloaded": ".r2z-Profil heruntergeladen",
+      "codeCopied": "Code kopiert: {count} Mod(s){skipped}",
+      "codeCopiedSkipped": "({skipped} Mod(s) übersprungen)",
+      "backupCreated": "Backup erstellt: {name}",
+      "scheduledBackupTriggered": "Geplante Sicherung ausgelöst – warten Sie ein paar Sekunden.",
+      "backupRestored": "Backup „{name}“ wiederhergestellt – Server wird neu gestartet.",
+      "backupRestoredLatest": "Backup „{name}“ wiederhergestellt – Server wird neu gestartet.",
+      "restoreUndone": "Wiederherstellung rückgängig gemacht – „{name}“ ist aktiv.",
+      "backupDeleted": "Sicherung „{name}“ gelöscht",
+      "purgeDeleted": "Gelöschte {count} Backup(s)",
+      "purgeNone": "Keine Backups zum Löschen",
+      "worldActivated": "Welt „{name}“ aktiviert",
+      "worldCreatedActivated": "Welt „{name}“ erstellt und aktiviert",
+      "worldRegistered": "Welt „{name}“ registriert",
+      "worldDeleted": "Welt „{name}“ gelöscht",
+      "playerKicked": "{label} gekickt",
+      "playerBanned": "{label} gesperrt",
+      "playerUnbanned": "{label} entsperrt",
+      "playerPromoted": "{label} zum Administrator befördert",
+      "playerDemoted": "{label} aus dem Admin entfernt",
+      "serverActionCompleted": "Aktion „{action}“ abgeschlossen",
+      "checkRequested": "Scheck angefordert"
+    },
+    "confirm": {
+      "kickPlayer": "Tritt {label}? Der Spieler kann wieder beitreten.",
+      "banPlayer": "Verbot {label} ({steamId})? Der Spieler kann nicht beitreten, bis die Sperre aufgehoben wird.",
+      "removeMod": "Mod {name} entfernen?",
+      "updateMod": "{name} aktualisieren? Möglicherweise muss der Server neu gestartet werden.",
+      "removeOrphanedConfig": "Verwaiste Konfiguration {names} entfernen?",
+      "removeOrphanedConfigs": "{count} verwaiste Konfigurationsdatei(en) entfernen?\n\n{names}",
+      "activateWorldNew": "Welt „{name}“ aktivieren? Der Server wird neu gestartet und eine NEUE (leere) Welt wird erstellt.",
+      "activateWorld": "Welt „{name}“ aktivieren? Der Server wird neu gestartet.",
+      "deleteWorld": "Welt „{name}“ endgültig löschen?",
+      "restoreLatest": "Das neueste Backup wiederherstellen? Der Server wird neu gestartet.",
+      "undoRestore": "Letzte Wiederherstellung rückgängig machen? Der Server kehrt in den vorherigen Zustand zurück.",
+      "applyMemoryLimit": "RAM-Limit auf {label} setzen? Der Container wird neu erstellt und die Verbindung der Spieler wird getrennt."
+    },
+    "errors": {
+      "invalidSteamId": "Ungültige Steam-ID – verwenden Sie 17 Ziffern",
+      "invalidWorldName": "Ungültiger Weltname – verwenden Sie nur Buchstaben, Zahlen, _ und -",
+      "rconUnavailable": "RCON nicht verfügbar",
+      "couldNotLoadUsage": "Die Nutzung konnte nicht geladen werden"
+    },
+    "logEmpty": {
+      "waitingForOutput": "Warten auf Serverausgabe...",
+      "noLogsAvailable": "Keine Protokolle verfügbar."
+    },
+    "editor": {
+      "unsavedChanges": "Nicht gespeicherte Änderungen",
+      "localDraftFound": "Lokaler Entwurf gefunden (nicht auf dem Server gespeichert).",
+      "defaultLabel": "Standard:",
+      "ctrlSaveSearch": "Strg+S zum Speichern · Strg+F zum Suchen",
+      "noMatchingSettings": "Keine passenden Einstellungen"
+    },
+    "language": "Sprache"
+  },
+  "help": {
+    "categories": {
+      "primeiros-passos": {
+        "label": "Erste Schritte",
+        "items": [
+          {
+            "q": "Wie treten meine Freunde dem Server bei?",
+            "a": "Verwenden Sie in Valheim <b>Join via IP</b> und geben Sie <code>YOUR_IP:2456</code> ein (der Standardport ist 2456). Geben Sie dann das Serverpasswort ein. Die aktuelle Adresse erscheint auf der Registerkarte <b>Übersicht</b> im Block „Verbindung herstellen“."
+          },
+          {
+            "q": "Wo lege ich den Servernamen und das Passwort fest?",
+            "a": "Auf der Registerkarte <b>Server</b>. Das Passwort muss mindestens 5 Zeichen lang sein und darf nicht den Servernamen enthalten. Speichern und neu starten, um die Anwendung anzuwenden."
+          },
+          {
+            "q": "Der Server wird nicht in der öffentlichen Liste angezeigt. Was nun?",
+            "a": "Die öffentliche Liste von Valheim dauert oft ein paar Minuten und schlägt manchmal fehl. Bevorzugen Sie <b>Beitritt über IP</b>. Bestätigen Sie außerdem, dass <code>SERVER_PUBLIC</code> auf der Registerkarte Server auf <code>true</code> gesetzt ist."
+          },
+          {
+            "q": "Muss ich Ports auf meinem Router öffnen?",
+            "a": "Ja – um über das Internet zu spielen, leiten Sie die UDP-Ports <b>2456–2458</b> an den Server-Rechner weiter (Portweiterleitung)."
+          },
+          {
+            "q": "Wie aktiviere ich Crossplay (PC + Xbox/Game Pass)?",
+            "a": "Fügen Sie auf der Registerkarte „Server“ <code>-crossplay</code> im Feld <b>Extra arguments</b> hinzu und starten Sie neu."
+          }
+        ]
+      },
+      "servidor": {
+        "label": "Server",
+        "items": [
+          {
+            "q": "Was ist der Unterschied zwischen Start, Stopp, Neustart, Pause und Fortsetzen?",
+            "a": "<b>Start/Stopp/Neustart</b> Schaltet den gesamten Container ein/aus. <b>Pause/Resume</b> unterbricht nur den Valheim-Prozess im Container (schneller, hält den Container am Laufen)."
+          },
+          {
+            "q": "Was sind die Listen „Administratoren“, „Gesperrt“ und „Zugelassen“?",
+            "a": "Steam-ID-Listen. <b>Admin</b> erhält Moderationsbefehle; <b>Gesperrte</b> Spieler können nicht beitreten; <b>Zulässig</b> fungiert als Whitelist (wenn ausgefüllt, können nur diese IDs beitreten). Verwenden Sie in <b>Overview</b> das Menü <b>Aktionen</b> neben jedem verbundenen Spieler, um ihn zu bewerben, zu kicken oder zu sperren, ohne die Dateien manuell bearbeiten zu müssen."
+          },
+          {
+            "q": "Wie verwende ich die interaktive Konsole des Panels?",
+            "a": "Der Mod <b>ValheimRcon</b> ist in das Panel (<b>Integrated</b> Abzeichen auf der Registerkarte Mods) integriert. Im <b>Modded (BepInEx)</b> Modus wird das RCON-Passwort bei der ersten Einrichtung automatisch generiert. Konsole und Moderation erfordern aktives BepInEx und aktivierten Mod."
+          },
+          {
+            "q": "Wie ändere ich das RCON-Passwort?",
+            "a": "Bearbeiten Sie <code>config/bepinex/org.tristan.rcon.cfg</code> (das Feld <code>Password</code>) in der Mods → ValheimRcon-Konfiguration oder legen Sie <code>PANEL_RCON_PASSWORD</code> in <code>.env</code> fest. Starten Sie den Server nach der Änderung neu."
+          },
+          {
+            "q": "Was ist der Unterschied zwischen Kick und Ban?",
+            "a": "<b>Kick</b> trennt die Verbindung des Spielers sofort, er kann jedoch wieder beitreten. <b>Ban</b> blockiert die Steam-ID auf der Sperrliste, bis Sie die Sperre aufheben. Für beide ist ValheimRcon aktiviert und ein RCON-Passwort konfiguriert."
+          },
+          {
+            "q": "Kann ich ValheimRcon entfernen?",
+            "a": "Nein – es ist in das Panel integriert und kann nicht entfernt werden. Sie können es auf der Registerkarte „Mods“ <b>deaktivieren</b>; Wenn Sie wieder in den Modded-Modus (BepInEx) wechseln, wird er automatisch wieder aktiviert."
+          },
+          {
+            "q": "Wie finde ich die Steam-ID eines Spielers?",
+            "a": "Verbundene Spieler werden in der Übersicht mit Namen und Steam-ID angezeigt. Für Offline-Spieler verwenden Sie <a href=\"https://steamid.io\" target=\"_blank\" rel=\"noopener\">steamid.io</a> und kopieren Sie die <b>steamID64</b> (17 Ziffern)."
+          }
+        ]
+      },
+      "mundos": {
+        "label": "Welten",
+        "items": [
+          {
+            "q": "Wie erschaffe ich eine neue Welt?",
+            "a": "Geben Sie auf der Registerkarte <b>Welten</b> einen Namen ein und klicken Sie auf <b>Erstellen</b> (bleibt ausstehend) oder <b>Erstellen und aktivieren</b> (schaltet den Server darauf um). Eine Welt wird tatsächlich nur beim ersten Booten generiert."
+          },
+          {
+            "q": "Was sind die Voreinstellungen (Easy, Hard, Hardcore...)?",
+            "a": "Es handelt sich dabei um dieselben Modifikatoren wie bei Valheims Welterstellungsbildschirm, die in der Datei <code>.fwl</code> gespeichert sind. Sie können eine Voreinstellung verwenden und dennoch einzelne Einstellungen (Kampf, Ressourcen, Raids, Portale, Todesstrafe) überschreiben."
+          },
+          {
+            "q": "Kann ich eine Welt importieren, die ich bereits habe?",
+            "a": "Ja. Kopieren Sie <code>WorldName.fwl</code> und <code>WorldName.db</code> nach <code>config/worlds_local/</code> (Registerkarte „Dateien“ oder Docker-Volume) und es wird in der Liste angezeigt."
+          },
+          {
+            "q": "Löscht ein Weltwechsel die vorherige?",
+            "a": "Nein. Durch den Wechsel ändert sich nur, welche Welt aktiv ist. Der Fortschritt auf anderen Welten bleibt in <code>config/worlds_local/</code> gespeichert."
+          }
+        ]
+      },
+      "mods": {
+        "label": "Mods & BepInEx",
+        "items": [
+          {
+            "q": "Wie installiere ich einen Mod?",
+            "a": "Fügen Sie unter <b>Mods & Config</b> eine <a href=\"https://thunderstore.io/c/valheim/\" target=\"_blank\" rel=\"noopener\">Thunderstore</a> URL (Seite, Download-Link oder r2modman) ein und klicken Sie auf „Installieren“ oder laden Sie eine <code>.zip</code>/<code>.dll</code> hoch."
+          },
+          {
+            "q": "Brauchen Spieler den Mod auch?",
+            "a": "Es kommt auf den Mod an. Serverseitige Mods (z. B. ServerSideMap) laufen nur auf dem Server; Die meisten Gameplay-/UI-Mods müssen auf dem Client jedes Spielers in derselben Version installiert werden."
+          },
+          {
+            "q": "Was ist BepInEx?",
+            "a": "Es ist der von Valheim verwendete Mod-Loader. Jeder Mod generiert normalerweise eine <code>.cfg</code>-Datei in <code>config/bepinex</code>, die auf der Registerkarte „Mods & Konfiguration“ bearbeitet werden kann."
+          },
+          {
+            "q": "Vanille oder modifiziert?",
+            "a": "Wählen Sie beim <b>ersten Start</b> oder auf <b>Server</b> → <b>Spielaktualisierungen</b> <b>Vanilla</b> (deaktiviert BepInEx und alle Mods) oder <b>Modded</b> (aktiviert BepInEx und integriertes ValheimRcon). Verwenden Sie im Vanilla-Modus <b>Administratoren</b> in den Spielerlisten, um im Spiel als Administrator zu fungieren."
+          },
+          {
+            "q": "Wie funktionieren Spielupdates?",
+            "a": "Der Container verwendet <code>valheim-updater</code> (SteamCMD). Auf der Registerkarte <b>Server</b> können Sie die automatische Aktualisierung aktivieren, deaktivieren oder auf <b>Jetzt nach Updates suchen</b> klicken. Wenn Mods installiert sind, aktualisieren Sie sie lieber manuell, nachdem Sie die Kompatibilität überprüft haben."
+          },
+          {
+            "q": "Können Updates Mods kaputt machen?",
+            "a": "Ja. Ein Valheim-Patch erfordert möglicherweise neue Mod-Versionen. Sichern Sie das Spiel, aktualisieren Sie es und verwenden Sie dann <b>Nach Updates suchen</b> für jeden mit Thunderstore verknüpften Mod."
+          },
+          {
+            "q": "Wie aktualisiere ich einen Mod?",
+            "a": "Über Thunderstore installierte Mods zeigen den Versionsstatus an. Verwenden Sie <b>Nach Updates suchen</b> und, wenn eine neue Version verfügbar ist, <b>Mod aktualisieren</b>. Hochgeladene Mods müssen für automatische Überprüfungen <b>mit einer Thunderstore-URL verknüpft</b> sein."
+          },
+          {
+            "q": "Ich habe einen Mod aktiviert/deaktiviert und nichts hat sich geändert.",
+            "a": "Mod-Änderungen erfordern einen <b>Server-Neustart</b>. Verwenden Sie die Schaltfläche „Neu starten“ in der Übersicht."
+          }
+        ]
+      },
+      "backups": {
+        "label": "Backups",
+        "items": [
+          {
+            "q": "Erfolgen Backups automatisch?",
+            "a": "Ja. Auf der Registerkarte <b>Backups</b> legen Sie unter <b>Automatischer Zeitplan</b> das Intervall fest. Der Container kopiert <code>worlds_local/</code> nach <code>config/backups/</code> als <code>worlds-*.zip</code> Dateien. Aufbewahrung: 30 Tage."
+          },
+          {
+            "q": "Wie kann ich jetzt ein Backup erstellen?",
+            "a": "Klicken Sie auf <b>Manuelle Sicherung erstellen</b> und wählen Sie den Typ: Aktive Welt (schnell), Vollständig oder Nur Konfigurationen."
+          },
+          {
+            "q": "Wie kann ich ein Backup wiederherstellen?",
+            "a": "Klicken Sie in der Backup-Liste an der gewünschten Stelle auf <b>Hier wiederherstellen</b>. Das Panel erstellt einen Prüfpunkt, stellt Dateien wieder her und startet den Server neu. Verwenden Sie <b>Auf den neuesten Stand zurücksetzen</b> oder <b>Letzte Wiederherstellung rückgängig machen</b>, um zurückzugehen."
+          },
+          {
+            "q": "Was ist jetzt für den Lauf geplant?",
+            "a": "Löst manuell denselben Sicherungsauftrag aus, der im konfigurierten Intervall ausgeführt wird – anders als <b>Manuelle Sicherung erstellen</b>, bei der Sie den Umfang auswählen können (weltweit, vollständig oder Konfigurationen)."
+          },
+          {
+            "q": "Kann ich den Verbrauch von Festplattensicherungen begrenzen?",
+            "a": "Ja. Verwenden Sie auf der Registerkarte <b>Server</b> unter <b>Backup-Festplattennutzung</b> das Dropdown-Menü <b>Gesamtsicherungslimit</b>. Lassen Sie es auf <b>Unbegrenzt</b> ohne Obergrenze oder wählen Sie eine Größe (1 GB, 2 GB, 10 GB usw.) und klicken Sie auf <b>Sicherungslimit speichern</b>. Älteste Backups werden automatisch entfernt, wenn die Obergrenze überschritten wird."
+          },
+          {
+            "q": "Was bewirkt die Funktion „Alle Backups jetzt löschen“?",
+            "a": "Auf der Registerkarte <b>Server</b> werden dadurch alle Sicherungs-ZIP-Dateien in <code>config/backups/</code> unwiderruflich gelöscht, mit Ausnahme von Sicherungen, die an einen aktiven Wiederherstellungs- oder Rückgängig-Prüfpunkt gebunden sind."
+          }
+        ]
+      },
+      "files": {
+        "label": "Dateien",
+        "items": [
+          {
+            "q": "Wie finde ich schnell eine bestimmte Datei?",
+            "a": "Verwenden Sie auf der Registerkarte <b>Dateien</b> das Suchfeld, um nach Dateinamen zu filtern. Passende Dateien werden für einen schnellen Zugriff in einer flachen Liste angezeigt."
+          },
+          {
+            "q": "Was sind die Dateitypfilter?",
+            "a": "Klicken Sie auf Chips wie <b>Config</b>, <b>DLLs</b>, <b>Plugins</b> oder <b>Worlds</b>, um den Baum auf gängige Dateitypen einzugrenzen – nützlich, wenn Sie nur ein paar Konfigurationen oder Mod-Dateien bearbeiten müssen."
+          }
+        ]
+      },
+      "recursos": {
+        "label": "Ressourcen & Leistung",
+        "items": [
+          {
+            "q": "Wie viel RAM benötigt der Server?",
+            "a": "Ein Valheim-Server benötigt normalerweise 2–4 GB, wobei die Größe mit der Anzahl der Spieler/Mods zunimmt. Passen Sie die Obergrenze auf der Registerkarte <b>Server</b> unter <b>Serverkapazität</b> an. Echtzeit-Metriken finden Sie auf <b>Übersicht</b>."
+          },
+          {
+            "q": "Wie lege ich das Spielerlimit fest?",
+            "a": "Auf der Registerkarte <b>Server</b> unter <b>Serverkapazität</b>. Vanilla unterstützt bis zu 10 Spieler; Darüber hinaus benötigen Sie einen Mod (Valheim Plus oder MaxPlayerCount). Das Panel synchronisiert den Wert mit der .cfg-Datei des Mods, falls installiert."
+          },
+          {
+            "q": "Führt eine Änderung des RAM-Limits dazu, dass Spieler getrennt werden?",
+            "a": "Ja – durch die Anwendung eines neuen Limits wird der Container neu erstellt und alle Personen werden online getrennt. Tun Sie dies in ruhigen Stunden."
+          }
+        ]
+      },
+      "docker": {
+        "label": "Installation & Docker",
+        "items": [
+          {
+            "q": "Wie betreibe ich das Panel + den Server?",
+            "a": "Kopieren Sie <code>.env.example</code> nach <code>.env</code>, passen Sie die Werte an und führen Sie <code>docker compose up -d</code> aus. Das Panel befindet sich unter <code>http://YOUR_IP:8080</code>."
+          },
+          {
+            "q": "Ich erhalte Berechtigungsfehler für Ordner.",
+            "a": "Bei der Ausführung über Docker verwenden Panel und Server denselben Benutzer (UID/GID 1000) und teilen sich Volumes, sodass keine Berechtigungsfehler auftreten sollten. Bestätigen Sie, dass <code>config/</code> und <code>data/</code> zur UID 1000 gehören."
+          },
+          {
+            "q": "Ist es sicher, docker.sock im Panel zu montieren?",
+            "a": "Das Panel benötigt <code>docker.sock</code> zur Steuerung des Valheim-Containers. Dadurch erhält Docker die Kontrolle über den Panel-Container – das Panel bleibt in einem privaten Netzwerk/hinter einem Proxy mit Authentifizierung in der Produktion."
+          }
+        ]
+      },
+      "problemas": {
+        "label": "Fehlerbehebung",
+        "items": [
+          {
+            "q": "Wo kann ich sehen, was passiert?",
+            "a": "Öffnen Sie <b>Console</b> (Docker/BepInEx) im Abschnitt „Tools“. Auf der Registerkarte <b>Audit</b> werden alle vom Panel durchgeführten Aktionen angezeigt. Echtzeit-CPU und RAM sind auf <b>Übersicht</b>."
+          },
+          {
+            "q": "Das Panel reagiert nicht / zeigt Fehler 500 an.",
+            "a": "Überprüfen Sie Konsole und Audit. Bestätigen Sie, dass Docker ausgeführt wird und der Container <code>valheim-server</code> vorhanden ist."
+          },
+          {
+            "q": "Eine Änderung wurde nicht angewendet.",
+            "a": "Viele Änderungen (Mods, Listen, laufende Weltkonfiguration) werden erst nach einem Neustart des Servers wirksam."
+          }
+        ]
+      }
+    },
+    "referenceLinks": [
+      {
+        "label": "Offizielles Valheim-Wiki",
+        "url": "https://valheim.fandom.com/wiki/Valheim_Wiki"
+      },
+      {
+        "label": "Thunderstore (Valheim-Mods)",
+        "url": "https://thunderstore.io/c/valheim/"
+      },
+      {
+        "label": "BepInEx (Mod-Loader)",
+        "url": "https://docs.bepinex.dev/"
+      },
+      {
+        "label": "lloesche/valheim-server Docker-Image",
+        "url": "https://github.com/lloesche/valheim-server-docker"
+      },
+      {
+        "label": "Dedizierter Server (offizieller Leitfaden)",
+        "url": "https://valheim.fandom.com/wiki/Hosting_a_Dedicated_Server"
+      }
+    ],
+    "title": "Häufig gestellte Fragen",
+    "searchPlaceholder": "FAQ durchsuchen...",
+    "usefulLinks": "Nützliche Links"
+  },
+  "worlds": {
+    "presets": {
+      "preset": {
+        "_default": {
+          "label": "Spielstandard",
+          "desc": "Keine Modifikatoren – Vanilla-Erlebnis wie vor dem Hildir's Request-Patch."
+        },
+        "easy": {
+          "label": "Einfach",
+          "desc": "Leichtere Kämpfe (leichter Schaden) und seltenere Überfälle."
+        },
+        "normal": {
+          "label": "Normal",
+          "desc": "Entspricht der Standardeinstellung des Spiels – alle Schieberegler auf „Normal“."
+        },
+        "hard": {
+          "label": "Hart",
+          "desc": "Harte Kämpfe und häufigere Überfälle."
+        },
+        "hardcore": {
+          "label": "Hardcore",
+          "desc": "Sehr harter Kampf, maximale Todesstrafe, häufige Überfälle, schwierige Portale und keine Karte."
+        },
+        "casual": {
+          "label": "Lässig",
+          "desc": "Sehr einfacher Kampf, leichte Todesstrafe, mehr Ressourcen, keine Raids, Gelegenheitsportale, Events pro Spieler und passive Mobs."
+        },
+        "hammer": {
+          "label": "Hammermodus",
+          "desc": "Bauen ohne Materialkosten, deaktivierte Raids und passive Mobs."
+        },
+        "immersive": {
+          "label": "Immersiv",
+          "desc": "Portale verboten, Feuer breitet sich über die ganze Welt aus und keine Karte/Minikarte."
+        }
+      },
+      "combat": {
+        "_default": {
+          "label": "Voreinstellung verwenden",
+          "desc": "Kampfschwierigkeit von der ausgewählten Voreinstellung übernehmen."
+        },
+        "veryeasy": {
+          "label": "Sehr einfach",
+          "desc": "125 % Spielerschaden, 50 % Feindschaden, Feinde 90 % Geschwindigkeit/Größe."
+        },
+        "easy": {
+          "label": "Einfach",
+          "desc": "110 % Spielerschaden, 75 % Feindschaden, Feinde 95 % Geschwindigkeit/Größe."
+        },
+        "normal": {
+          "label": "Normal",
+          "desc": "100 % bei allen Kampfparametern. Höhere Chance auf hochstufige Gegner auf Schwer/Sehr schwer."
+        },
+        "hard": {
+          "label": "Hart",
+          "desc": "85 % Spielerschaden, 150 % Feindschaden, Feinde 110 % Geschwindigkeit/Größe, 120 % Levelaufstiegsrate."
+        },
+        "veryhard": {
+          "label": "Sehr schwer",
+          "desc": "70 % Spielerschaden, 200 % Feindschaden, Feinde 120 % Geschwindigkeit/Größe, 140 % Levelaufstiegsrate."
+        }
+      },
+      "deathpenalty": {
+        "_default": {
+          "label": "Voreinstellung verwenden",
+          "desc": "Todesstrafe von der ausgewählten Voreinstellung übernehmen."
+        },
+        "casual": {
+          "label": "Lässig",
+          "desc": "Ausrüstung auf Tod gehalten. Der Lagerbestand ist gesunken. Fähigkeitsverlust: 1 %."
+        },
+        "veryeasy": {
+          "label": "Sehr einfach",
+          "desc": "Lass alles auf den Tod fallen. Fähigkeitsverlust: 1 % (weniger als normal)."
+        },
+        "easy": {
+          "label": "Einfach",
+          "desc": "Lass alles auf den Tod fallen. Fähigkeitsverlust: 2,5 %."
+        },
+        "normal": {
+          "label": "Normal",
+          "desc": "Lass alles auf den Tod fallen. Fähigkeitsverlust: 5 %."
+        },
+        "hard": {
+          "label": "Hart",
+          "desc": "Ausrüstung wurde fallen gelassen, Inventar dauerhaft zerstört. Fähigkeitsverlust: 7,5 %."
+        },
+        "hardcore": {
+          "label": "Hardcore",
+          "desc": "Alle Gegenstände und Fertigkeiten gehen mit dem Tod dauerhaft verloren."
+        }
+      },
+      "resources": {
+        "_default": {
+          "label": "Voreinstellung verwenden",
+          "desc": "Ressourcenrate von der ausgewählten Voreinstellung übernehmen."
+        },
+        "muchless": {
+          "label": "Viel weniger",
+          "desc": "50 % der normalen Mob- und Objekt-Drop-Rate (≈0,5×)."
+        },
+        "less": {
+          "label": "Weniger",
+          "desc": "75 % der normalen Rate (≈0,75×)."
+        },
+        "normal": {
+          "label": "Normal",
+          "desc": "Standardmäßige Spielressourcenrate."
+        },
+        "more": {
+          "label": "Mehr",
+          "desc": "150 % der Normalrate (≈1,5×)."
+        },
+        "muchmore": {
+          "label": "Viel mehr",
+          "desc": "200 % der Normalrate (≈2×)."
+        },
+        "most": {
+          "label": "Maximal",
+          "desc": "300 % der Normalrate (≈3×)."
+        }
+      },
+      "raids": {
+        "_default": {
+          "label": "Voreinstellung verwenden",
+          "desc": "Raid-Häufigkeit von der ausgewählten Voreinstellung übernehmen."
+        },
+        "none": {
+          "label": "Keiner",
+          "desc": "EventRate 0 – Tagesüberfälle deaktiviert. Es kann weiterhin zu nächtlichen Razzien kommen."
+        },
+        "muchless": {
+          "label": "Viel weniger",
+          "desc": "Intervall ~92 Minuten, 10 % Chance – deutlich weniger Überfälle."
+        },
+        "less": {
+          "label": "Weniger",
+          "desc": "Intervall ~69 Minuten, ~13 % Chance."
+        },
+        "normal": {
+          "label": "Normal",
+          "desc": "Intervall ~46 Minuten, 20 % Chance."
+        },
+        "more": {
+          "label": "Mehr",
+          "desc": "Intervall ~28 Minuten, ~33 % Chance."
+        },
+        "muchmore": {
+          "label": "Viel mehr",
+          "desc": "Intervall ~14 Minuten, ~67 % Chance."
+        }
+      },
+      "portals": {
+        "_default": {
+          "label": "Voreinstellung verwenden",
+          "desc": "Portalregeln von der ausgewählten Voreinstellung übernehmen."
+        },
+        "casual": {
+          "label": "Lässig",
+          "desc": "TeleportAll – fast alles kann durch Portale gehen (außer gezähmte Tiere)."
+        },
+        "normal": {
+          "label": "Normal",
+          "desc": "Nicht tragbare Gegenstände unterliegen den Standardspielregeln."
+        },
+        "hard": {
+          "label": "Keine Bossportale",
+          "desc": "Portale sind nicht verfügbar, solange ein Boss in der Gegend aktiv ist."
+        },
+        "veryhard": {
+          "label": "Keine Portale",
+          "desc": "Keine Portale auf der Welt erlaubt."
+        }
+      }
+    },
+    "flags": {
+      "nobuildcost": {
+        "label": "Keine Baukosten",
+        "desc": "Bauteile verbrauchen keine Materialien. Rezepte müssen noch entdeckt werden."
+      },
+      "playerevents": {
+        "label": "Raids pro Spieler",
+        "desc": "Raids basieren auf dem individuellen Fortschritt jedes Spielers, nicht auf den auf dem Server getöteten Bossen."
+      },
+      "fire": {
+        "label": "Brandgefahr",
+        "desc": "Holz kann Feuer fangen und das Feuer breitet sich auf der ganzen Welt aus, nicht nur in Ashlands."
+      },
+      "passivemobs": {
+        "label": "Passive Feinde",
+        "desc": "Feinde greifen erst dann an, wenn sie provoziert werden."
+      },
+      "nomap": {
+        "label": "Keine Karte",
+        "desc": "Karte und Minikarte deaktiviert – navigieren Sie nur anhand von Orientierungspunkten."
+      }
+    },
+    "fields": {
+      "preset": "Voreingestellt",
+      "combat": "Kampf",
+      "deathpenalty": "Todesstrafe",
+      "death": "Tod",
+      "resources": "Ressourcen",
+      "raids": "Überfälle",
+      "portals": "Portale"
+    },
+    "badges": {
+      "awaitingCreation": "Warten auf die Schöpfung",
+      "running": "Läuft",
+      "active": "Aktiv",
+      "pending": "Ausstehend",
+      "configBadge": "{preset} · Portale: {portals}"
+    },
+    "fallback": {
+      "gameDefault": "Spielstandard",
+      "preset": "Voreingestellt"
+    },
+    "ui": {
+      "createTitle": "Erschaffe eine neue Welt",
+      "worldNamePlaceholder": "Weltname",
+      "create": "Erstellen",
+      "createAndActivate": "Erstellen und aktivieren",
+      "db": "DB: {value}",
+      "notCreated": "nicht erstellt",
+      "configBtn": "Konfig",
+      "activate": "Aktivieren",
+      "settingsTitle": "Welteinstellungen",
+      "settingsDesc": "In der Datei <span class=\"font-mono\">.fwl</span> gespeicherte Modifikatoren – entspricht Valheims Welterstellungsbildschirm.",
+      "refresh": "↻ Aktualisieren",
+      "seed": "Samen",
+      "uid": "UID",
+      "fwlFile": ".fwl-Datei",
+      "saveDb": ".db speichern",
+      "presetTitle": "Weltvoreinstellung",
+      "detectedFromFwl": "Aus .fwl erkannt",
+      "custom": "Brauch",
+      "effectiveTitle": "Effektive Werte",
+      "effectiveDesc": "Was wird nach dem Speichern auf die Welt angewendet (Voreinstellung + Überschreibungen).",
+      "modifiersTitle": "Individuelle Modifikatoren",
+      "modifiersDesc": "Lassen Sie „Voreinstellung verwenden“, um von der obigen Voreinstellung zu übernehmen, oder wählen Sie einen bestimmten Wert.",
+      "seedNewWorld": "🌱 Samen (neue Welt)",
+      "seedPlaceholder": "Optional – 1–10 Zeichen",
+      "seedHint": "Wird nur verwendet, wenn die .fwl-Datei zum ersten Mal erstellt wird.",
+      "advancedTitle": "Erweiterte Optionen",
+      "technicalTitle": "Technische Details – Zeichenfolgen in .fwl gespeichert",
+      "noModifiers": "Keine Modifikatoren (Vanille / Normale Welt).",
+      "saveSettings": "Einstellungen speichern",
+      "saveAndRestart": "Speichern und neu starten",
+      "backupHint": "Automatische Sicherung der vorherigen .fwl in <span class=\"font-mono\">panel-data/world_fwl_backups/</span> vor jedem Speichern.",
+      "restartWarning": "Die Welt läuft – starten Sie den Server nach dem Speichern neu, um die .fwl-Änderungen zu übernehmen."
+    }
+  },
+  "console": {
+    "categories": {
+      "Server": "Server",
+      "Moderation": "Mäßigung",
+      "Players": "Spieler",
+      "Chat": "Chatten",
+      "Objects": "Objekte",
+      "World": "Welt"
+    },
+    "commands": {
+      "save": {
+        "usage": "speichern",
+        "desc": "Speichert die aktuelle Welt"
+      },
+      "list": {
+        "usage": "Liste",
+        "desc": "Listet alle Befehle auf dem Server auf"
+      },
+      "players": {
+        "usage": "Spieler",
+        "desc": "Zeigt Online-Spieler mit Position"
+      },
+      "serverStats": {
+        "usage": "serverStats",
+        "desc": "Serverstatistiken (FPS, RAM, Spieler)"
+      },
+      "time": {
+        "usage": "Zeit",
+        "desc": "Zeigt Serverzeit und -tag an"
+      },
+      "logs": {
+        "usage": "Protokolle",
+        "desc": "Neueste Serverprotokollzeilen"
+      },
+      "consoleCommand": {
+        "usage": "consoleCommand <command>",
+        "desc": "Führt einen Valheim-Konsolenbefehl aus"
+      },
+      "kick": {
+        "usage": "treten <player|SteamID>",
+        "desc": "Tritt einen Spieler"
+      },
+      "ban": {
+        "usage": "verbieten <player|SteamID>",
+        "desc": "Sperren nach Name oder Steam-ID"
+      },
+      "banSteamId": {
+        "usage": "banSteamId <SteamID>",
+        "desc": "Sperren nach Steam-ID"
+      },
+      "unban": {
+        "usage": "<player|SteamID> entsperren",
+        "desc": "Entfernt ein Verbot"
+      },
+      "addAdmin": {
+        "usage": "addAdmin <SteamID>",
+        "desc": "Fügt einen Administrator hinzu"
+      },
+      "removeAdmin": {
+        "usage": "RemoveAdmin <SteamID>",
+        "desc": "Entfernt einen Administrator"
+      },
+      "addPermitted": {
+        "usage": "addPermitted <SteamID>",
+        "desc": "Fügt der zulässigen Liste hinzu"
+      },
+      "removePermitted": {
+        "usage": "RemovePermitted <SteamID>",
+        "desc": "Wird aus der zulässigen Liste entfernt"
+      },
+      "adminlist": {
+        "usage": "Adminliste",
+        "desc": "Listet Administratoren auf"
+      },
+      "banlist": {
+        "usage": "Bannliste",
+        "desc": "Listet gesperrte Spieler auf"
+      },
+      "permitted": {
+        "usage": "gestattet",
+        "desc": "Listet zugelassene Spieler auf"
+      },
+      "disconnectAll": {
+        "usage": "trennenAlle",
+        "desc": "Trennt alle Spieler"
+      },
+      "give": {
+        "usage": "gib <player|SteamID> <item> [Optionen]",
+        "desc": "Gibt einem Spieler einen Gegenstand"
+      },
+      "heal": {
+        "usage": "heilen <player|SteamID> <health>",
+        "desc": "Heilt den Spieler auf seinen Gesundheitswert"
+      },
+      "damage": {
+        "usage": "Schaden <player|SteamID> <damage>",
+        "desc": "Fügt einem Spieler Schaden zu"
+      },
+      "teleport": {
+        "usage": "teleportieren <player|SteamID> <x> <y> <z>",
+        "desc": "Teleportiert einen Spieler"
+      },
+      "findPlayer": {
+        "usage": "findPlayer <name>",
+        "desc": "Findet einen Spieler und zeigt Details an"
+      },
+      "say": {
+        "usage": "sag <message>",
+        "desc": "Sendet eine Chat-Nachricht (Shout)"
+      },
+      "showMessage": {
+        "usage": "showMessage <message>",
+        "desc": "Nachricht auf dem mittleren Bildschirm für alle"
+      },
+      "ping": {
+        "usage": "ping <x> <y> <z>",
+        "desc": "Kartenping für alle"
+      },
+      "spawn": {
+        "usage": "spawn <prefab> <x> <y> <z> [Optionen]",
+        "desc": "Erzeugt Objekte/Kreaturen"
+      },
+      "findObjects": {
+        "usage": "findObjects [Optionen]",
+        "desc": "Sucht nach Objekten in der Welt"
+      },
+      "addGlobalKey": {
+        "usage": "addGlobalKey <key>",
+        "desc": "Fügt einen globalen Schlüssel hinzu (z. B. Boss besiegt)"
+      },
+      "removeGlobalKey": {
+        "usage": "entferneGlobalKey <key>",
+        "desc": "Entfernt einen globalen Schlüssel"
+      },
+      "globalKeys": {
+        "usage": "globalKeys",
+        "desc": "Listet aktive globale Schlüssel auf"
+      }
+    },
+    "hints": {
+      "bepinexRequired": "Die RCON-Konsole funktioniert nur, wenn BepInEx aktiv ist – wählen Sie „Modifiziert“ auf der Registerkarte „Server“.",
+      "modRequired": "Aktivieren Sie den ValheimRcon-Mod unter Mods & Config, um Konsole und Moderation zu verwenden.",
+      "configPending": "Warten auf RCON-Konfiguration – starten Sie das Panel oder den Valheim-Server neu.",
+      "serverStopped": "Starten Sie den Server, um die interaktive Konsole zu verwenden.",
+      "unavailable": "RCON ist derzeit nicht verfügbar."
+    },
+    "placeholder": "RCON-Befehl (z. B. Speichern, Auflisten, Kick-Name...)",
+    "viewCommands": "Verfügbare Befehle anzeigen",
+    "inputHints": "Die Registerkarte wird automatisch vervollständigt. · Versendungen eingeben. Die Ausgabe wird in den Protokollen oben angezeigt",
+    "moderationActions": "Moderationsaktionen",
+    "helpModal": {
+      "title": "RCON-Befehle",
+      "intro": "Klicken Sie auf einen Befehl, um die Konsole zu füllen. Verwenden Sie <code class=\"text-valheim-gold-light\">list</code> auf dem Server, um alle installierten Befehle anzuzeigen.",
+      "searchPlaceholder": "Suchbefehl...",
+      "noCommands": "Keine Befehle gefunden.",
+      "docPrefix": "Vollständige Dokumentation:",
+      "docLink": "ValheimRcon kein GitHub"
+    },
+    "chart": {
+      "download": "Herunterladen",
+      "upload": "Hochladen",
+      "networkTraffic": "Netzwerkverkehr (Diagramm)"
+    }
+  },
+  "setup": {
+    "title": "Server einrichten",
+    "subtitle": "Wählen Sie aus, wie der Valheim-Server ausgeführt werden soll.",
+    "serverMode": "Servermodus",
+    "modes": {
+      "vanilla": "Vanille",
+      "bepinex": "Mit Mods (BepInEx)"
+    },
+    "vanillaHint": "Kein BepInEx und keine Mods. Fügen Sie unten Ihre Steam-ID als Administrator hinzu.",
+    "bepinexHint": "Aktiviert BepInEx, den gebündelten ValheimRcon-Mod, und generiert das RCON-Passwort automatisch.",
+    "adminSteamId": "Ihre Steam-ID (Administrator)",
+    "adminSteamIdPlaceholder": "76561198000000000",
+    "adminSteamIdHint": "Vorerst optional – Sie können es später unter Server → Spielerlisten bearbeiten.",
+    "firstWorld": "Erste Welt (optional)",
+    "firstWorldPlaceholder": "MeineWelt",
+    "createAndActivate": "Erschaffe und aktiviere diese Welt",
+    "rconPassword": {
+      "title": "Generiertes RCON-Passwort",
+      "body": "Das Panel hat ValheimRcon konfiguriert. Kopieren Sie das Passwort – es wird nicht mehr angezeigt.",
+      "changeHint": "Zum späteren Ändern: Bearbeiten Sie <code class=\"text-gray-400\">config/bepinex/org.tristan.rcon.cfg</code> oder legen Sie <code class=\"text-gray-400\">PANEL_RCON_PASSWORD</code> in .env fest."
+    }
+  },
+  "dashboard": {
+    "stats": {
+      "server": "Server",
+      "activeWorld": "Aktive Welt",
+      "playersOnline": "Spieler online",
+      "mods": "Mods",
+      "port": "Hafen"
+    },
+    "configCorrected": "Konfiguration korrigiert: {from} → {to}",
+    "performance": "Leistung",
+    "metrics": {
+      "cpu": "CPU",
+      "ram": "RAM",
+      "disk": "Scheibe (Valheim)",
+      "network": "Netzwerk"
+    },
+    "diskBreakdown": {
+      "game": "Spiel",
+      "mods": "Mods",
+      "worlds": "Welten",
+      "backups": "Backups"
+    },
+    "connect": {
+      "title": "So verbinden Sie sich",
+      "intro": "Verwenden Sie in Valheim <strong class=\"text-gray-200\">Join IP</strong> und geben Sie Folgendes ein:",
+      "hint": "Das Passwort wird auf der Registerkarte „Server“ festgelegt. Öffnen Sie UDP <strong>2456–2458</strong> auf Ihrem Router für den externen Zugriff."
+    },
+    "players": {
+      "title": "Verbundene Spieler",
+      "empty": "Im Moment sind keine Spieler verbunden.",
+      "admin": "Admin",
+      "banned": "Verboten",
+      "actions": "Aktionen ▾",
+      "promote": "Machen Sie Administrator",
+      "demote": "Administrator entfernen",
+      "kick": "Kick",
+      "ban": "Ban",
+      "unban": "Verbot aufheben"
+    },
+    "quickControls": {
+      "title": "Schnellsteuerung",
+      "start": "Start",
+      "stop": "Stoppen",
+      "restart": "Neustart",
+      "pause": "Pause",
+      "resume": "Wieder aufnehmen",
+      "backup": "💾 Sicherung"
+    },
+    "console": {
+      "title": "Serverkonsole (live)"
+    },
+    "supervisor": {
+      "title": "Aufsicht"
+    }
+  },
+  "server": {
+    "settings": {
+      "title": "Servereinstellungen (.env)",
+      "activeWorld": "Aktive Welt",
+      "password": "Passwort",
+      "showPassword": "Passwort anzeigen",
+      "hidePassword": "Passwort verbergen",
+      "save": "Einstellungen speichern",
+      "saveAndRestart": "Speichern und neu starten"
+    },
+    "envFields": {
+      "SERVER_NAME": {
+        "label": "Servername",
+        "hint": "Wird in der Serverliste im Spiel angezeigt."
+      },
+      "SERVER_PUBLIC": {
+        "label": "Öffentlich (wahr/falsch)",
+        "hint": "true = öffentlich gelistet; false = nur direkte Verbindung."
+      },
+      "SERVER_ARGS": {
+        "label": "Zusätzliche Argumente",
+        "hint": "Z.B. -crossplay, um Crossplay zu aktivieren."
+      }
+    },
+    "capacity": {
+      "title": "Serverkapazität",
+      "subtitle": "Container-RAM-Limit und maximale Spieleranzahl.",
+      "wikiGuide": "Wiki-Anleitung",
+      "ramLimit": "RAM-Grenze",
+      "current": "Aktuell: {value}",
+      "applyRamLimit": "Wenden Sie das RAM-Limit an",
+      "ramWarning": "Durch die Anwendung wird der Container neu erstellt – verbundene Spieler werden getrennt.",
+      "playerLimit": "Spielerlimit",
+      "modSource": "Mod: {name}",
+      "vanillaMax": "Vanille (max. 10)",
+      "playersAbove10": "Für mehr als 10 Spieler ist Valheim Plus oder MaxPlayerCount auf der Registerkarte „Mods“ erforderlich.",
+      "savePlayerLimit": "Spielerlimit speichern",
+      "table": {
+        "players": "Spieler",
+        "suggestedRam": "Empfohlener RAM",
+        "notes": "Notizen"
+      }
+    },
+    "playerLists": {
+      "title": "Spielerlisten",
+      "vanillaHint": "Fügen Sie im <b>Vanilla</b>-Modus Ihre Steam-ID unter <b>Administratoren</b> hinzu, um Administratorberechtigungen im Spiel zu erhalten (ohne die Panel-RCON-Konsole).",
+      "admin": "Administratoren (Steam-IDs)",
+      "banned": "Gesperrt (Steam-IDs)",
+      "permitted": "Zulässig / Whitelist (Steam-IDs)",
+      "saveLists": "Listen speichern"
+    }
+  },
+  "storage": {
+    "title": "Nutzung der Sicherungsfestplatte",
+    "intro": "Optionale Obergrenze für <code class=\"text-gray-400\">config/backups/</code> ZIP-Dateien. Wählen Sie <span class=\"text-valheim-gold font-medium\">Unbegrenzt</span>, um alle Backups aufzubewahren, oder wählen Sie eine Größe aus – die ältesten Backups werden zuerst gelöscht, wenn das Limit überschritten wird.",
+    "totalLimit": "Gesamt-Backup-Limit",
+    "unlimitedKeep": "Backups werden aufbewahrt, bis der Speicherplatz aufgebraucht ist.",
+    "oldestDeleted": "Die ältesten Backups werden zuerst gelöscht, wenn die Nutzung das oben genannte Limit überschreitet.",
+    "currentUsage": "Aktuelle Nutzung",
+    "saveLimit": "Backup-Limit speichern",
+    "clearAll": "Löschen Sie jetzt alle Backups",
+    "clearAllHint": "Unumkehrbar – löscht alle Sicherungs-ZIP-Dateien mit Ausnahme derjenigen, die an einen aktiven Wiederherstellungs- oder Rückgängig-Prüfpunkt gebunden sind.",
+    "purgeModal": {
+      "title": "Löschen Sie alle Backups",
+      "body": "Diese Aktion ist <strong>irreversibel</strong>. Jede Sicherungs-ZIP-Datei in <code class=\"text-gray-400\">config/backups/</code> wird gelöscht.",
+      "preserved": "Sicherungen, die mit einem aktiven Wiederherstellungs- oder Rückgängig-Checkpoint verknüpft sind, bleiben erhalten.",
+      "deleteAll": "Alles löschen"
+    },
+    "usageNoLimit": "{used} verwendet (keine Begrenzung)",
+    "usageOfLimit": "{used} von {limit} GB"
+  },
+  "updates": {
+    "title": "Spielaktualisierungen",
+    "subtitle": "Steuern Sie Valheim-Updates über den Valheim-Updater (SteamCMD).",
+    "modsWarning": "Valheim-Updates können Mods beschädigen. Sichern Sie zuerst. Überprüfen Sie die Kompatibilität jedes Mods, nachdem Sie das Spiel aktualisiert haben.",
+    "serverMode": "Servermodus",
+    "modeHint": "Vanilla deaktiviert BepInEx und schaltet alle Mods aus. Mit Mods werden BepInEx und das gebündelte ValheimRcon aktiviert.",
+    "installedVersion": "Installierte Version",
+    "build": "Bauen",
+    "updater": "Updater",
+    "autoUpdate": "Spiel mit automatischer Aktualisierung",
+    "onlyWhenEmpty": "Nur wenn der Server leer ist",
+    "checkInterval": "Intervall prüfen",
+    "customCron": "Benutzerdefinierter Cron",
+    "save": "Speichern",
+    "saveRecreate": "Container speichern und neu erstellen",
+    "checkNow": "Suchen Sie jetzt nach Updates",
+    "presets": {
+      "15min": "Alle 15 Minuten",
+      "1h": "Stündlich",
+      "6h": "Alle 6 Stunden",
+      "daily": "Täglich (06:00)",
+      "custom": "Brauch"
+    }
+  },
+  "mods": {
+    "install": {
+      "title": "Mod installieren",
+      "upload": "📁 Hochladen (.zip / .dll)",
+      "urlPlaceholder": "Thunderstore-URL (Seite, Download oder r2modman)",
+      "installUrl": "Von URL installieren"
+    },
+    "valheimRcon": "<strong class=\"text-valheim-gold\">ValheimRcon</strong> ist mit dem Panel gebündelt (RCON-Konsole, Kick, Ban und Admin). Es kann nicht entfernt, aber deaktiviert werden. Die Konsolen- und Spieleraktionen erfordern aktives BepInEx und diesen aktivierten Mod.",
+    "bundled": "Gebündelt",
+    "bundledCannotRemove": "Im Lieferumfang enthalten – kann nicht entfernt werden",
+    "active": "Aktiv",
+    "disabled": "Deaktiviert",
+    "activeConsole": "Aktiv – Konsole und Moderation verfügbar",
+    "disabledConsole": "Deaktiviert: Aktivieren Sie diese Option, um Konsole und Moderation zu verwenden",
+    "configPrefix": "Konfiguration: {name}",
+    "noConfig": "Keine Konfiguration",
+    "version": "Version",
+    "checkUpdates": "Suchen Sie nach Updates",
+    "updateMod": "Mod aktualisieren",
+    "linkThunderstore": "Link Thunderstore",
+    "linkUrlPlaceholder": "Thunderstore-URL",
+    "configBtn": "Konfig",
+    "remove": "Entfernen",
+    "empty": "Keine Mods installiert",
+    "orphaned": {
+      "title": "Verwaiste Konfigurationen",
+      "desc": "{count} Konfigurationsdateien von entfernten Mods befinden sich noch auf der Festplatte.",
+      "remove": "Entfernen Sie verwaiste Konfigurationen"
+    },
+    "export": {
+      "title": "R2modman-Profil exportieren",
+      "desc": "Exportiert Mods, die mit Thunderstore- und BepInEx-Konfigurationen verknüpft sind, für den Import in r2modman. Nicht verknüpfte Mods werden übersprungen.",
+      "skipped": "{count} Mod(s) ohne Thunderstore-Link werden übersprungen",
+      "downloadR2z": "Laden Sie .r2z herunter"
+    },
+    "bepinexConfigs": {
+      "title": "BepInEx-Konfigurationen",
+      "desc": "Konfigurationsdateien, die von Mods in <code class=\"font-mono\">config/bepinex/</code> generiert wurden.",
+      "empty": "Keine Konfigurationsdateien gefunden",
+      "edit": "Bearbeiten"
+    },
+    "status": {
+      "up_to_date": "Auf dem neuesten Stand",
+      "update_available": "Update verfügbar",
+      "unknown": "Unbekannte Quelle",
+      "error": "Prüfung fehlgeschlagen"
+    }
+  },
+  "backups": {
+    "state": {
+      "title": "Serverstatus",
+      "restoredFrom": "Wiederhergestellt von: {name}",
+      "live": "Server im Status <strong>live</strong> – keine Panel-Wiederherstellung aufgezeichnet.",
+      "lastRestore": "Letzte Wiederherstellung: {date}",
+      "restoreLatest": "Neueste wiederherstellen",
+      "undoRestore": "Letzte Wiederherstellung rückgängig machen",
+      "hint": "Durch die Wiederherstellung wird der Server immer neu gestartet. Vor jeder Wiederherstellung wird ein automatischer Prüfpunkt erstellt."
+    },
+    "schedule": {
+      "title": "Automatische Terminplanung",
+      "info": "Der Valheim-Container kopiert regelmäßig den Ordner <code class=\"text-gray-400\">worlds_local/</code> nach <code class=\"text-gray-400\">config/backups/</code>. Dateien werden als <code class=\"text-gray-400\">Welten-JJJJMMTT-HHMMSS.zip</code> angezeigt. Aufbewahrung: 30 Tage.",
+      "automatic": "Automatische Backups",
+      "enabled": "Ermöglicht",
+      "disabled": "Deaktiviert",
+      "interval": "Intervall",
+      "customCron": "Benutzerdefinierter Cron",
+      "retention": "Zurückbehaltung",
+      "retentionValue": "30 Tage",
+      "idleLabel": "Backup, wenn keine Spieler online sind",
+      "idleYes": "Ja – Backup auch im leeren Zustand",
+      "idleNo": "Nur wenn Spieler online sind",
+      "current": "Aktuell: {value}",
+      "applyRestart": "Anwenden und neu starten",
+      "manual": "Erstellen Sie ein manuelles Backup",
+      "runScheduled": "Geplanten Job jetzt ausführen",
+      "runScheduledTitle": "Führt jetzt denselben Job aus, der im geplanten Intervall ausgeführt wird"
+    },
+    "intervalPresets": {
+      "hourly": "Stündlich",
+      "6h": "Alle 6 Stunden",
+      "12h": "Alle 12 Stunden",
+      "daily": "Täglich (00:00)",
+      "custom": "Brauch"
+    },
+    "idleLabels": {
+      "online": "Nur wenn Spieler online sind",
+      "empty": "Ja – auch ohne Spieler"
+    },
+    "list": {
+      "title": "Gespeicherte Backups",
+      "hideCheckpoints": "Kontrollpunkte ausblenden",
+      "empty": "Keine Backups in config/backups/ gefunden",
+      "columns": {
+        "type": "Typ",
+        "name": "Name",
+        "date": "Datum",
+        "age": "Alter",
+        "size": "Größe",
+        "mods": "Mods",
+        "actions": "Aktionen"
+      },
+      "badges": {
+        "active": "Aktiv",
+        "latest": "Letzte",
+        "checkpoint": "Kontrollpunkt"
+      },
+      "activeMods": "{count} aktiv",
+      "restoreToHere": "Hierher wiederherstellen",
+      "details": "Einzelheiten"
+    },
+    "types": {
+      "world": {
+        "label": "Aktive Welt (schnell)",
+        "desc": "Nur die Welt im Einsatz (.fwl + .db)."
+      },
+      "full": {
+        "label": "Voll",
+        "desc": "Welten + BepInEx-Konfigurationen + Mods + Listen + .env."
+      },
+      "configs": {
+        "label": "Nur Konfigurationen",
+        "desc": "BepInEx-Konfigurationen + Spielerlisten + .env."
+      }
+    },
+    "modals": {
+      "create": {
+        "title": "Backup erstellen",
+        "desc": "Wählen Sie die Art der manuellen Sicherung aus, die Sie jetzt erstellen möchten.",
+        "creating": "Backup wird erstellt..."
+      },
+      "restore": {
+        "title": "Sicherung wiederherstellen",
+        "intro": "Stellen Sie den Server auf den Zustand dieser Sicherung wieder her:",
+        "name": "Name:",
+        "type": "Typ:",
+        "date": "Datum:",
+        "bullets": [
+          "Der Server wird automatisch gestoppt und neu gestartet",
+          "World/config-Dateien werden überschrieben",
+          "Zunächst wird ein Prüfpunkt des aktuellen Zustands erstellt"
+        ],
+        "confirm": "Wiederherstellen und neu starten"
+      },
+      "delete": {
+        "title": "Sicherung löschen",
+        "confirm": "{name} dauerhaft löschen?"
+      },
+      "details": {
+        "title": "Sicherungsdetails",
+        "loading": "Details werden geladen...",
+        "world": "Welt:",
+        "build": "Valheim-Build:",
+        "inferred": "Von ZIP abgeleitete Metadaten – Thunderstore-Versionen sind möglicherweise nicht verfügbar.",
+        "modsTitle": "Mods ({count})",
+        "noMods": "In diesem Backup sind keine Mods aufgezeichnet.",
+        "columns": {
+          "mod": "Mod",
+          "package": "Paket",
+          "version": "Version",
+          "state": "Zustand"
+        },
+        "contents": "Inhalt",
+        "includesWorlds": "Welten inklusive",
+        "includesDlls": "Mod-DLLs enthalten",
+        "includesEnv": ".env-Datei enthalten",
+        "hasAdminlist": "Admin-Liste",
+        "fileCount": "{count} Datei(en) im ZIP-Format",
+        "worldsList": "Welten: {names}"
+      }
+    },
+    "contentsNotes": {
+      "noDlls": "Dieses Backup enthält keine Mod-Dateien (.dll) – die Liste unten spiegelt den Serverstatus zum Zeitpunkt des Backups wider.",
+      "configsOnly": "Dieses Backup enthält nur World/Configs – Mods waren nicht enthalten. Verwenden Sie „Manuelle Sicherung – Vollständig“ für einen Snapshot mit DLLs."
+    }
+  },
+  "files": {
+    "searchPlaceholder": "Nach Dateinamen suchen...",
+    "browser": "Browser",
+    "noMatches": "Keine Übereinstimmungen",
+    "selectFile": "Wählen Sie eine Datei zum Bearbeiten aus",
+    "searchSettings": "Sucheinstellungen...",
+    "form": "Form",
+    "raw": "Raw",
+    "scopes": {
+      "config": "Konfig",
+      "data": "Daten"
+    },
+    "typeFilters": {
+      "all": "Alle",
+      "config": "Konfig",
+      "dll": "DLLs",
+      "plugin": "Plugins",
+      "world": "Welten",
+      "list": "Listen",
+      "backup": "Backups",
+      "log": "Protokolle"
+    },
+    "tree": {
+      "emptyFolder": "Leerer Ordner",
+      "inaccessible": "unzugänglich"
+    }
+  },
+  "logs": {
+    "docker": "Docker",
+    "bepinex": "BepInEx",
+    "autoRefresh": "Automatisch (5 Sek.)"
+  },
+  "audit": {
+    "downloadLog": "Laden Sie das vollständige Protokoll herunter",
+    "autoRefresh": "Automatisch (5 Sek.)",
+    "description": "Persistentes Protokoll aller Aktionen (POST/PUT/DELETE) zur Diagnose und Fehlerbehebung.",
+    "empty": "Keine Ereignisse aufgezeichnet",
+    "columns": {
+      "time": "Zeit",
+      "method": "Verfahren",
+      "action": "Aktion",
+      "status": "Status",
+      "duration": "Dauer.",
+      "error": "Fehler",
+      "details": "Einzelheiten"
+    },
+    "modal": {
+      "title": "Prüfungsdetails",
+      "request": "Anfrage",
+      "response": "Antwort"
+    }
+  },
+  "donation": {
+    "title": "Unterstützen Sie das Projekt",
+    "pitch": "Vikinger Panel ist für den persönlichen Gebrauch kostenlos. Sponsoren tragen dazu bei, das Projekt aufrechtzuerhalten und die Entwicklung voranzutreiben. Mitwirkende ab 1 $/Monat erhalten direkten Support vom Betreuer. Sponsoring ersetzt keine kommerzielle Lizenz – Hosting-Anbieter benötigen weiterhin eine (siehe unten).",
+    "voluntary": {
+      "title": "Freiwillige Spenden",
+      "desc": "Das Panel ist für den persönlichen Gebrauch kostenlos. Wenn es Ihnen hilft, finanziert jeder Beitrag neue Funktionen, Korrekturen und Dokumentation."
+    },
+    "pix": "Pix (Brasilien)",
+    "notConfigured": "Spendenlinks sind noch nicht konfiguriert. Stellen Sie <code class=\"text-gray-400\">PANEL_DONATION_*</code> im Server <code class=\"text-gray-400\">.env</code> ein.",
+    "commercial": {
+      "title": "Kommerzielle Lizenzierung",
+      "intro": "<strong class=\"text-gray-200\">Hosting-Anbieter</strong> die dieses Panel Kunden anbieten möchten, benötigen eine <strong class=\"text-gray-200\">kommerzielle Lizenz</strong>. Weiterverkauf und White-Label-Nutzung ohne Genehmigung verstoßen gegen {license}.",
+      "items": [
+        "Persönliche Nutzung und Open-Source-Beitrag: kostenlos",
+        "Kommerzielles Hosting/Weiterverkauf: kostenpflichtige Lizenz",
+        "Spenden ersetzen keine kommerzielle Lizenz"
+      ],
+      "requestLicense": "Fordern Sie eine kommerzielle Lizenz an",
+      "licenseText": "Lizenztext",
+      "contact": "Lizenzkontakt:"
+    }
+  },
+  "about": {
+    "subtitle": "Webmanager für einen Docker-Valheim-Server",
+    "fields": {
+      "version": "Version",
+      "build": "Bauen",
+      "commit": "Begehen",
+      "license": "Lizenz"
+    },
+    "repository": "Repository",
+    "whatsNew": "Was ist neu",
+    "creditsTitle": "Credits",
+    "changelog": {
+      "2.2.0": [
+        "Registerkarte „Dateien“: schnelle Suche nach Namen mit Typfiltern (Konfiguration, DLLs, Plugins, Welten, Listen, Backups, Protokolle).",
+        "Registerkarte „Server“: optionale Backup-Festplattenobergrenze mit automatischer Bereinigung der ältesten ZIPs bei Überschreitung.",
+        "Jetzt alle Backups löschen – irreversibles Löschen mit Schutz für aktive Wiederherstellungskontrollpunkte."
+      ],
+      "2.0.0": [
+        "Komplette UI/UX-Überarbeitung mit abschnittsbasierter Navigation.",
+        "Neue Hilfe (durchsuchbare FAQ), „Projekt unterstützen“ und „Über/Version“-Bildschirme.",
+        "Polyform Shield-Lizenz – kostenlose Nutzung, kein kommerzieller Weiterverkauf ohne Genehmigung.",
+        "Metriken zur Übersicht; Kapazität (RAM und Spieler) auf der Registerkarte „Server“; Tools mit Dateien, Konsole und Audit.",
+        "100 % dockerisiert, keine Probleme mit Berechtigungen; lokale Vermögenswerte (kein CDN)."
+      ]
+    },
+    "credits": {
+      "valheimDocker": {
+        "label": "Valheim-Server in Docker",
+        "by": "lloesche/valheim-server-docker"
+      },
+      "backend": {
+        "label": "Backend",
+        "by": "FastAPI + Uvicorn"
+      },
+      "frontend": {
+        "label": "Frontend",
+        "by": "Alpine.js + Tailwind CSS + Chart.js + CodeMirror"
+      }
+    }
+  },
+  "resources": {
+    "noLimit": "Keine Begrenzung",
+    "hostSuffix": "(Gastgeber)"
+  }
+}

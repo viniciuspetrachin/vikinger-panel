@@ -1,5 +1,8 @@
 // Servidor: .env básico + listas de jogadores + capacidade (RAM e jogadores).
 
+const ENV_FIELD_KEYS = ["SERVER_NAME", "SERVER_PUBLIC", "SERVER_ARGS"];
+const LIST_KEYS = ["admin", "banned", "permitted"];
+
 export const server = {
   envValues: {},
   listValues: { admin: "", banned: "", permitted: "" },
@@ -17,17 +20,24 @@ export const server = {
   },
   maxPlayers: 10,
 
-  envFields: [
-    { key: "SERVER_NAME", label: "Server Name", hint: "Shown in the in-game server list." },
-    { key: "SERVER_PUBLIC", label: "Public (true/false)", hint: "true = listed publicly; false = direct connection only." },
-    { key: "SERVER_ARGS", label: "Extra arguments", hint: "E.g. -crossplay to enable crossplay." },
-  ],
+  getEnvFields() {
+    void this.localeVersion;
+    const fields = this.tObj("server.envFields") || {};
+    return ENV_FIELD_KEYS.map((key) => ({
+      key,
+      label: fields[key]?.label || key,
+      hint: fields[key]?.hint || "",
+    }));
+  },
 
-  serverLists: [
-    { key: "admin", label: "Administrators (Steam IDs)" },
-    { key: "banned", label: "Banned (Steam IDs)" },
-    { key: "permitted", label: "Permitted / whitelist (Steam IDs)" },
-  ],
+  getServerLists() {
+    void this.localeVersion;
+    const lists = this.tObj("server.playerLists") || {};
+    return LIST_KEYS.map((key) => ({
+      key,
+      label: lists[key] || key,
+    }));
+  },
 
   async loadServerPage() {
     await this.loadWorlds();
@@ -59,8 +69,8 @@ export const server = {
 
   async applyMemoryLimit() {
     const gb = this.memoryGbForApi();
-    const label = gb ? `${gb} GB` : "No limit";
-    if (!confirm(`Set RAM limit to ${label}? The container will be recreated and players disconnected.`)) return;
+    const label = gb ? `${gb} GB` : this.t("common.status.noLimit");
+    if (!confirm(this.t("common.confirm.applyMemoryLimit", { label }))) return;
 
     return this.withBusy("applyMemory", async () => {
       try {
@@ -69,7 +79,7 @@ export const server = {
           apply_memory: true,
         });
         if (data.memory_warning) this.toast(data.memory_warning, "error");
-        this.toast(data.message || "Limit applied");
+        this.toast(data.message || this.t("common.toasts.limitApplied"));
         await this.loadCapacity();
         await this.loadMemoryConfig();
         await this.refreshStatus();
@@ -85,7 +95,7 @@ export const server = {
         this.capacity = { ...this.capacity, ...data };
         this.maxPlayers = data.max_players ?? this.maxPlayers;
         if (data.warning) this.toast(data.warning, "error");
-        this.toast(data.message || "Player limit saved");
+        this.toast(data.message || this.t("common.toasts.playerLimitSaved"));
       } catch (e) { this.toast(e.message, "error"); }
     });
   },
@@ -129,7 +139,7 @@ export const server = {
     return this.withBusy(restart ? "saveEnvRestart" : "saveEnv", async () => {
       try {
         await this.api("PUT", "/api/config/env", { values: this.envValues });
-        this.toast("Settings saved!");
+        this.toast(this.t("common.toasts.settingsSaved"));
         if (restart) await this.serverAction("restart");
         await this.loadCapacity();
       } catch (e) { this.toast(e.message, "error"); }
@@ -147,7 +157,7 @@ export const server = {
           await this.api("PUT", `/api/config/serverlists/${k}`, { ids });
           editor?.setContent(text, { markSaved: true });
         }
-        this.toast("Lists saved! Server restarted if it was online.");
+        this.toast(this.t("common.toasts.listsSaved"));
       } catch (e) { this.toast(e.message, "error"); }
     });
   },

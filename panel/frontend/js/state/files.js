@@ -20,26 +20,25 @@ const BEPINEX_CFG_PREFIX = "config/bepinex/";
 const BEPINEX_PROTECTED_CFG = new Set(["BepInEx.cfg", "org.tristan.rcon.cfg"]);
 const LIST_FILES = new Set(["adminlist.txt", "bannedlist.txt", "permittedlist.txt"]);
 
+const FILE_SCOPE_IDS = ["config", "data"];
+const FILE_TYPE_FILTER_IDS = ["", "config", "dll", "plugin", "world", "list", "backup", "log"];
+const FILE_TYPE_FILTER_KEYS = {
+  "": "all",
+  config: "config",
+  dll: "dll",
+  plugin: "plugin",
+  world: "world",
+  list: "list",
+  backup: "backup",
+  log: "log",
+};
+
 export const files = {
   fileScope: "config",
-  fileScopes: [
-    { id: "config", label: "Config" },
-    { id: "data", label: "Data" },
-  ],
   fileTree: [],
   fileExpandedPaths: {},
   fileSearchQuery: "",
   fileTypeFilter: "",
-  fileTypeFilters: [
-    { id: "", label: "All" },
-    { id: "config", label: "Config" },
-    { id: "dll", label: "DLLs" },
-    { id: "plugin", label: "Plugins" },
-    { id: "world", label: "Worlds" },
-    { id: "list", label: "Lists" },
-    { id: "backup", label: "Backups" },
-    { id: "log", label: "Logs" },
-  ],
   editPath: "",
   editContent: "",
   fileEditorDirty: false,
@@ -50,6 +49,22 @@ export const files = {
   cfgSavedSnapshot: "",
   cfgSearchQuery: "",
   cfgExpandedSections: {},
+
+  getFileScopes() {
+    void this.localeVersion;
+    return FILE_SCOPE_IDS.map((id) => ({
+      id,
+      label: this.t(`files.scopes.${id}`),
+    }));
+  },
+
+  getFileTypeFilters() {
+    void this.localeVersion;
+    return FILE_TYPE_FILTER_IDS.map((id) => ({
+      id,
+      label: this.t(`files.typeFilters.${FILE_TYPE_FILTER_KEYS[id]}`),
+    }));
+  },
 
   async _fetchFileTree() {
     try {
@@ -195,9 +210,11 @@ export const files = {
     void _selected;
     if (!items?.length) {
       if (depth === 0 && this.fileSearchActive()) {
-        return '<p class="file-tree-empty">No matches</p>';
+        return `<p class="file-tree-empty">${this.escapeHtml(this.t("files.noMatches"))}</p>`;
       }
-      return depth === 0 ? '<p class="file-tree-empty">Empty folder</p>' : "";
+      return depth === 0
+        ? `<p class="file-tree-empty">${this.escapeHtml(this.t("files.tree.emptyFolder"))}</p>`
+        : "";
     }
     const cls = depth === 0 ? "file-tree" : "file-tree-children";
     let html = `<div class="${cls}">`;
@@ -231,7 +248,7 @@ export const files = {
       return (
         `<div class="file-tree-row file-tree-broken" style="--file-depth:${pad}px">` +
         `<span class="file-tree-chevron file-tree-chevron-spacer"></span>` +
-        `<span class="file-tree-name text-red-400">${name} (${this.escapeHtml(item.error || "inaccessible")})</span>` +
+        `<span class="file-tree-name text-red-400">${name} (${this.escapeHtml(item.error || this.t("files.tree.inaccessible"))})</span>` +
         `</div>`
       );
     }
@@ -517,7 +534,7 @@ export const files = {
           this.fileEditorDirty = false;
           this.fileEditorDraftPending = false;
           window.PanelEditor?.clearDraft(this.editPath);
-          this.toast("File saved!");
+          this.toast(this.t("common.toasts.fileSaved"));
           return;
         }
         const editor = window.PanelEditor?.get("file");
@@ -527,7 +544,7 @@ export const files = {
         editor?.setContent(content, { markSaved: true });
         this.fileEditorDirty = false;
         this.fileEditorDraftPending = false;
-        this.toast("File saved!");
+        this.toast(this.t("common.toasts.fileSaved"));
       } catch (e) {
         this.toast(e.message, "error");
       }

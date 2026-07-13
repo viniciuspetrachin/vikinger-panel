@@ -9,6 +9,9 @@ from pathlib import Path
 
 __version__ = "2.1.4"
 
+DEFAULT_LOCALE = "en-US"
+SUPPORTED_LOCALES = ("en-US", "pt-BR", "de-DE", "ru-RU", "es-ES")
+
 REPO_URL = "https://github.com/viniciuspetrachin/vikinger-panel"
 LICENSE = "Polyform Shield 1.0.0"
 LICENSE_URL = "https://polyformproject.org/licenses/shield/1.0.0"
@@ -76,6 +79,11 @@ def build_date() -> str:
     return os.environ.get("PANEL_BUILD_DATE", "")
 
 
+def default_locale() -> str:
+    raw = os.environ.get("PANEL_DEFAULT_LOCALE", DEFAULT_LOCALE).strip()
+    return raw if raw in SUPPORTED_LOCALES else DEFAULT_LOCALE
+
+
 def version_info() -> dict:
     return {
         "version": __version__,
@@ -85,4 +93,6 @@ def version_info() -> dict:
         "license": LICENSE,
         "license_url": LICENSE_URL,
         "donation": donation_info(),
+        "default_locale": default_locale(),
+        "supported_locales": list(SUPPORTED_LOCALES),
     }

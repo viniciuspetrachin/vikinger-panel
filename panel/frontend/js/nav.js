@@ -18,35 +18,35 @@ export const nav = {
   navSections: [
     {
       id: "painel",
-      label: "Panel",
-      items: [{ id: "dashboard", label: "Overview", icon: icons.dashboard }],
+      labelKey: "nav.sections.painel",
+      items: [{ id: "dashboard", labelKey: "nav.items.dashboard", icon: icons.dashboard }],
     },
     {
       id: "gerenciar",
-      label: "Manage",
+      labelKey: "nav.sections.gerenciar",
       items: [
-        { id: "server", label: "Server", icon: icons.server },
-        { id: "worlds", label: "Worlds", icon: icons.worlds },
-        { id: "mods", label: "Mods & Config", icon: icons.mods },
-        { id: "backups", label: "Backups", icon: icons.backups },
+        { id: "server", labelKey: "nav.items.server", icon: icons.server },
+        { id: "worlds", labelKey: "nav.items.worlds", icon: icons.worlds },
+        { id: "mods", labelKey: "nav.items.mods", icon: icons.mods },
+        { id: "backups", labelKey: "nav.items.backups", icon: icons.backups },
       ],
     },
     {
       id: "ferramentas",
-      label: "Tools",
+      labelKey: "nav.sections.ferramentas",
       items: [
-        { id: "files", label: "Files", icon: icons.files },
-        { id: "logs", label: "Console", icon: icons.logs },
-        { id: "audit", label: "Audit", icon: icons.audit },
+        { id: "files", labelKey: "nav.items.files", icon: icons.files },
+        { id: "logs", labelKey: "nav.items.logs", icon: icons.logs },
+        { id: "audit", labelKey: "nav.items.audit", icon: icons.audit },
       ],
     },
     {
       id: "suporte",
-      label: "Support",
+      labelKey: "nav.sections.suporte",
       items: [
-        { id: "help", label: "Help", icon: icons.help },
-        { id: "donation", label: "Support the Project", icon: icons.donation },
-        { id: "about", label: "About", icon: icons.about },
+        { id: "help", labelKey: "nav.items.help", icon: icons.help },
+        { id: "donation", labelKey: "nav.items.donation", icon: icons.donation },
+        { id: "about", labelKey: "nav.items.about", icon: icons.about },
       ],
     },
   ],
@@ -54,11 +54,19 @@ export const nav = {
   initNav() {},
 
   visibleSections() {
-    return this.navSections;
+    void this.localeVersion;
+    return this.navSections.map((section) => ({
+      ...section,
+      label: this.t(section.labelKey),
+      items: section.items.map((item) => ({
+        ...item,
+        label: this.t(item.labelKey),
+      })),
+    }));
   },
 
   allNavItems() {
-    return this.navSections.flatMap((s) => s.items);
+    return this.visibleSections().flatMap((s) => s.items);
   },
 
   pageTitle() {

@@ -1,5 +1,19 @@
 // Mundos: criar/trocar/apagar + editor de configurações do .fwl.
 
+const MODIFIER_FIELDS = ["preset", "combat", "deathpenalty", "resources", "raids", "portals"];
+const FLAG_KEYS = ["nobuildcost", "playerevents", "fire", "passivemobs", "nomap"];
+const FIELD_KEYS = ["combat", "deathpenalty", "resources", "raids", "portals"];
+const FIELD_ICONS = { combat: "⚔️", deathpenalty: "💀", resources: "🪵", raids: "🔥", portals: "🌀" };
+
+function catalogFromI18n(tObj, field) {
+  const raw = tObj?.[field] || {};
+  return Object.entries(raw).map(([value, meta]) => ({
+    value: value === "_default" ? "" : value,
+    label: meta.label,
+    desc: meta.desc,
+  }));
+}
+
 export const worlds = {
   worlds: [],
   newWorldName: "",
@@ -16,74 +30,35 @@ export const worlds = {
   worldConfigWarnings: [],
   worldConfigRequiresRestart: false,
 
-  worldModifierCatalog: {
-    preset: [
-      { value: "", label: "Game default", desc: "No modifiers — vanilla experience, as before the Hildir's Request patch." },
-      { value: "easy", label: "Easy", desc: "Lighter combat (easy damage) and less frequent raids." },
-      { value: "normal", label: "Normal", desc: "Equivalent to game default — all sliders at Normal." },
-      { value: "hard", label: "Hard", desc: "Hard combat and more frequent raids." },
-      { value: "hardcore", label: "Hardcore", desc: "Very hard combat, maximum death penalty, frequent raids, hard portals, and no map." },
-      { value: "casual", label: "Casual", desc: "Very easy combat, light death penalty, more resources, no raids, casual portals, per-player events, and passive mobs." },
-      { value: "hammer", label: "Hammer mode", desc: "Building with no material cost, raids disabled, and passive mobs." },
-      { value: "immersive", label: "Immersive", desc: "Portals forbidden, fire spreads across the world, and no map/minimap." },
-    ],
-    combat: [
-      { value: "", label: "Use preset", desc: "Inherit combat difficulty from the selected preset." },
-      { value: "veryeasy", label: "Very easy", desc: "125% player damage, 50% enemy damage, enemies 90% speed/size." },
-      { value: "easy", label: "Easy", desc: "110% player damage, 75% enemy damage, enemies 95% speed/size." },
-      { value: "normal", label: "Normal", desc: "100% on all combat parameters. Higher chance of high-level enemies on Hard/Very hard." },
-      { value: "hard", label: "Hard", desc: "85% player damage, 150% enemy damage, enemies 110% speed/size, 120% level-up rate." },
-      { value: "veryhard", label: "Very hard", desc: "70% player damage, 200% enemy damage, enemies 120% speed/size, 140% level-up rate." },
-    ],
-    deathpenalty: [
-      { value: "", label: "Use preset", desc: "Inherit death penalty from the selected preset." },
-      { value: "casual", label: "Casual", desc: "Equipment kept on death. Inventory dropped. Skill loss: 1%." },
-      { value: "veryeasy", label: "Very easy", desc: "Drop everything on death. Skill loss: 1% (less than Normal)." },
-      { value: "easy", label: "Easy", desc: "Drop everything on death. Skill loss: 2.5%." },
-      { value: "normal", label: "Normal", desc: "Drop everything on death. Skill loss: 5%." },
-      { value: "hard", label: "Hard", desc: "Equipment dropped, inventory permanently destroyed. Skill loss: 7.5%." },
-      { value: "hardcore", label: "Hardcore", desc: "All items and skills permanently lost on death." },
-    ],
-    resources: [
-      { value: "", label: "Use preset", desc: "Inherit resource rate from the selected preset." },
-      { value: "muchless", label: "Much less", desc: "50% of normal mob and object drop rate (≈0.5×)." },
-      { value: "less", label: "Less", desc: "75% of normal rate (≈0.75×)." },
-      { value: "normal", label: "Normal", desc: "Default game resource rate." },
-      { value: "more", label: "More", desc: "150% of normal rate (≈1.5×)." },
-      { value: "muchmore", label: "Much more", desc: "200% of normal rate (≈2×)." },
-      { value: "most", label: "Maximum", desc: "300% of normal rate (≈3×)." },
-    ],
-    raids: [
-      { value: "", label: "Use preset", desc: "Inherit raid frequency from the selected preset." },
-      { value: "none", label: "None", desc: "EventRate 0 — daytime raids disabled. Night raids may still occur." },
-      { value: "muchless", label: "Much less", desc: "Interval ~92 min, 10% chance — far fewer raids." },
-      { value: "less", label: "Less", desc: "Interval ~69 min, ~13% chance." },
-      { value: "normal", label: "Normal", desc: "Interval ~46 min, 20% chance." },
-      { value: "more", label: "More", desc: "Interval ~28 min, ~33% chance." },
-      { value: "muchmore", label: "Much more", desc: "Interval ~14 min, ~67% chance." },
-    ],
-    portals: [
-      { value: "", label: "Use preset", desc: "Inherit portal rules from the selected preset." },
-      { value: "casual", label: "Casual", desc: "TeleportAll — almost everything can go through portals (except tamed animals)." },
-      { value: "normal", label: "Normal", desc: "Non-portable items follow default game rules." },
-      { value: "hard", label: "No boss portals", desc: "Portals unavailable while a boss is active in the area." },
-      { value: "veryhard", label: "No portals", desc: "No portals allowed in the world." },
-    ],
+  getWorldModifierCatalog() {
+    void this.localeVersion;
+    const presets = this.tObj("worlds.presets") || {};
+    const out = {};
+    for (const field of MODIFIER_FIELDS) {
+      out[field] = catalogFromI18n(presets, field);
+    }
+    return out;
   },
-  worldConfigFields: [
-    { key: "combat", label: "Combat", icon: "⚔️" },
-    { key: "deathpenalty", label: "Death penalty", icon: "💀" },
-    { key: "resources", label: "Resources", icon: "🪵" },
-    { key: "raids", label: "Raids", icon: "🔥" },
-    { key: "portals", label: "Portals", icon: "🌀" },
-  ],
-  worldConfigFlags: [
-    { key: "nobuildcost", label: "No build cost", desc: "Building pieces consume no materials. Recipes still need to be discovered." },
-    { key: "playerevents", label: "Per-player raids", desc: "Raids based on each player's individual progress, not bosses killed on the server." },
-    { key: "fire", label: "Fire hazard", desc: "Wood can catch fire and fire spreads across the entire world, not just Ashlands." },
-    { key: "passivemobs", label: "Passive enemies", desc: "Enemies do not attack until provoked." },
-    { key: "nomap", label: "No map", desc: "Map and minimap disabled — navigate by landmarks only." },
-  ],
+
+  getWorldConfigFields() {
+    void this.localeVersion;
+    const labels = this.tObj("worlds.fields") || {};
+    return FIELD_KEYS.map((key) => ({
+      key,
+      label: labels[key] || key,
+      icon: FIELD_ICONS[key],
+    }));
+  },
+
+  getWorldConfigFlags() {
+    void this.localeVersion;
+    const flags = this.tObj("worlds.flags") || {};
+    return FLAG_KEYS.filter((key) => flags[key]).map((key) => ({
+      key,
+      label: flags[key].label,
+      desc: flags[key].desc,
+    }));
+  },
 
   async loadWorldsPage() {
     await this.loadWorlds();
@@ -104,13 +79,13 @@ export const worlds = {
     const world = this.worlds.find((w) => w.name === name);
     const isNew = world && world.pending && !world.has_db;
     const msg = isNew
-      ? `Activate world "${name}"? The server will restart and a NEW (empty) world will be created.`
-      : `Activate world "${name}"? The server will restart.`;
+      ? this.t("common.confirm.activateWorldNew", { name })
+      : this.t("common.confirm.activateWorld", { name });
     if (!confirm(msg)) return;
     return this.withBusy(`switchWorld:${name}`, async () => {
       try {
         await this.api("POST", "/api/worlds/switch", { world_name: name });
-        this.toast(`World "${name}" activated`);
+        this.toast(this.t("common.toasts.worldActivated", { name }));
         await this.loadWorlds();
         await this.refreshStatus();
         if (this.page === "server") {
@@ -127,7 +102,10 @@ export const worlds = {
     return this.withBusy(act ? "createWorldActivate" : "createWorld", async () => {
       try {
         await this.api("POST", `/api/worlds/create?name=${encodeURIComponent(this.newWorldName)}&activate=${act}`);
-        this.toast(act ? `World "${this.newWorldName}" created and activated` : `World "${this.newWorldName}" registered`);
+        const name = this.newWorldName;
+        this.toast(act
+          ? this.t("common.toasts.worldCreatedActivated", { name })
+          : this.t("common.toasts.worldRegistered", { name }));
         this.newWorldName = "";
         this.createWorldActivate = false;
         await this.loadWorlds();
@@ -137,21 +115,21 @@ export const worlds = {
   },
 
   async deleteWorld(name) {
-    if (!confirm(`Permanently delete world "${name}"?`)) return;
+    if (!confirm(this.t("common.confirm.deleteWorld", { name }))) return;
     return this.withBusy(`deleteWorld:${name}`, async () => {
       try {
         await this.api("DELETE", `/api/worlds/${encodeURIComponent(name)}`);
-        this.toast(`World "${name}" deleted`);
+        this.toast(this.t("common.toasts.worldDeleted", { name }));
         await this.loadWorlds();
       } catch (e) { this.toast(e.message, "error"); }
     });
   },
 
   worldBadge(world) {
-    if (world.running && !world.has_db) return "Awaiting creation";
-    if (world.running) return "Running";
-    if (world.active) return "Active";
-    if (world.pending) return "Pending";
+    if (world.running && !world.has_db) return this.t("worlds.badges.awaitingCreation");
+    if (world.running) return this.t("worlds.badges.running");
+    if (world.active) return this.t("worlds.badges.active");
+    if (world.pending) return this.t("worlds.badges.pending");
     return "";
   },
 
@@ -160,20 +138,28 @@ export const worlds = {
     if (!s) return "";
     const preset = this.worldOptionLabel("preset", s.preset || "normal");
     const portals = this.worldOptionLabel("portals", s.portals || "normal");
-    return `${preset} · Portals: ${portals}`;
+    return this.t("worlds.badges.configBadge", { preset, portals });
+  },
+
+  worldDbLabel(world) {
+    void this.localeVersion;
+    const value = world.has_db ? this.formatSize(world.db_size) : this.t("worlds.ui.notCreated");
+    return this.t("worlds.ui.db", { value });
   },
 
   worldOptionLabel(field, value) {
     const v = value ?? "";
-    const item = (this.worldModifierCatalog[field] || []).find((o) => o.value === v);
+    const item = (this.getWorldModifierCatalog()[field] || []).find((o) => o.value === v);
     if (item) return item.label;
-    if (!v) return field === "preset" ? "Game default" : "Preset";
+    if (!v) return field === "preset"
+      ? this.t("worlds.fallback.gameDefault")
+      : this.t("worlds.fallback.preset");
     return v;
   },
 
   worldOptionDesc(field, value) {
     const v = value ?? "";
-    const item = (this.worldModifierCatalog[field] || []).find((o) => o.value === v);
+    const item = (this.getWorldModifierCatalog()[field] || []).find((o) => o.value === v);
     return item?.desc || "";
   },
 
@@ -187,14 +173,16 @@ export const worlds = {
   },
 
   worldEffectiveRows() {
+    void this.localeVersion;
     const eff = this.computeWorldEffective();
+    const labels = this.tObj("worlds.fields") || {};
     return [
-      { key: "preset", label: "Preset", value: eff.preset },
-      { key: "combat", label: "Combat", value: eff.combat },
-      { key: "deathpenalty", label: "Death", value: eff.deathpenalty },
-      { key: "resources", label: "Resources", value: eff.resources },
-      { key: "raids", label: "Raids", value: eff.raids },
-      { key: "portals", label: "Portals", value: eff.portals },
+      { key: "preset", label: labels.preset || this.t("worlds.fields.preset"), value: eff.preset },
+      { key: "combat", label: labels.combat || this.t("worlds.fields.combat"), value: eff.combat },
+      { key: "deathpenalty", label: labels.death || labels.deathpenalty || this.t("worlds.fields.death"), value: eff.deathpenalty },
+      { key: "resources", label: labels.resources || this.t("worlds.fields.resources"), value: eff.resources },
+      { key: "raids", label: labels.raids || this.t("worlds.fields.raids"), value: eff.raids },
+      { key: "portals", label: labels.portals || this.t("worlds.fields.portals"), value: eff.portals },
     ];
   },
 
@@ -263,7 +251,9 @@ export const worlds = {
       try {
         const payload = { config: this.worldConfigForm, restart };
         const data = await this.api("PUT", `/api/worlds/${encodeURIComponent(this.worldConfigName)}/config`, payload);
-        this.toast(restart ? "Settings saved and server restarted" : "World settings saved");
+        this.toast(restart
+          ? this.t("common.toasts.worldSettingsSavedRestart")
+          : this.t("common.toasts.worldSettingsSaved"));
         this.worldConfigRequiresRestart = !!data.requires_restart;
         this.worldConfigEffective = data.effective || data.summary || null;
         this.worldConfigInferredPreset = data.inferred_preset || "";

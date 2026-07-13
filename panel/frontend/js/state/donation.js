@@ -10,10 +10,10 @@ export const donation = {
     license_url: "",
   },
 
-  donationPitch:
-    "Vikinger Panel is free for personal use. Sponsors help maintain the project and keep development going. " +
-    "Contributors at $1+/month get direct support from the maintainer. " +
-    "Sponsorship does not replace a commercial license — hosting providers still need one (see below).",
+  getDonationPitch() {
+    void this.localeVersion;
+    return this.t("donation.pitch");
+  },
 
   async loadDonationInfo() {
     try {

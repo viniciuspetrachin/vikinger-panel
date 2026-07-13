@@ -1,5 +1,7 @@
 // Formatting + log rendering helpers (mixed into the Alpine component).
 
+import { getLocale } from "./i18n/index.js";
+
 export function formatRateTick(bps) {
   if (!bps || bps <= 0) return "0 B/s";
   if (bps >= 1024 * 1024) return (bps / (1024 * 1024)).toFixed(1) + " MB/s";
@@ -9,7 +11,12 @@ export function formatRateTick(bps) {
 
 export const helpers = {
   statusLabel(s) {
-    const map = { running: "Online", stopped: "Paused", offline: "Offline", starting: "Starting" };
+    const map = {
+      running: this.t("common.status.online"),
+      stopped: this.t("common.status.paused"),
+      offline: this.t("common.status.offline"),
+      starting: this.t("common.status.starting"),
+    };
     return map[s] || s;
   },
 
@@ -46,7 +53,10 @@ export const helpers = {
     return `<span class="log-msg ${msgCls}">${this.escapeHtml(line)}</span>`;
   },
 
-  formatLogHtml(text, emptyLabel = "Waiting for server output...") {
+  formatLogHtml(text, emptyLabel) {
+    if (emptyLabel === undefined) {
+      emptyLabel = this.t("common.logEmpty.waitingForOutput");
+    }
     if (!text) {
       return `<span class="log-line log-empty">${this.escapeHtml(emptyLabel)}</span>`;
     }
@@ -74,11 +84,12 @@ export const helpers = {
   },
 
   formatDate(iso) {
-    if (!iso) return "—";
+    if (!iso) return this.t("common.status.emDash");
     try {
       const d = new Date(iso);
       if (Number.isNaN(d.getTime())) return iso;
-      return d.toLocaleString("en-US", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      const locale = this.locale || getLocale();
+      return d.toLocaleString(locale, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
     } catch {
       return iso;
     }

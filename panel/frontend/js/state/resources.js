@@ -5,18 +5,20 @@ export const resources = {
   memoryGb: 29,
 
   memorySliderLabel() {
-    if (this.memoryGb >= (this.memoryConfig.slider_max || 29)) return "No limit";
+    void this.localeVersion;
+    if (this.memoryGb >= (this.memoryConfig.slider_max || 29)) return this.t("resources.noLimit");
     return `${this.memoryGb} GB`;
   },
 
   memoryLimitLabel() {
+    void this.localeVersion;
     if (this.memoryConfig.unlimited && !this.metrics.memory?.limit_gb) {
       const host = this.formatBytes(this.metrics.memory?.limit_bytes);
-      return host ? `${host} (host)` : "No limit";
+      return host ? `${host} ${this.t("resources.hostSuffix")}` : this.t("resources.noLimit");
     }
     const gb = this.metrics.memory?.limit_gb ?? this.memoryConfig.gb;
     if (gb) return `${gb} GB`;
-    return this.formatBytes(this.metrics.memory?.limit_bytes) || "No limit";
+    return this.formatBytes(this.metrics.memory?.limit_bytes) || this.t("resources.noLimit");
   },
 
   memoryGbForApi() {
