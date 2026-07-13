@@ -1275,20 +1275,24 @@
     },
     "repository": "Repository",
     "whatsNew": "Was ist neu",
+    "changelogEmpty": "Keine Changelog-Einträge.",
     "creditsTitle": "Credits",
-    "changelog": {
-      "2.2.0": [
-        "Registerkarte „Dateien“: schnelle Suche nach Namen mit Typfiltern (Konfiguration, DLLs, Plugins, Welten, Listen, Backups, Protokolle).",
-        "Registerkarte „Server“: optionale Backup-Festplattenobergrenze mit automatischer Bereinigung der ältesten ZIPs bei Überschreitung.",
-        "Jetzt alle Backups löschen – irreversibles Löschen mit Schutz für aktive Wiederherstellungskontrollpunkte."
-      ],
-      "2.0.0": [
-        "Komplette UI/UX-Überarbeitung mit abschnittsbasierter Navigation.",
-        "Neue Hilfe (durchsuchbare FAQ), „Projekt unterstützen“ und „Über/Version“-Bildschirme.",
-        "Polyform Shield-Lizenz – kostenlose Nutzung, kein kommerzieller Weiterverkauf ohne Genehmigung.",
-        "Metriken zur Übersicht; Kapazität (RAM und Spieler) auf der Registerkarte „Server“; Tools mit Dateien, Konsole und Audit.",
-        "100 % dockerisiert, keine Probleme mit Berechtigungen; lokale Vermögenswerte (kein CDN)."
-      ]
+    "changelogSections": {
+      "added": "Added",
+      "changed": "Changed",
+      "deprecated": "Deprecated",
+      "removed": "Removed",
+      "fixed": "Fixed",
+      "security": "Security"
+    },
+    "update": {
+      "title": "Panel-Update",
+      "upToDate": "Aktuell (v{current})",
+      "available": "Update verfügbar: v{latest}",
+      "viewRelease": "Release auf GitHub ansehen",
+      "apply": "Jetzt aktualisieren",
+      "updating": "Aktualisiere… Neustart",
+      "started": "Panel-Update gestartet — die Seite lädt neu, wenn der Container neu startet."
     },
     "credits": {
       "valheimDocker": {

@@ -1275,20 +1275,24 @@
     },
     "repository": "Repositorio",
     "whatsNew": "Qué hay de nuevo",
+    "changelogEmpty": "No hay entradas en el changelog.",
     "creditsTitle": "Créditos",
-    "changelog": {
-      "2.2.0": [
-        "Pestaña Archivos: búsqueda rápida por nombre con filtros de tipo (Configuración, DLL, complementos, mundos, listas, copias de seguridad, registros).",
-        "Pestaña Servidor: límite de disco de respaldo opcional con poda automática de archivos ZIP más antiguos cuando se excede.",
-        "Borre todas las copias de seguridad ahora: purga irreversible con protección para puntos de control de restauración activos."
-      ],
-      "2.0.0": [
-        "Revisión completa de UI/UX con navegación basada en secciones.",
-        "Nuevas pantallas de Ayuda (Preguntas frecuentes con capacidad de búsqueda), Soporte para el proyecto y Acerca de/Versión.",
-        "Licencia Polyform Shield: uso gratuito, no reventa comercial sin autorización.",
-        "Métricas en descripción general; capacidad (RAM y jugadores) en la pestaña Servidor; Herramientas con Archivos, Consola y Auditoría.",
-        "100% acoplado, sin dolores de cabeza por permisos; Activos locales (sin CDN)."
-      ]
+    "changelogSections": {
+      "added": "Added",
+      "changed": "Changed",
+      "deprecated": "Deprecated",
+      "removed": "Removed",
+      "fixed": "Fixed",
+      "security": "Security"
+    },
+    "update": {
+      "title": "Actualización del panel",
+      "upToDate": "Actualizado (v{current})",
+      "available": "Actualización disponible: v{latest}",
+      "viewRelease": "Ver release en GitHub",
+      "apply": "Actualizar ahora",
+      "updating": "Actualizando… reiniciando",
+      "started": "Actualización iniciada — la página se recargará al reiniciar el contenedor."
     },
     "credits": {
       "valheimDocker": {

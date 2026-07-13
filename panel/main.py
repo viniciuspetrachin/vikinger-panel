@@ -38,6 +38,7 @@ from rcon_client import (
     is_protected_mod,
 )
 from version import __version__, version_info
+from panel_update import check_panel_update, start_panel_update
 import storage_limits
 from bepinex_cfg import (
     apply_setting_values,
@@ -3085,11 +3086,29 @@ class ModLink(BaseModel):
     url: str
 
 
+class PanelUpdateBody(BaseModel):
+    version: str = ""
+
+
 # ── Version ──────────────────────────────────────────────────────────────────
 
 @app.get("/api/version")
 def api_version():
     return version_info()
+
+
+@app.get("/api/panel/update/check")
+def api_panel_update_check():
+    return check_panel_update(COMPOSE_FILE)
+
+
+@app.post("/api/panel/update")
+def api_panel_update(body: PanelUpdateBody | None = None):
+    target = (body.version if body else "") or ""
+    try:
+        return start_panel_update(ROOT, target)
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 # ── Status & Server Control ──────────────────────────────────────────────────

@@ -1275,20 +1275,24 @@
     },
     "repository": "Repositório",
     "whatsNew": "O que há de novo",
+    "changelogEmpty": "Nenhuma entrada no changelog.",
     "creditsTitle": "Créditos",
-    "changelog": {
-      "2.2.0": [
-        "Aba Arquivos: busca rápida por nome com filtros de tipo (Config, DLLs, Plugins, Mundos, Listas, Backups, Logs).",
-        "Guia Servidor: tampa de disco de backup opcional com poda automática de ZIPs mais antigos quando excedida.",
-        "Limpe todos os backups agora — limpeza irreversível com proteção para pontos de verificação de restauração ativos."
-      ],
-      "2.0.0": [
-        "Revisão completa de UI/UX com navegação baseada em seção.",
-        "Nova Ajuda (FAQ pesquisável), Telas de Suporte ao Projeto e Sobre/Versão.",
-        "Licença Polyform Shield — uso gratuito, sem revenda comercial sem autorização.",
-        "Métricas na Visão Geral; capacidade (RAM e players) na guia Servidor; Ferramentas com Arquivos, Console e Auditoria.",
-        "100% dockerized, sem dores de cabeça de permissão; ativos locais (sem CDN)."
-      ]
+    "changelogSections": {
+      "added": "Adicionado",
+      "changed": "Alterado",
+      "deprecated": "Obsoleto",
+      "removed": "Removido",
+      "fixed": "Corrigido",
+      "security": "Segurança"
+    },
+    "update": {
+      "title": "Atualização do painel",
+      "upToDate": "Atualizado (v{current})",
+      "available": "Atualização disponível: v{latest}",
+      "viewRelease": "Ver release no GitHub",
+      "apply": "Atualizar agora",
+      "updating": "Atualizando… reiniciando",
+      "started": "Atualização iniciada — a página recarrega quando o container reiniciar."
     },
     "credits": {
       "valheimDocker": {

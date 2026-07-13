@@ -46,6 +46,17 @@ jobs:
         working-directory: panel
         run: pytest tests/e2e -q
 
+      - name: Check CHANGELOG unreleased
+        run: |
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0, "panel")
+          from changelog import CHANGELOG_MD, has_unreleased_content
+          text = CHANGELOG_MD.read_text(encoding="utf-8")
+          if not has_unreleased_content(text):
+              print("::warning::CHANGELOG [Unreleased] has no bullet items; release will use fallback notes.")
+          PY
+
       - name: Bump patch version
         id: bump
         run: |
@@ -107,17 +118,33 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add panel/version.py panel/package.json README.md CHANGELOG.md
+          git add panel/version.py panel/package.json panel/changelog_data.json README.md CHANGELOG.md
           git diff --staged --quiet && echo "Nada para commitar" && exit 0
           git commit -m "chore(release): v${{ steps.bump.outputs.version }} [skip ci]"
           git push
+
+      - name: Prepare release notes
+        id: notes
+        run: |
+          BODY=$(python3 - <<'PY'
+          import sys
+          sys.path.insert(0, "panel")
+          from changelog import version_section_markdown
+          print(version_section_markdown("${{ steps.bump.outputs.version }}"))
+          PY
+          )
+          {
+            echo "body<<EOF"
+            echo "$BODY"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.bump.outputs.version }}
           name: v${{ steps.bump.outputs.version }}
-          generate_release_notes: true
+          body: ${{ steps.notes.outputs.body }}
           files: |
             dist/vikinger-panel-${{ steps.bump.outputs.version }}-dist.zip
             dist/vikinger-panel-${{ steps.bump.outputs.version }}.tar

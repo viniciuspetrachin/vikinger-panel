@@ -50,3 +50,10 @@ All notable changes to this project will be documented in this file.
 - API `/api/updates/*` para config, status e trigger do `valheim-updater`.
 - Registro Thunderstore (`panel-data/mods-registry.json`) e endpoints por mod: vincular, buscar e aplicar atualizações.
 - FAQ expandido sobre updates e mods.
+- **i18n:** multi-language UI (en-US, pt-BR, de-DE, ru-RU, es-ES) with locale persistence.
+- **About:** changelog synced 1:1 from `CHANGELOG.md` / GitHub Releases.
+- **Panel self-update:** check for new releases and apply GHCR image update with automatic container restart.
+
+### Changed
+
+- Translation fixes for technical terms (RAM, Mods, Plugins, etc.).
