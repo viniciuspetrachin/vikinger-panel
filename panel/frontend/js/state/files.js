@@ -16,6 +16,8 @@ const CHEVRON_SVG =
   "</svg>";
 
 const CONFIG_EXTS = new Set([".cfg", ".ini", ".json", ".yaml", ".yml", ".xml", ".prefs", ".env"]);
+const BEPINEX_CFG_PREFIX = "config/bepinex/";
+const BEPINEX_PROTECTED_CFG = new Set(["BepInEx.cfg", "org.tristan.rcon.cfg"]);
 const LIST_FILES = new Set(["adminlist.txt", "bannedlist.txt", "permittedlist.txt"]);
 
 export const files = {
@@ -42,6 +44,12 @@ export const files = {
   editContent: "",
   fileEditorDirty: false,
   fileEditorDraftPending: false,
+  cfgEditorMode: "raw",
+  cfgDocument: null,
+  cfgStructured: false,
+  cfgSavedSnapshot: "",
+  cfgSearchQuery: "",
+  cfgExpandedSections: {},
 
   async _fetchFileTree() {
     try {
@@ -79,14 +87,21 @@ export const files = {
     const path = (item.path || "").toLowerCase();
     const name = (item.name || "").toLowerCase();
     const ext = name.includes(".") ? name.slice(name.lastIndexOf(".")) : "";
+    if (this.isBepinexPluginCfg(item.path)) return "config";
     if (ext === ".dll") return "dll";
     if (path.includes("/plugins/")) return "plugin";
     if (ext === ".fwl" || ext === ".db" || path.includes("worlds_local/")) return "world";
     if (LIST_FILES.has(name)) return "list";
     if (ext === ".zip" && path.includes("backups/")) return "backup";
     if (ext === ".log") return "log";
-    if (CONFIG_EXTS.has(ext)) return "config";
     return null;
+  },
+
+  isBepinexPluginCfg(path) {
+    if (!path || !path.startsWith(BEPINEX_CFG_PREFIX)) return false;
+    const name = path.slice(BEPINEX_CFG_PREFIX.length);
+    if (!name.endsWith(".cfg") || name.includes("/")) return false;
+    return !BEPINEX_PROTECTED_CFG.has(name);
   },
 
   fileMatchesFilter(item) {
@@ -237,11 +252,38 @@ export const files = {
       const data = await this.api("GET", `/api/files/read?path=${encodeURIComponent(path)}`);
       this.editPath = path;
       this.editContent = data.content;
+      this.cfgDocument = null;
+      this.cfgStructured = false;
+      this.cfgEditorMode = "raw";
+      this.cfgSearchQuery = "";
+      this.cfgExpandedSections = {};
+      if (this.isBepinexPluginCfg(path)) {
+        try {
+          const parsed = await this.api("GET", `/api/bepinex/configs/parse?path=${encodeURIComponent(path)}`);
+          if (parsed.structured && parsed.document?.sections?.length) {
+            this.cfgDocument = parsed.document;
+            this.cfgStructured = true;
+            this.cfgEditorMode = "form";
+            this.cfgSavedSnapshot = JSON.stringify(parsed.document);
+            const expanded = {};
+            for (const sec of parsed.document.sections) expanded[sec.name] = true;
+            this.cfgExpandedSections = expanded;
+          }
+        } catch {
+          /* fallback to raw editor */
+        }
+      }
       if (this.page !== "files") {
         this.page = "files";
       }
       await this.$nextTick();
-      await this.mountFileEditor(data.content);
+      if (this.cfgEditorMode === "raw") {
+        await this.mountFileEditor(data.content);
+      } else {
+        window.PanelEditor?.destroy("file");
+        const el = document.getElementById("file-editor-host");
+        if (el) el.innerHTML = "";
+      }
     } catch (e) {
       this.toast(e.message, "error");
     }
@@ -256,6 +298,138 @@ export const files = {
     const fileRow = event.target.closest(".file-tree-file");
     if (fileRow?.dataset.path) {
       this.editFile(fileRow.dataset.path);
+    }
+  },
+
+  async switchCfgEditorMode(mode) {
+    if (mode === this.cfgEditorMode) return;
+    if (mode === "raw") {
+      if (this.cfgStructured && this.cfgDocument) {
+        try {
+          const updates = this.collectCfgUpdates();
+          if (updates.length) {
+            const data = await this.api("PUT", "/api/bepinex/configs/apply", {
+              path: this.editPath,
+              updates,
+            });
+            this.editContent = data.content;
+          }
+        } catch (e) {
+          this.toast(e.message, "error");
+          return;
+        }
+      }
+      this.cfgEditorMode = "raw";
+      await this.$nextTick();
+      await this.mountFileEditor(this.editContent);
+      if (this.cfgSearchQuery) this.fileEditorOpenSearch(this.cfgSearchQuery);
+      return;
+    }
+    if (mode === "form" && this.cfgStructured) {
+      const editor = window.PanelEditor?.get("file");
+      if (editor) this.editContent = editor.getContent();
+      window.PanelEditor?.destroy("file");
+      try {
+        const parsed = await this.api("POST", "/api/bepinex/configs/parse", {
+          path: this.editPath,
+          content: this.editContent,
+        });
+        if (parsed.structured && parsed.document?.sections?.length) {
+          this.cfgDocument = parsed.document;
+          this.cfgSavedSnapshot = JSON.stringify(parsed.document);
+          this.fileEditorDirty = false;
+        }
+      } catch (e) {
+        this.toast(e.message, "error");
+        this.cfgEditorMode = "raw";
+        await this.$nextTick();
+        await this.mountFileEditor(this.editContent);
+        return;
+      }
+      this.cfgEditorMode = "form";
+    }
+  },
+
+  cfgInputKind(setting) {
+    const type = (setting.type || "").toLowerCase();
+    if (setting.acceptable?.length) return "select";
+    if (type === "boolean") return "boolean";
+    if (["int32", "int64", "uint32", "uint64", "int", "long"].includes(type)) return "integer";
+    if (["single", "double", "float", "decimal"].includes(type)) return "number";
+    return "text";
+  },
+
+  cfgSettingMatchesSearch(setting, sectionName) {
+    const q = (this.cfgSearchQuery || "").trim().toLowerCase();
+    if (!q) return true;
+    const hay = [
+      setting.label,
+      setting.key,
+      setting.type,
+      setting.default,
+      setting.value,
+      sectionName,
+    ].join(" ").toLowerCase();
+    return hay.includes(q);
+  },
+
+  filteredCfgSections() {
+    if (!this.cfgDocument?.sections) return [];
+    return this.cfgDocument.sections
+      .map((sec) => ({
+        ...sec,
+        settings: (sec.settings || []).filter((s) => this.cfgSettingMatchesSearch(s, sec.name)),
+      }))
+      .filter((sec) => sec.settings.length > 0);
+  },
+
+  cfgFormMatchCount() {
+    let n = 0;
+    for (const sec of this.filteredCfgSections()) n += sec.settings.length;
+    return n;
+  },
+
+  isCfgSectionExpanded(name) {
+    return !!this.cfgExpandedSections[name];
+  },
+
+  toggleCfgSection(name) {
+    const next = { ...this.cfgExpandedSections };
+    next[name] = !next[name];
+    this.cfgExpandedSections = next;
+  },
+
+  onCfgValueChange() {
+    const snap = JSON.stringify(this.cfgDocument);
+    this.fileEditorDirty = snap !== this.cfgSavedSnapshot;
+  },
+
+  collectCfgUpdates() {
+    const updates = [];
+    for (const sec of this.cfgDocument?.sections || []) {
+      for (const setting of sec.settings || []) {
+        updates.push({
+          section: sec.name,
+          key: setting.key,
+          value: String(setting.value ?? ""),
+        });
+      }
+    }
+    return updates;
+  },
+
+  setCfgValue(setting, value) {
+    setting.value = String(value ?? "");
+  },
+
+  fileEditorOpenSearch(query = "") {
+    const q = query || this.cfgSearchQuery || "";
+    window.PanelEditor?.get("file")?.openSearch(q);
+  },
+
+  onFileEditorSearchInput() {
+    if (this.cfgEditorMode === "raw") {
+      this.fileEditorOpenSearch(this.cfgSearchQuery);
     }
   },
 
@@ -332,6 +506,20 @@ export const files = {
   async saveFile() {
     return this.withBusy("saveFile", async () => {
       try {
+        if (this.cfgEditorMode === "form" && this.cfgStructured && this.cfgDocument) {
+          const updates = this.collectCfgUpdates();
+          const data = await this.api("PUT", "/api/bepinex/configs/apply", {
+            path: this.editPath,
+            updates,
+          });
+          this.editContent = data.content;
+          this.cfgSavedSnapshot = JSON.stringify(this.cfgDocument);
+          this.fileEditorDirty = false;
+          this.fileEditorDraftPending = false;
+          window.PanelEditor?.clearDraft(this.editPath);
+          this.toast("File saved!");
+          return;
+        }
         const editor = window.PanelEditor?.get("file");
         const content = editor ? editor.getContent() : this.editContent;
         await this.api("PUT", `/api/files/write?path=${encodeURIComponent(this.editPath)}`, { content });

@@ -797,6 +797,21 @@
           </div>
           <p x-show="!mods.length" class="text-gray-500 text-sm text-center py-8">No mods installed</p>
 
+          <div x-show="orphanedConfigsCount > 0"
+               class="bg-valheim-800 rounded-xl border border-amber-600/40 p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div class="flex-1 min-w-0">
+              <h3 class="font-display text-sm font-semibold text-amber-300">Orphaned configs</h3>
+              <p class="text-xs text-gray-400 mt-1"
+                 x-text="orphanedConfigsCount + ' config file(s) from removed mods are still on disk.'"></p>
+            </div>
+            <button @click="cleanupOrphanedConfigs()" :disabled="isBusy('cleanupOrphanedConfigs')"
+                    class="btn btn-sm btn-ghost-danger shrink-0">
+              <span x-show="actionPending === 'cleanupOrphanedConfigs'" class="spinner"></span>
+              <span x-show="actionPending !== 'cleanupOrphanedConfigs'">Remove orphaned configs</span>
+              <span x-show="actionPending === 'cleanupOrphanedConfigs'">Removing...</span>
+            </button>
+          </div>
+
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4">
             <div>
               <h3 class="font-display text-sm font-semibold text-valheim-gold">Export r2modman profile</h3>
@@ -1283,18 +1298,101 @@
                     </button>
                   </div>
                 </div>
-                <div x-show="fileEditorDraftPending" class="editor-draft-banner">
+                <div x-show="fileEditorDraftPending && cfgEditorMode === 'raw'" class="editor-draft-banner">
                   <span>Local draft found (not saved on server).</span>
                   <button type="button" @click="restoreFileDraft()" class="btn btn-sm btn-warning">Restore draft</button>
                   <button type="button" @click="discardFileDraft()" class="btn btn-sm btn-ghost">Discard</button>
                 </div>
                 <div class="editor-toolbar">
-                  <button type="button" @click="fileEditorUndo()" class="btn btn-sm btn-ghost" title="Undo">↶</button>
-                  <button type="button" @click="fileEditorRedo()" class="btn btn-sm btn-ghost" title="Redo">↷</button>
+                  <input type="search" x-model="cfgSearchQuery" @input="onFileEditorSearchInput()"
+                         placeholder="Search settings..."
+                         class="cfg-search-input bg-valheim-900 border border-valheim-600 rounded px-2 py-1 text-xs focus:border-valheim-gold focus:outline-none w-40 sm:w-52" />
+                  <div x-show="cfgStructured" class="flex gap-1">
+                    <button type="button" @click="switchCfgEditorMode('form')"
+                            class="btn-tab btn-tab-sm" :class="cfgEditorMode === 'form' && 'btn-tab-active'">Form</button>
+                    <button type="button" @click="switchCfgEditorMode('raw')"
+                            class="btn-tab btn-tab-sm" :class="cfgEditorMode === 'raw' && 'btn-tab-active'">Raw</button>
+                  </div>
+                  <template x-if="cfgEditorMode === 'raw'">
+                    <span class="flex gap-1">
+                      <button type="button" @click="fileEditorUndo()" class="btn btn-sm btn-ghost" title="Undo">↶</button>
+                      <button type="button" @click="fileEditorRedo()" class="btn btn-sm btn-ghost" title="Redo">↷</button>
+                      <button type="button" @click="fileEditorOpenSearch(cfgSearchQuery)" class="btn btn-sm btn-ghost" title="Find (Ctrl+F)">Find</button>
+                    </span>
+                  </template>
                   <span x-show="fileEditorDirty" id="file-editor-dirty" class="editor-dirty-badge">Unsaved changes</span>
-                  <span class="text-xs text-gray-600 ml-auto">Ctrl+S to save · local draft every 2s</span>
+                  <span x-show="cfgEditorMode === 'raw'" class="text-xs text-gray-600 ml-auto">Ctrl+S to save · Ctrl+F to search</span>
+                  <span x-show="cfgEditorMode === 'form' && cfgSearchQuery" class="text-xs text-gray-500 ml-auto">
+                    <span x-text="cfgFormMatchCount()"></span> match(es)
+                  </span>
                 </div>
-                <div id="file-editor-host" class="min-h-[400px]"></div>
+                <div x-show="cfgEditorMode === 'form' && cfgDocument" class="cfg-form-panel max-h-[520px] overflow-y-auto space-y-3 pr-1">
+                  <template x-for="sec in cfgDocument.sections" :key="sec.name">
+                    <div x-show="sec.settings.some(s => cfgSettingMatchesSearch(s, sec.name))"
+                         class="cfg-section bg-valheim-900 border border-valheim-700 rounded-lg overflow-hidden">
+                      <button type="button" @click="toggleCfgSection(sec.name)"
+                              class="cfg-section-header w-full flex items-center justify-between px-3 py-2 text-left hover:bg-valheim-800/60">
+                        <span class="text-sm font-medium text-valheim-gold" x-text="sec.name"></span>
+                        <span class="text-xs text-gray-500" x-text="isCfgSectionExpanded(sec.name) ? '▾' : '▸'"></span>
+                      </button>
+                      <div x-show="isCfgSectionExpanded(sec.name)" class="cfg-section-body border-t border-valheim-700/60 divide-y divide-valheim-700/40">
+                        <template x-for="setting in sec.settings" :key="sec.name + ':' + setting.key">
+                          <div x-show="cfgSettingMatchesSearch(setting, sec.name)" class="cfg-setting px-3 py-3 space-y-2">
+                            <div class="space-y-1">
+                              <p class="text-sm text-gray-200" x-text="setting.label || setting.key"></p>
+                              <div class="flex flex-wrap gap-2 text-xs text-gray-500">
+                                <span x-show="setting.type" class="cfg-type-badge" x-text="setting.type"></span>
+                                <span x-show="setting.default !== ''" class="text-gray-600">
+                                  Default: <span class="font-mono text-gray-400" x-text="setting.default"></span>
+                                </span>
+                              </div>
+                            </div>
+                            <div>
+                              <template x-if="cfgInputKind(setting) === 'boolean'">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                  <input type="checkbox"
+                                         :checked="setting.value === 'true'"
+                                         @change="setCfgValue(setting, $event.target.checked ? 'true' : 'false'); onCfgValueChange()"
+                                         class="rounded border-valheim-600 accent-valheim-gold" />
+                                  <span class="text-xs text-gray-400" x-text="setting.value === 'true' ? 'true' : 'false'"></span>
+                                </label>
+                              </template>
+                              <template x-if="cfgInputKind(setting) === 'select'">
+                                <select :value="setting.value"
+                                        @change="setCfgValue(setting, $event.target.value); onCfgValueChange()"
+                                        class="cfg-input w-full bg-valheim-950 border border-valheim-600 rounded px-2 py-1.5 text-sm">
+                                  <template x-for="opt in setting.acceptable" :key="opt">
+                                    <option :value="opt" x-text="opt" :selected="opt === setting.value"></option>
+                                  </template>
+                                </select>
+                              </template>
+                              <template x-if="cfgInputKind(setting) === 'integer'">
+                                <input type="number" step="1"
+                                       :value="setting.value"
+                                       @input="setCfgValue(setting, $event.target.value); onCfgValueChange()"
+                                       class="cfg-input w-full bg-valheim-950 border border-valheim-600 rounded px-2 py-1.5 text-sm font-mono" />
+                              </template>
+                              <template x-if="cfgInputKind(setting) === 'number'">
+                                <input type="number" step="any"
+                                       :value="setting.value"
+                                       @input="setCfgValue(setting, $event.target.value); onCfgValueChange()"
+                                       class="cfg-input w-full bg-valheim-950 border border-valheim-600 rounded px-2 py-1.5 text-sm font-mono" />
+                              </template>
+                              <template x-if="cfgInputKind(setting) === 'text'">
+                                <input type="text"
+                                       :value="setting.value"
+                                       @input="setCfgValue(setting, $event.target.value); onCfgValueChange()"
+                                       class="cfg-input w-full bg-valheim-950 border border-valheim-600 rounded px-2 py-1.5 text-sm font-mono" />
+                              </template>
+                            </div>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                  </template>
+                  <p x-show="cfgSearchQuery && !cfgFormMatchCount()" class="text-sm text-gray-500 text-center py-6">No matching settings</p>
+                </div>
+                <div x-show="cfgEditorMode === 'raw'" id="file-editor-host" class="min-h-[400px]"></div>
               </div>
             </div>
           </div>

@@ -39,6 +39,15 @@ from rcon_client import (
 )
 from version import __version__, version_info
 import storage_limits
+from bepinex_cfg import (
+    apply_setting_values,
+    build_cfg_index,
+    find_orphaned_configs,
+    is_bepinex_plugin_cfg_path,
+    match_dll_to_cfg,
+    parse_bepinex_cfg,
+    PROTECTED_CFG_NAMES,
+)
 
 logger = logging.getLogger("vikinger-panel")
 logging.basicConfig(level=logging.INFO)
@@ -2812,14 +2821,7 @@ def get_players_info() -> dict:
     return parse_players_from_logs(logs)
 
 
-def _mod_cfg_for_dll(dll_stem: str, cfg_map: dict[str, str]) -> Optional[str]:
-    for stem, fname in cfg_map.items():
-        if stem in dll_stem.lower() or dll_stem.lower() in stem:
-            return fname
-    return None
-
-
-def _collect_mod_entry(dll: Path, enabled: bool, cfg_map: dict[str, str]) -> dict:
+def _collect_mod_entry(dll: Path, enabled: bool, cfg_index: list) -> dict:
     stat = dll.stat()
     bundled = is_protected_mod(dll.name)
     meta = BUNDLED_MODS.get(dll.name, {})
@@ -2828,7 +2830,7 @@ def _collect_mod_entry(dll: Path, enabled: bool, cfg_map: dict[str, str]) -> dic
         "enabled": enabled,
         "size": stat.st_size,
         "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-        "config": _mod_cfg_for_dll(dll.stem, cfg_map),
+        "config": match_dll_to_cfg(dll.stem, cfg_index),
         "bundled": bundled,
         "protected": bundled,
         "label": meta.get("label"),
@@ -2950,13 +2952,13 @@ def upload_r2modman_profile(payload: str) -> str:
 
 def list_mods_data() -> list[dict]:
     mods: list[dict] = []
-    cfg_map = {f.stem.lower(): f.name for f in BEPINEX_CFG_DIR.glob("*.cfg") if f.name != "BepInEx.cfg"}
+    cfg_index = build_cfg_index(BEPINEX_CFG_DIR)
     if PLUGINS_DIR.exists():
         for dll in sorted(PLUGINS_DIR.glob("*.dll")):
-            mods.append(_collect_mod_entry(dll, True, cfg_map))
+            mods.append(_collect_mod_entry(dll, True, cfg_index))
     if PLUGINS_DISABLED_DIR.exists():
         for dll in sorted(PLUGINS_DISABLED_DIR.glob("*.dll")):
-            mods.append(_collect_mod_entry(dll, False, cfg_map))
+            mods.append(_collect_mod_entry(dll, False, cfg_index))
     return mods
 
 
@@ -3007,6 +3009,20 @@ class PlayerActionBody(BaseModel):
 
 class FileContent(BaseModel):
     content: str
+
+
+class BepinexCfgApply(BaseModel):
+    path: str
+    updates: list[dict]
+
+
+class BepinexCfgParseBody(BaseModel):
+    path: str
+    content: Optional[str] = None
+
+
+class OrphanedCfgDelete(BaseModel):
+    names: Optional[list[str]] = None
 
 
 class ModUrlInstall(BaseModel):
@@ -3852,6 +3868,74 @@ def api_bepinex_configs():
                 "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
             })
     return {"configs": configs}
+
+
+@app.get("/api/bepinex/configs/parse")
+def api_bepinex_config_parse_get(path: str = Query(...)):
+    return _parse_bepinex_config(path)
+
+
+@app.post("/api/bepinex/configs/parse")
+def api_bepinex_config_parse_post(body: BepinexCfgParseBody):
+    return _parse_bepinex_config(body.path, body.content)
+
+
+def _parse_bepinex_config(path: str, content: Optional[str] = None) -> dict:
+    if not is_bepinex_plugin_cfg_path(path):
+        raise HTTPException(400, "Not a BepInEx plugin config file")
+    target = safe_path(path)
+    if content is None:
+        if not target.is_file():
+            raise HTTPException(404, "File not found")
+        text = target.read_text(encoding="utf-8", errors="replace")
+    else:
+        text = content
+    doc = parse_bepinex_cfg(text)
+    return {
+        "path": path,
+        "raw": text,
+        "document": doc.to_dict(),
+        "structured": doc.structured,
+    }
+
+
+@app.put("/api/bepinex/configs/apply")
+def api_bepinex_config_apply(body: BepinexCfgApply):
+    path = body.path
+    if not is_bepinex_plugin_cfg_path(path):
+        raise HTTPException(400, "Not a BepInEx plugin config file")
+    target = safe_path(path)
+    if not target.is_file():
+        raise HTTPException(404, "File not found")
+    text = target.read_text(encoding="utf-8", errors="replace")
+    updated = apply_setting_values(text, body.updates)
+    target.write_text(updated, encoding="utf-8")
+    return {"ok": True, "path": path, "content": updated}
+
+
+@app.get("/api/bepinex/orphaned-configs")
+def api_bepinex_orphaned_configs():
+    orphaned = find_orphaned_configs(BEPINEX_CFG_DIR, PLUGINS_DIR, PLUGINS_DISABLED_DIR)
+    return {"configs": orphaned, "count": len(orphaned)}
+
+
+@app.delete("/api/bepinex/orphaned-configs")
+def api_bepinex_delete_orphaned_configs(body: OrphanedCfgDelete):
+    orphaned = find_orphaned_configs(BEPINEX_CFG_DIR, PLUGINS_DIR, PLUGINS_DISABLED_DIR)
+    allowed = {c["name"] for c in orphaned}
+    if body.names:
+        to_delete = [n for n in body.names if n in allowed]
+    else:
+        to_delete = sorted(allowed)
+    deleted: list[str] = []
+    for name in to_delete:
+        if name in PROTECTED_CFG_NAMES:
+            continue
+        target = BEPINEX_CFG_DIR / name
+        if target.is_file():
+            target.unlink()
+            deleted.append(name)
+    return {"ok": True, "deleted": deleted, "count": len(deleted)}
 
 
 # ── Updates (game + BepInEx mode) ────────────────────────────────────────────
