@@ -80,7 +80,7 @@ def test_parse_players_closing_removes_player():
     assert result["online"] is False
 
 
-@pytest.mark.parametrize("action", ["start", "stop", "restart", "pause", "resume"])
+@pytest.mark.parametrize("action", ["start", "stop", "restart", "recreate", "pause", "resume"])
 def test_server_actions_valid(client, action):
     r = client.post(f"/api/server/{action}")
     assert r.status_code == 200
@@ -157,6 +157,23 @@ def test_put_env(client):
     r = client.put("/api/config/env", json={"values": {"SERVER_NAME": "Novo"}})
     assert r.status_code == 200
     assert r.json()["values"]["SERVER_NAME"] == "Novo"
+    assert r.json()["server_name_meta"]["effective_name"] == "Novo - Powered by Vikinger Panel"
+
+
+def test_put_env_branding_opt_out(client):
+    r = client.put(
+        "/api/config/env",
+        json={"values": {"SERVER_NAME": "SemBranding", "SERVER_NAME_BRANDING": "off"}},
+    )
+    assert r.status_code == 200
+    assert r.json()["values"]["SERVER_NAME"] == "SemBranding"
+    assert r.json()["server_name_meta"]["branding_enabled"] is False
+
+
+def test_get_env_includes_server_name_meta(client):
+    r = client.get("/api/config/env")
+    assert r.status_code == 200
+    assert "server_name_meta" in r.json()
 
 
 def test_get_serverlists(client):

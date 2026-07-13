@@ -52,8 +52,8 @@ REPLACEMENTS: list[tuple[str, str]] = sorted([
     # Sidebar meta
     ('<h1 class="font-display text-xl font-bold text-valheim-gold tracking-wide">Vikinger Panel</h1>',
      '<h1 class="font-display text-xl font-bold text-valheim-gold tracking-wide" x-text="t(\'meta.appTitle\')">Vikinger Panel</h1>'),
-    ('<p class="text-xs text-gray-500 mt-1">PsyDev Server Manager</p>',
-     '<p class="text-xs text-gray-500 mt-1" x-text="t(\'meta.appSubtitle\')">PsyDev Server Manager</p>'),
+    ('<p class="text-xs text-gray-500 mt-1">Valheim Server Manager</p>',
+     '<p class="text-xs text-gray-500 mt-1" x-text="t(\'meta.appSubtitle\')">Valheim Server Manager</p>'),
     ("x-text=\"status.container === 'running' ? 'Container running' : 'Container stopped'\"",
      "x-text=\"status.container === 'running' ? t('nav.sidebar.containerRunning') : t('nav.sidebar.containerStopped')\""),
     # Language selector placeholder - inserted separately

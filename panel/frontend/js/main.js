@@ -98,9 +98,8 @@ function panel() {
         await this.loadConsoleStatus();
       }
       if (this.page === "audit") await this.loadAudit();
-      if (this.page === "about") await this.loadVersion();
+      if (this.page === "about") await this.loadAboutPage();
       if (this.page === "donation") {
-        await this.loadVersion();
         await this.loadDonationInfo();
       }
 

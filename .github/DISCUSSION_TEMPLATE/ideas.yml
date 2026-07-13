@@ -1,0 +1,23 @@
+title: "Idea — "
+labels: ["Ideas"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share an idea to improve Vikinger Panel for self-hosters.
+
+        If it is a clear feature with acceptance criteria, you can also open a [Feature request](https://github.com/viniciuspetrachin/vikinger-panel/issues/new?template=feature_request.yml).
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: Describe your idea
+      description: What would make hosting Valheim easier for you or your community?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Home server, VPS, modded/vanilla, number of players, etc.

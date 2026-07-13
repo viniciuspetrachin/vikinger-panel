@@ -424,7 +424,7 @@
 423	Portals forbidden, fire spreads across the world, and no map/minimap.
 424	Portals unavailable while a boss is active in the area.
 425	Preset
-426	PsyDev Server Manager
+426	Valheim Server Manager
 427	Public (true/false)
 428	Publishing...
 429	Quick Controls

@@ -1,0 +1,42 @@
+title: "Q&A — "
+labels: ["Q&A"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ask a question about hosting Valheim at home with Vikinger Panel.
+
+        **Before posting**, check:
+        - [Getting started guide](https://github.com/viniciuspetrachin/vikinger-panel/blob/main/docs/getting-started.md)
+        - [FAQ](https://github.com/viniciuspetrachin/vikinger-panel/blob/main/docs/faq.md)
+        - [Troubleshooting](https://github.com/viniciuspetrachin/vikinger-panel/blob/main/docs/troubleshooting.md)
+
+        For confirmed bugs, please open a [Bug report](https://github.com/viniciuspetrachin/vikinger-panel/issues/new?template=bug_report.yml) instead.
+
+  - type: input
+    id: version
+    attributes:
+      label: Panel version (if known)
+      placeholder: "e.g. 2.1.7"
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: Be specific — include what you tried and any error messages
+    validations:
+      required: true
+
+  - type: dropdown
+    id: topic
+    attributes:
+      label: Topic
+      options:
+        - Installation / Docker
+        - Connecting players / port forwarding
+        - Mods & BepInEx
+        - Worlds & backups
+        - Server settings
+        - General
+    validations:
+      required: true

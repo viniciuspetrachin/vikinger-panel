@@ -39,6 +39,13 @@ from rcon_client import (
 )
 from version import __version__, version_info
 from panel_update import check_panel_update, start_panel_update
+from server_name_branding import (
+    apply_env_save,
+    effective_server_name,
+    prepare_env_for_api,
+    server_name_meta,
+    strip_server_name_branding,
+)
 import storage_limits
 from bepinex_cfg import (
     apply_setting_values,
@@ -3033,7 +3040,8 @@ R2MODMAN_CONFIG_EXTENSIONS = {".txt", ".json", ".yml", ".yaml", ".ini"}
 
 
 def get_export_profile_name() -> str:
-    return read_env().get("SERVER_NAME", "").strip() or "Valheim"
+    env = read_env()
+    return strip_server_name_branding(effective_server_name(env)) or "Valheim"
 
 
 def build_r2modman_export_mods() -> tuple[list[dict], int]:
@@ -3266,8 +3274,8 @@ def api_version():
 
 
 @app.get("/api/panel/update/check")
-def api_panel_update_check():
-    return check_panel_update(COMPOSE_FILE)
+def api_panel_update_check(force: bool = Query(False)):
+    return check_panel_update(COMPOSE_FILE, force=force)
 
 
 @app.post("/api/panel/update")
@@ -3293,7 +3301,10 @@ def api_status():
         "server": server_process_status(),
         "supervisor": sup,
         "config": {
-            "server_name": env.get("SERVER_NAME", ""),
+            "server_name": effective_server_name(env),
+            "server_name_display": strip_server_name_branding(env.get("SERVER_NAME", ""))
+            if server_name_meta(env)["branding_enabled"]
+            else (env.get("SERVER_NAME") or "").strip(),
             "world_name": active or configured,
             "server_port": env.get("SERVER_PORT", "2456"),
             "server_public": env.get("SERVER_PUBLIC", "true"),
@@ -3475,6 +3486,7 @@ def api_server_action(action: str):
         "start": start_valheim_container,
         "stop": stop_valheim_container,
         "restart": restart_valheim_container,
+        "recreate": recreate_container,
         "pause": lambda: docker("exec", CONTAINER_NAME, "supervisorctl", "stop", "valheim-server"),
         "resume": lambda: docker("exec", CONTAINER_NAME, "supervisorctl", "start", "valheim-server"),
     }
@@ -3557,13 +3569,18 @@ def api_player_action(steam_id: str, body: PlayerActionBody):
 
 @app.get("/api/config/env")
 def api_get_env():
-    return {"values": read_env()}
+    return prepare_env_for_api(read_env())
 
 
 @app.put("/api/config/env")
 def api_put_env(body: EnvUpdate):
-    write_env(body.values)
-    return {"ok": True, "values": read_env()}
+    try:
+        normalized = apply_env_save(body.values)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    write_env(normalized)
+    result = prepare_env_for_api(read_env())
+    return {"ok": True, **result}
 
 
 @app.get("/api/config/serverlists")

@@ -1,0 +1,84 @@
+name: Bug report
+description: Something is broken or not working as expected
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please check [Troubleshooting](https://github.com/viniciuspetrachin/vikinger-panel/blob/main/docs/troubleshooting.md) and [FAQ](https://github.com/viniciuspetrachin/vikinger-panel/blob/main/docs/faq.md) first.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Overview / server controls
+        - Server settings
+        - Worlds
+        - Mods & Config
+        - Backups
+        - Panel UI / installation
+        - Docker / first boot
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Vikinger Panel version
+      description: Shown on the About tab or in the VERSION file
+      placeholder: "e.g. 2.1.7"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug clearly. What did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps help a lot
+      placeholder: |
+        1. Open Mods tab
+        2. Install mod X
+        3. Restart server
+        4. See error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste output from `docker compose logs valheim` or `docker compose logs panel`. Redact passwords and IPs if needed.
+      render: shell
+
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: How did you install?
+      options:
+        - GitHub Release ZIP
+        - git clone + docker compose
+        - GHCR image pull
+        - Not sure
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and discussions
+          required: true
+        - label: I removed passwords/tokens from logs before posting
+          required: true
