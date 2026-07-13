@@ -74,6 +74,14 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [2.1.8]
+
+### Added
+
+### Changed
+
+### Fixed
+
 ## [Unreleased]
 
 ### Added
