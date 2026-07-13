@@ -58,6 +58,14 @@ All notable changes to this project will be documented in this file.
 
 - Translation fixes for technical terms (RAM, Mods, Plugins, etc.).
 
+## [2.1.6]
+
+### Added
+
+### Changed
+
+### Fixed
+
 ## [Unreleased]
 
 ### Added
