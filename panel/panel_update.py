@@ -103,9 +103,18 @@ def fetch_latest_release(*, force: bool = False) -> dict:
     return result
 
 
+def _deployed_version(deploy: dict) -> str:
+    """Versão em produção: tag GHCR do compose, ou código em dev."""
+    if deploy["mode"] == "ghcr":
+        tag = (deploy.get("tag") or "").strip()
+        if tag and parse_semver(tag):
+            return tag
+    return __version__
+
+
 def check_panel_update(compose_path: Path) -> dict:
-    current = __version__
     deploy = detect_deploy_mode(compose_path)
+    current = _deployed_version(deploy)
     try:
         release = fetch_latest_release()
         latest = release["latest"]
@@ -149,8 +158,9 @@ def start_panel_update(root: Path, version: str) -> dict:
     target = version.strip().lstrip("v") or status.get("latest", "")
     if not target:
         raise ValueError("No target version")
-    if compare_semver(target, __version__) <= 0:
-        raise ValueError(f"Already on v{__version__}")
+    deployed = _deployed_version(detect_deploy_mode(compose_path))
+    if compare_semver(target, deployed) <= 0:
+        raise ValueError(f"Already on v{deployed}")
 
     script = root / "scripts" / "panel-self-update.sh"
     if not script.exists():
