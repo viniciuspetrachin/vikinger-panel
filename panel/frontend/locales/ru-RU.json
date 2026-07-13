@@ -107,6 +107,13 @@
       "mods": "моды",
       "ms": "ms"
     },
+    "pagination": {
+      "prev": "Назад",
+      "next": "Далее",
+      "pageOf": "Страница {page} из {total}",
+      "showing": "Показано {from}–{to} из {total}",
+      "perPage": "На странице"
+    },
     "toasts": {
       "copied": "Скопировано!",
       "failedToCopy": "Не удалось скопировать",
@@ -1017,6 +1024,12 @@
     }
   },
   "mods": {
+    "installedTitle": "Установленные моды",
+    "viewCards": "Карточки",
+    "viewList": "Список",
+    "list": {
+      "updateStatus": "Статус обновления"
+    },
     "install": {
       "title": "Установить мод",
       "upload": "📁 Загрузите (.zip/.dll)",

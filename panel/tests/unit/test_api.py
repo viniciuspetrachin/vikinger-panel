@@ -1515,6 +1515,44 @@ def test_audit_sanitizes_sensitive_query(client):
     assert "response_body" in write_entries[0]
 
 
+def test_audit_pagination_defaults(client):
+    for _ in range(15):
+        client.post("/api/server/restart")
+    r = client.get("/api/audit")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["page"] == 1
+    assert data["page_size"] == 10
+    assert data["total"] >= 15
+    assert len(data["entries"]) == 10
+    assert data["total_pages"] >= 2
+
+
+def test_audit_pagination_page_two(client):
+    for _ in range(15):
+        client.post("/api/server/restart")
+    r = client.get("/api/audit?page=2&page_size=10")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["page"] == 2
+    assert len(data["entries"]) >= 5
+
+
+def test_audit_pagination_page_size_25(client):
+    for _ in range(5):
+        client.post("/api/server/start")
+    r = client.get("/api/audit?page_size=25")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["page_size"] == 25
+    assert len(data["entries"]) == 5
+
+
+def test_audit_pagination_invalid_page_size(client):
+    r = client.get("/api/audit?page_size=15")
+    assert r.status_code == 400
+
+
 # ── Metrics & Resources ──────────────────────────────────────────────────────
 
 def test_normalize_valheim_cpu(monkeypatch):

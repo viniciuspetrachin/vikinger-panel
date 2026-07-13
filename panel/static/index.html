@@ -709,8 +709,31 @@
             <p x-html="tHtml('mods.valheimRcon')"><strong class="text-valheim-gold">ValheimRcon</strong> is bundled with the panel (RCON console, kick, ban, and admin). It cannot be removed, but it can be disabled. The console and player actions require active BepInEx and this mod enabled.</p>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <template x-for="mod in mods" :key="mod.name">
+          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-4">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <h3 class="font-display text-sm font-semibold text-valheim-gold" x-text="t('mods.installedTitle')">Installed mods</h3>
+              <div class="flex flex-wrap items-center gap-3">
+                <div class="flex gap-1">
+                  <button @click="modsSetViewMode('cards')" class="btn btn-sm btn-tab"
+                          :class="modsViewMode === 'cards' && 'btn-tab-active'"
+                          x-text="t('mods.viewCards')">Cards</button>
+                  <button @click="modsSetViewMode('list')" class="btn btn-sm btn-tab"
+                          :class="modsViewMode === 'list' && 'btn-tab-active'"
+                          x-text="t('mods.viewList')">List</button>
+                </div>
+                <div x-show="mods.length" class="flex items-center gap-2 text-xs text-gray-500">
+                  <span x-text="t('common.pagination.perPage')">Per page</span>
+                  <template x-for="size in paginationPageSizes" :key="'mods-ps-' + size">
+                    <button @click="modsSetPageSize(size)" class="btn btn-sm"
+                            :class="modsPageSize === size ? 'btn-primary' : 'btn-ghost'"
+                            x-text="size"></button>
+                  </template>
+                </div>
+              </div>
+            </div>
+
+            <div x-show="modsViewMode === 'cards'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <template x-for="mod in paginatedMods()" :key="mod.name">
               <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-5 flex items-start gap-4"
                    :class="[!mod.enabled && 'opacity-60', isBusy('toggleMod:' + mod.name) && 'opacity-75', mod.protected && 'border-valheim-gold/30']">
                 <div class="w-10 h-10 rounded-lg bg-valheim-700 flex items-center justify-center text-lg shrink-0">⚔</div>
@@ -785,6 +808,90 @@
                 </div>
               </div>
             </template>
+            </div>
+
+            <div x-show="modsViewMode === 'list' && mods.length" class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="text-left text-xs text-gray-500 border-b border-valheim-700">
+                    <th class="pb-2 pr-4" x-text="t('backups.list.columns.name')">Name</th>
+                    <th class="pb-2 pr-4" x-text="t('backups.list.columns.size')">Size</th>
+                    <th class="pb-2 pr-4" x-text="t('common.status.active')">Active</th>
+                    <th class="pb-2 pr-4" x-text="t('mods.version')">Version</th>
+                    <th class="pb-2 pr-4" x-text="t('mods.list.updateStatus')">Update status</th>
+                    <th class="pb-2" x-text="t('backups.list.columns.actions')">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="mod in paginatedMods()" :key="'list-' + mod.name">
+                    <tr class="border-b border-valheim-700/50 last:border-0"
+                        :class="[!mod.enabled && 'opacity-60', mod.protected && 'bg-valheim-900/20']">
+                      <td class="py-2 pr-4">
+                        <div class="flex flex-wrap items-center gap-1.5">
+                          <span class="font-medium text-xs text-gray-200" x-text="mod.label || mod.name"></span>
+                          <span x-show="mod.protected" class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-valheim-gold/20 text-valheim-gold" x-text="t('mods.bundled')">Bundled</span>
+                        </div>
+                      </td>
+                      <td class="py-2 pr-4 text-xs text-gray-500" x-text="formatSize(mod.size)"></td>
+                      <td class="py-2 pr-4">
+                        <label class="flex items-center gap-2 text-xs text-gray-400 cursor-pointer"
+                               :class="(!bepinexEnabled && mod.protected) && 'opacity-50 cursor-not-allowed'">
+                          <input type="checkbox" :checked="mod.enabled"
+                                 @change="toggleMod(mod.name, $event.target.checked)"
+                                 :disabled="isBusy('toggleMod:' + mod.name) || (!bepinexEnabled && mod.protected)"
+                                 class="rounded border-valheim-600 accent-valheim-gold" />
+                          <span x-text="mod.enabled ? t('common.status.on') : t('common.status.off')"></span>
+                        </label>
+                      </td>
+                      <td class="py-2 pr-4 text-xs font-mono text-gray-400">
+                        <span x-text="mod.installed_version || '—'"></span>
+                        <span x-show="mod.latest_version && mod.update_available" class="text-amber-400">
+                          → <span x-text="mod.latest_version"></span>
+                        </span>
+                      </td>
+                      <td class="py-2 pr-4 text-xs" :class="modStatusClass(mod.update_status)"
+                          x-text="modStatusLabel(mod.update_status)"></td>
+                      <td class="py-2">
+                        <div class="flex flex-wrap gap-1">
+                          <button x-show="mod.update_status !== 'unknown'"
+                                  @click="checkModUpdate(mod.name)"
+                                  :disabled="isBusy('checkModUpdate:' + mod.name)"
+                                  class="btn btn-sm btn-ghost" x-text="t('mods.checkUpdates')">Check</button>
+                          <button x-show="mod.update_available"
+                                  @click="updateMod(mod.name)"
+                                  :disabled="isBusy('updateMod:' + mod.name)"
+                                  class="btn btn-sm btn-primary" x-text="t('mods.updateMod')">Update</button>
+                          <button x-show="mod.update_status === 'unknown' && modLinkTarget !== mod.name"
+                                  @click="openModLink(mod.name)"
+                                  class="btn btn-sm btn-ghost" x-text="t('mods.linkThunderstore')">Link</button>
+                          <button x-show="mod.config" @click="editFile('config/bepinex/' + mod.config)"
+                                  class="btn btn-sm btn-ghost" x-text="t('mods.configBtn')">Config</button>
+                          <button x-show="!mod.protected" @click="deleteMod(mod.name)"
+                                  :disabled="isBusy('deleteMod:' + mod.name)"
+                                  class="btn btn-sm btn-ghost-danger" x-text="t('mods.remove')">Remove</button>
+                        </div>
+                        <div x-show="modLinkTarget === mod.name" class="flex gap-1 mt-1">
+                          <input x-model="modLinkUrl" :placeholder="t('mods.linkUrlPlaceholder')"
+                                 class="flex-1 min-w-0 bg-valheim-900 border border-valheim-600 rounded px-2 py-1 text-xs focus:border-valheim-gold focus:outline-none" />
+                          <button @click="linkModThunderstore(mod.name)" :disabled="isBusy('linkMod:' + mod.name)"
+                                  class="btn btn-sm btn-primary" x-text="t('common.actions.ok')">OK</button>
+                          <button @click="cancelModLink()" class="btn btn-sm btn-ghost">✕</button>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+
+            <div x-show="mods.length" class="flex flex-wrap items-center justify-between gap-3 mt-4 pt-4 border-t border-valheim-700 text-xs text-gray-500">
+              <div class="flex items-center gap-2">
+                <button @click="modsPrevPage()" :disabled="modsPage <= 1" class="btn btn-sm btn-ghost" x-text="t('common.pagination.prev')">Previous</button>
+                <span x-text="t('common.pagination.pageOf', { page: modsPage, total: modsTotalPages() })"></span>
+                <button @click="modsNextPage()" :disabled="modsPage >= modsTotalPages()" class="btn btn-sm btn-ghost" x-text="t('common.pagination.next')">Next</button>
+              </div>
+              <span x-text="t('common.pagination.showing', { from: modsShowingFrom(), to: modsShowingTo(), total: mods.length })"></span>
+            </div>
           </div>
           <p x-show="!mods.length" class="text-gray-500 text-sm text-center py-8" x-text="t('mods.empty')">No mods installed</p>
 
@@ -1597,9 +1704,27 @@
             </label>
           </div>
           <p class="text-xs text-gray-500" x-text="t('audit.description')">Persistent log of all actions (POST/PUT/DELETE) for diagnostics and error recovery.</p>
+
+          <div x-show="auditTotal > 0" class="flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
+            <div class="flex items-center gap-2">
+              <button @click="auditPrevPage()" :disabled="auditPage <= 1 || isBusy('loadAudit')" class="btn btn-sm btn-ghost" x-text="t('common.pagination.prev')">Previous</button>
+              <span x-text="t('common.pagination.pageOf', { page: auditPage, total: auditTotalPages })"></span>
+              <button @click="auditNextPage()" :disabled="auditPage >= auditTotalPages || isBusy('loadAudit')" class="btn btn-sm btn-ghost" x-text="t('common.pagination.next')">Next</button>
+            </div>
+            <span x-text="t('common.pagination.showing', { from: auditShowingFrom(), to: auditShowingTo(), total: auditTotal })"></span>
+            <div class="flex items-center gap-2">
+              <span x-text="t('common.pagination.perPage')">Per page</span>
+              <template x-for="size in paginationPageSizes" :key="'audit-ps-' + size">
+                <button @click="auditSetPageSize(size)" class="btn btn-sm"
+                        :class="auditPageSize === size ? 'btn-primary' : 'btn-ghost'"
+                        x-text="size"></button>
+              </template>
+            </div>
+          </div>
+
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-4 overflow-x-auto">
-            <p x-show="!audit.length" class="text-gray-500 text-sm text-center py-8" x-text="t('audit.empty')">No events recorded</p>
-            <table x-show="audit.length" class="w-full text-xs">
+            <p x-show="auditTotal === 0" class="text-gray-500 text-sm text-center py-8" x-text="t('audit.empty')">No events recorded</p>
+            <table x-show="auditTotal > 0" class="w-full text-xs">
               <thead>
                 <tr class="text-left text-gray-500 border-b border-valheim-700">
                   <th class="pb-2 pr-4" x-text="t('audit.columns.time')">Time</th>
@@ -1629,6 +1754,23 @@
                 </template>
               </tbody>
             </table>
+          </div>
+
+          <div x-show="auditTotal > 0" class="flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
+            <div class="flex items-center gap-2">
+              <button @click="auditPrevPage()" :disabled="auditPage <= 1 || isBusy('loadAudit')" class="btn btn-sm btn-ghost" x-text="t('common.pagination.prev')">Previous</button>
+              <span x-text="t('common.pagination.pageOf', { page: auditPage, total: auditTotalPages })"></span>
+              <button @click="auditNextPage()" :disabled="auditPage >= auditTotalPages || isBusy('loadAudit')" class="btn btn-sm btn-ghost" x-text="t('common.pagination.next')">Next</button>
+            </div>
+            <span x-text="t('common.pagination.showing', { from: auditShowingFrom(), to: auditShowingTo(), total: auditTotal })"></span>
+            <div class="flex items-center gap-2">
+              <span x-text="t('common.pagination.perPage')">Per page</span>
+              <template x-for="size in paginationPageSizes" :key="'audit-ps-bottom-' + size">
+                <button @click="auditSetPageSize(size)" class="btn btn-sm"
+                        :class="auditPageSize === size ? 'btn-primary' : 'btn-ghost'"
+                        x-text="size"></button>
+              </template>
+            </div>
           </div>
         </section>
 

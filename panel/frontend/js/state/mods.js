@@ -7,6 +7,9 @@ export const mods = {
   exportSkipped: 0,
   orphanedConfigs: [],
   orphanedConfigsCount: 0,
+  modsPage: 1,
+  modsPageSize: 10,
+  modsViewMode: "cards",
 
   async loadModsPage() {
     await this.loadUpdatesConfig();
@@ -24,8 +27,44 @@ export const mods = {
     try {
       const data = await this.api("GET", "/api/mods");
       this.mods = data.mods || [];
+      this.modsPage = this.clampPage(this.modsPage, this.modsTotalPages());
       this.updateExportSkipped();
     } catch (e) { this.toast(e.message, "error"); }
+  },
+
+  paginatedMods() {
+    return this.paginateSlice(this.mods, this.modsPage, this.modsPageSize);
+  },
+
+  modsTotalPages() {
+    return this.calcTotalPages(this.mods.length, this.modsPageSize);
+  },
+
+  modsPrevPage() {
+    if (this.modsPage <= 1) return;
+    this.modsPage -= 1;
+  },
+
+  modsNextPage() {
+    if (this.modsPage >= this.modsTotalPages()) return;
+    this.modsPage += 1;
+  },
+
+  modsSetPageSize(size) {
+    this.modsPageSize = size;
+    this.modsPage = 1;
+  },
+
+  modsSetViewMode(mode) {
+    this.modsViewMode = mode;
+  },
+
+  modsShowingFrom() {
+    return this.paginationFrom(this.modsPage, this.modsPageSize, this.mods.length);
+  },
+
+  modsShowingTo() {
+    return this.paginationTo(this.modsPage, this.modsPageSize, this.mods.length);
   },
 
   async loadBepinexConfigs() {

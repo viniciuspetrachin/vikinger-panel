@@ -107,6 +107,13 @@
       "mods": "mods",
       "ms": "ms"
     },
+    "pagination": {
+      "prev": "Anterior",
+      "next": "Próxima",
+      "pageOf": "Página {page} de {total}",
+      "showing": "Mostrando {from}–{to} de {total}",
+      "perPage": "Por página"
+    },
     "toasts": {
       "copied": "Copiado!",
       "failedToCopy": "Falha ao copiar",
@@ -1017,6 +1024,12 @@
     }
   },
   "mods": {
+    "installedTitle": "Mods instalados",
+    "viewCards": "Cards",
+    "viewList": "Lista",
+    "list": {
+      "updateStatus": "Status de atualização"
+    },
     "install": {
       "title": "Instalar mod",
       "upload": "📁 Carregar (.zip/.dll)",

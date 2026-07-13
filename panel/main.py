@@ -251,7 +251,10 @@ def write_audit(entry: dict) -> None:
         logger.warning("Falha ao gravar audit log: %s", e)
 
 
-def read_audit(lines: int = 200) -> list[dict]:
+AUDIT_PAGE_SIZES = frozenset({10, 25, 50})
+
+
+def _load_audit_entries() -> list[dict]:
     entries: list[dict] = []
     if not AUDIT_FILE.exists():
         return entries
@@ -259,7 +262,7 @@ def read_audit(lines: int = 200) -> list[dict]:
         raw = AUDIT_FILE.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
         return entries
-    for line in raw[-lines:]:
+    for line in raw:
         line = line.strip()
         if not line:
             continue
@@ -269,6 +272,21 @@ def read_audit(lines: int = 200) -> list[dict]:
             continue
     entries.reverse()  # mais recentes primeiro
     return entries
+
+
+def read_audit_paginated(page: int = 1, page_size: int = 10) -> dict:
+    all_entries = _load_audit_entries()
+    total = len(all_entries)
+    total_pages = max(1, (total + page_size - 1) // page_size) if total else 1
+    page = min(max(1, page), total_pages)
+    start = (page - 1) * page_size
+    return {
+        "entries": all_entries[start : start + page_size],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+    }
 
 
 @app.middleware("http")
@@ -4261,8 +4279,13 @@ def api_purge_all_backups(body: PurgeAllBackupsRequest):
 # ── Audit ────────────────────────────────────────────────────────────────────
 
 @app.get("/api/audit")
-def api_get_audit(lines: int = Query(200, ge=1, le=5000)):
-    return {"entries": read_audit(lines)}
+def api_get_audit(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=50),
+):
+    if page_size not in AUDIT_PAGE_SIZES:
+        raise HTTPException(400, f"page_size must be one of {sorted(AUDIT_PAGE_SIZES)}")
+    return read_audit_paginated(page, page_size)
 
 
 @app.get("/api/audit/download")
