@@ -34,6 +34,12 @@ All notable changes to this project will be documented in this file.
 
 - Release automático v2.1.3.
 
+## [2.1.4]
+
+### Changed
+
+- Release automático v2.1.4.
+
 ## [Unreleased]
 
 ### Added
