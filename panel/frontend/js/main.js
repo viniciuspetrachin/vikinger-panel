@@ -12,6 +12,7 @@ import { files } from "./state/files.js";
 import { logs } from "./state/logs.js";
 import { console as consoleState } from "./state/console.js";
 import { audit } from "./state/audit.js";
+import { pagination } from "./state/pagination.js";
 import { help } from "./state/help.js";
 import { donation } from "./state/donation.js";
 import { about } from "./state/about.js";
@@ -151,6 +152,7 @@ function panel() {
     logs,
     consoleState,
     audit,
+    pagination,
     help,
     donation,
     about,

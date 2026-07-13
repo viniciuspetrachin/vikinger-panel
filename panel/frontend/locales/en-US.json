@@ -107,6 +107,13 @@
       "mods": "mods",
       "ms": "ms"
     },
+    "pagination": {
+      "prev": "Previous",
+      "next": "Next",
+      "pageOf": "Page {page} of {total}",
+      "showing": "Showing {from}–{to} of {total}",
+      "perPage": "Per page"
+    },
     "toasts": {
       "copied": "Copied!",
       "failedToCopy": "Failed to copy",
@@ -1017,6 +1024,12 @@
     }
   },
   "mods": {
+    "installedTitle": "Installed mods",
+    "viewCards": "Cards",
+    "viewList": "List",
+    "list": {
+      "updateStatus": "Update status"
+    },
     "install": {
       "title": "Install Mod",
       "upload": "📁 Upload (.zip / .dll)",
