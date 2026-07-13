@@ -3,6 +3,7 @@ import {
   getConsoleCompletions,
   getConsoleGhostSuffix,
   groupCommandsByCategory,
+  localizeCommands,
 } from "./console-commands.js";
 
 export const console = {
@@ -37,7 +38,7 @@ export const console = {
     const command = (this.consoleInput || "").trim();
     if (!command || this.consoleSending) return;
     if (!this.rconStatus.available) {
-      this.toast(this.consoleStatusHint() || "RCON unavailable", "error");
+      this.toast(this.consoleStatusHint() || this.t("common.errors.rconUnavailable"), "error");
       return;
     }
     this.consoleInput = "";
@@ -100,7 +101,8 @@ export const console = {
   },
 
   consoleCommandsByCategory() {
-    return groupCommandsByCategory(RCON_COMMANDS, this.consoleHelpSearch);
+    void this.localeVersion;
+    return groupCommandsByCategory(localizeCommands((k) => this.t(k)), this.consoleHelpSearch);
   },
 
   insertConsoleCommand(usage) {
@@ -114,18 +116,19 @@ export const console = {
 
   consoleStatusHint() {
     if (this.rconStatus.available) return "";
+    void this.localeVersion;
     if (!this.rconStatus.bepinex_enabled) {
-      return "RCON console only works with BepInEx active — choose Modded on the Server tab.";
+      return this.t("console.hints.bepinexRequired");
     }
     if (!this.rconStatus.mod_enabled) {
-      return "Enable the ValheimRcon mod on Mods & Config to use console and moderation.";
+      return this.t("console.hints.modRequired");
     }
     if (!this.rconStatus.configured) {
-      return "Waiting for RCON configuration — restart the panel or Valheim server.";
+      return this.t("console.hints.configPending");
     }
     if (!this.rconStatus.container_running) {
-      return "Start the server to use the interactive console.";
+      return this.t("console.hints.serverStopped");
     }
-    return "RCON unavailable at the moment.";
+    return this.t("console.hints.unavailable");
   },
 };

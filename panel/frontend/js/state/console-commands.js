@@ -1,44 +1,54 @@
 /** RCON catalog (ValheimRcon) + terminal-style autocomplete. */
 
+/** RCON catalog (ValheimRcon) + terminal-style autocomplete. */
+
 export const RCON_COMMANDS = [
-  { name: "save", usage: "save", desc: "Saves the current world", category: "Server", playerArg: false },
-  { name: "list", usage: "list", desc: "Lists all commands on the server", category: "Server", playerArg: false },
-  { name: "players", usage: "players", desc: "Shows online players with position", category: "Server", playerArg: false },
-  { name: "serverStats", usage: "serverStats", desc: "Server statistics (FPS, RAM, players)", category: "Server", playerArg: false },
-  { name: "time", usage: "time", desc: "Shows server time and day", category: "Server", playerArg: false },
-  { name: "logs", usage: "logs", desc: "Latest server log lines", category: "Server", playerArg: false },
-  { name: "consoleCommand", usage: "consoleCommand <command>", desc: "Runs a Valheim console command", category: "Server", playerArg: false },
+  { name: "save", usage: "save", descKey: "console.commands.save.desc", categoryKey: "console.categories.Server", playerArg: false },
+  { name: "list", usage: "list", descKey: "console.commands.list.desc", categoryKey: "console.categories.Server", playerArg: false },
+  { name: "players", usage: "players", descKey: "console.commands.players.desc", categoryKey: "console.categories.Server", playerArg: false },
+  { name: "serverStats", usage: "serverStats", descKey: "console.commands.serverStats.desc", categoryKey: "console.categories.Server", playerArg: false },
+  { name: "time", usage: "time", descKey: "console.commands.time.desc", categoryKey: "console.categories.Server", playerArg: false },
+  { name: "logs", usage: "logs", descKey: "console.commands.logs.desc", categoryKey: "console.categories.Server", playerArg: false },
+  { name: "consoleCommand", usage: "consoleCommand <command>", descKey: "console.commands.consoleCommand.desc", categoryKey: "console.categories.Server", playerArg: false },
 
-  { name: "kick", usage: "kick <player|SteamID>", desc: "Kicks a player", category: "Moderation", playerArg: true },
-  { name: "ban", usage: "ban <player|SteamID>", desc: "Bans by name or Steam ID", category: "Moderation", playerArg: true },
-  { name: "banSteamId", usage: "banSteamId <SteamID>", desc: "Bans by Steam ID", category: "Moderation", playerArg: true },
-  { name: "unban", usage: "unban <player|SteamID>", desc: "Removes a ban", category: "Moderation", playerArg: true },
-  { name: "addAdmin", usage: "addAdmin <SteamID>", desc: "Adds an administrator", category: "Moderation", playerArg: true },
-  { name: "removeAdmin", usage: "removeAdmin <SteamID>", desc: "Removes an administrator", category: "Moderation", playerArg: true },
-  { name: "addPermitted", usage: "addPermitted <SteamID>", desc: "Adds to permitted list", category: "Moderation", playerArg: true },
-  { name: "removePermitted", usage: "removePermitted <SteamID>", desc: "Removes from permitted list", category: "Moderation", playerArg: true },
-  { name: "adminlist", usage: "adminlist", desc: "Lists administrators", category: "Moderation", playerArg: false },
-  { name: "banlist", usage: "banlist", desc: "Lists banned players", category: "Moderation", playerArg: false },
-  { name: "permitted", usage: "permitted", desc: "Lists permitted players", category: "Moderation", playerArg: false },
-  { name: "disconnectAll", usage: "disconnectAll", desc: "Disconnects all players", category: "Moderation", playerArg: false },
+  { name: "kick", usage: "kick <player|SteamID>", descKey: "console.commands.kick.desc", categoryKey: "console.categories.Moderation", playerArg: true },
+  { name: "ban", usage: "ban <player|SteamID>", descKey: "console.commands.ban.desc", categoryKey: "console.categories.Moderation", playerArg: true },
+  { name: "banSteamId", usage: "banSteamId <SteamID>", descKey: "console.commands.banSteamId.desc", categoryKey: "console.categories.Moderation", playerArg: true },
+  { name: "unban", usage: "unban <player|SteamID>", descKey: "console.commands.unban.desc", categoryKey: "console.categories.Moderation", playerArg: true },
+  { name: "addAdmin", usage: "addAdmin <SteamID>", descKey: "console.commands.addAdmin.desc", categoryKey: "console.categories.Moderation", playerArg: true },
+  { name: "removeAdmin", usage: "removeAdmin <SteamID>", descKey: "console.commands.removeAdmin.desc", categoryKey: "console.categories.Moderation", playerArg: true },
+  { name: "addPermitted", usage: "addPermitted <SteamID>", descKey: "console.commands.addPermitted.desc", categoryKey: "console.categories.Moderation", playerArg: true },
+  { name: "removePermitted", usage: "removePermitted <SteamID>", descKey: "console.commands.removePermitted.desc", categoryKey: "console.categories.Moderation", playerArg: true },
+  { name: "adminlist", usage: "adminlist", descKey: "console.commands.adminlist.desc", categoryKey: "console.categories.Moderation", playerArg: false },
+  { name: "banlist", usage: "banlist", descKey: "console.commands.banlist.desc", categoryKey: "console.categories.Moderation", playerArg: false },
+  { name: "permitted", usage: "permitted", descKey: "console.commands.permitted.desc", categoryKey: "console.categories.Moderation", playerArg: false },
+  { name: "disconnectAll", usage: "disconnectAll", descKey: "console.commands.disconnectAll.desc", categoryKey: "console.categories.Moderation", playerArg: false },
 
-  { name: "give", usage: "give <player|SteamID> <item> [options]", desc: "Gives an item to a player", category: "Players", playerArg: true },
-  { name: "heal", usage: "heal <player|SteamID> <health>", desc: "Heals player to health value", category: "Players", playerArg: true },
-  { name: "damage", usage: "damage <player|SteamID> <damage>", desc: "Deals damage to a player", category: "Players", playerArg: true },
-  { name: "teleport", usage: "teleport <player|SteamID> <x> <y> <z>", desc: "Teleports a player", category: "Players", playerArg: true },
-  { name: "findPlayer", usage: "findPlayer <name>", desc: "Finds a player and shows details", category: "Players", playerArg: true },
+  { name: "give", usage: "give <player|SteamID> <item> [options]", descKey: "console.commands.give.desc", categoryKey: "console.categories.Players", playerArg: true },
+  { name: "heal", usage: "heal <player|SteamID> <health>", descKey: "console.commands.heal.desc", categoryKey: "console.categories.Players", playerArg: true },
+  { name: "damage", usage: "damage <player|SteamID> <damage>", descKey: "console.commands.damage.desc", categoryKey: "console.categories.Players", playerArg: true },
+  { name: "teleport", usage: "teleport <player|SteamID> <x> <y> <z>", descKey: "console.commands.teleport.desc", categoryKey: "console.categories.Players", playerArg: true },
+  { name: "findPlayer", usage: "findPlayer <name>", descKey: "console.commands.findPlayer.desc", categoryKey: "console.categories.Players", playerArg: true },
 
-  { name: "say", usage: "say <message>", desc: "Sends a chat message (shout)", category: "Chat", playerArg: false },
-  { name: "showMessage", usage: "showMessage <message>", desc: "Center-screen message for everyone", category: "Chat", playerArg: false },
-  { name: "ping", usage: "ping <x> <y> <z>", desc: "Map ping for everyone", category: "Chat", playerArg: false },
+  { name: "say", usage: "say <message>", descKey: "console.commands.say.desc", categoryKey: "console.categories.Chat", playerArg: false },
+  { name: "showMessage", usage: "showMessage <message>", descKey: "console.commands.showMessage.desc", categoryKey: "console.categories.Chat", playerArg: false },
+  { name: "ping", usage: "ping <x> <y> <z>", descKey: "console.commands.ping.desc", categoryKey: "console.categories.Chat", playerArg: false },
 
-  { name: "spawn", usage: "spawn <prefab> <x> <y> <z> [options]", desc: "Spawns objects/creatures", category: "Objects", playerArg: false },
-  { name: "findObjects", usage: "findObjects [options]", desc: "Searches for objects in the world", category: "Objects", playerArg: false },
+  { name: "spawn", usage: "spawn <prefab> <x> <y> <z> [options]", descKey: "console.commands.spawn.desc", categoryKey: "console.categories.Objects", playerArg: false },
+  { name: "findObjects", usage: "findObjects [options]", descKey: "console.commands.findObjects.desc", categoryKey: "console.categories.Objects", playerArg: false },
 
-  { name: "addGlobalKey", usage: "addGlobalKey <key>", desc: "Adds a global key (e.g. boss defeated)", category: "World", playerArg: false },
-  { name: "removeGlobalKey", usage: "removeGlobalKey <key>", desc: "Removes a global key", category: "World", playerArg: false },
-  { name: "globalKeys", usage: "globalKeys", desc: "Lists active global keys", category: "World", playerArg: false },
+  { name: "addGlobalKey", usage: "addGlobalKey <key>", descKey: "console.commands.addGlobalKey.desc", categoryKey: "console.categories.World", playerArg: false },
+  { name: "removeGlobalKey", usage: "removeGlobalKey <key>", descKey: "console.commands.removeGlobalKey.desc", categoryKey: "console.categories.World", playerArg: false },
+  { name: "globalKeys", usage: "globalKeys", descKey: "console.commands.globalKeys.desc", categoryKey: "console.categories.World", playerArg: false },
 ];
+
+export function localizeCommands(t) {
+  return RCON_COMMANDS.map((cmd) => ({
+    ...cmd,
+    desc: t(cmd.descKey),
+    category: t(cmd.categoryKey),
+  }));
+}
 
 const COMMAND_BY_NAME = Object.fromEntries(RCON_COMMANDS.map((c) => [c.name.toLowerCase(), c]));
 

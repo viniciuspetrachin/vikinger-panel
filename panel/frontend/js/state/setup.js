@@ -25,14 +25,14 @@ export const setup = {
     if (this.setupMode === "vanilla" && this.setupAdminSteamId) {
       const sid = this.setupAdminSteamId.trim();
       if (!/^\d{17}$/.test(sid)) {
-        this.toast("Invalid Steam ID — use 17 digits", "error");
+        this.toast(this.t("common.errors.invalidSteamId"), "error");
         return;
       }
     }
     if (this.setupWorldName.trim()) {
       const name = this.setupWorldName.trim();
       if (!/^[A-Za-z0-9_-]+$/.test(name)) {
-        this.toast("Invalid world name — use only letters, numbers, _ and -", "error");
+        this.toast(this.t("common.errors.invalidWorldName"), "error");
         return;
       }
     }
@@ -49,9 +49,11 @@ export const setup = {
         this.setupStatus = { completed: true, needs_wizard: false, mode: data.mode };
         if (data.rcon_password) {
           this.setupRconPassword = data.rcon_password;
-          this.toast("RCON password generated — copy it before closing the notice", "success");
+          this.toast(this.t("common.toasts.rconPasswordGenerated"), "success");
         } else {
-          this.toast(data.mode === "vanilla" ? "Server configured in Vanilla mode" : "Server configured with BepInEx");
+          this.toast(data.mode === "vanilla"
+            ? this.t("common.toasts.serverConfiguredVanilla")
+            : this.t("common.toasts.serverConfiguredBepinex"));
         }
         this.bepinexEnabled = data.bepinex;
         await this.loadDashboardData();

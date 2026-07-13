@@ -1,3 +1,4 @@
+import { createI18nMixin } from "./i18n/index.js";
 import { helpers } from "./helpers.js";
 import { nav } from "./nav.js";
 import { dashboard } from "./state/dashboard.js";
@@ -46,9 +47,9 @@ function panel() {
     async copyText(text) {
       try {
         await navigator.clipboard.writeText(text);
-        this.toast("Copied!");
+        this.toast(this.t("common.toasts.copied"));
       } catch (e) {
-        this.toast("Failed to copy", "error");
+        this.toast(this.t("common.toasts.failedToCopy"), "error");
       }
     },
 
@@ -56,10 +57,11 @@ function panel() {
     async init() {
       this.actionPending = null;
       this.initNav();
+      await this.loadVersion();
+      this.initI18nFromApi(this.versionInfo.default_locale || "en-US");
       await this.loadSetupStatus();
       await this.loadDashboardData();
       await this.loadMemoryConfig();
-      await this.loadVersion();
       if (this.page === "dashboard") this.startMetricsPolling();
       setInterval(() => { if (this.page === "dashboard") { this.refreshStatus(); this.loadPlayers(); this.loadPlayerLists(); } }, 10000);
       setInterval(() => { if (this.page === "dashboard") this.loadDashLogs(); }, 5000);
@@ -135,6 +137,7 @@ function panel() {
 
   return Object.assign(
     {},
+    createI18nMixin(),
     helpers,
     nav,
     dashboard,

@@ -1,0 +1,726 @@
+0	 ({skipped} mod(s) skipped)
+1	(host)
+2	(pending)
+3	.env file included
+4	.fwl file
+5	.r2z profile downloaded
+6	100% on all combat parameters. Higher chance of high-level enemies on Hard/Very hard.
+7	110% player damage, 75% enemy damage, enemies 95% speed/size.
+8	125% player damage, 50% enemy damage, enemies 90% speed/size.
+9	150% of normal rate (≈1.5×).
+10	200% of normal rate (≈2×).
+11	30 days
+12	300% of normal rate (≈3×).
+13	50% of normal mob and object drop rate (≈0.5×).
+14	70% player damage, 200% enemy damage, enemies 120% speed/size, 140% level-up rate.
+15	75% of normal rate (≈0.75×).
+16	76561198000000000
+17	85% player damage, 150% enemy damage, enemies 110% speed/size, 120% level-up rate.
+18	<b>Kick</b> disconnects the player immediately, but they can rejoin. <b>Ban</b> blocks the Steam ID on the ban list until you unban them. Both require ValheimRcon enabled and an RCON password configured.
+19	<b>Start/Stop/Restart</b> turn the entire container on/off. <b>Pause/Resume</b> only suspend the Valheim process inside the container (faster, keeps the container running).
+20	<strong class="text-gray-200">Hosting providers</strong> who want to offer this panel to customers need a <strong class="text-gray-200">commercial license</strong>. Resale and white-label use without authorization violate the {license}.
+21	<strong class="text-valheim-gold">ValheimRcon</strong> is bundled with the panel (RCON console, kick, ban, and admin). It cannot be removed, but it can be disabled. The console and player actions require active BepInEx and this mod enabled.
+22	A Valheim server typically uses 2–4 GB, increasing with more players/mods. Adjust the cap on the <b>Server</b> tab under <b>Server capacity</b>. Real-time metrics are on <b>Overview</b>.
+23	A change didn't apply.
+24	A checkpoint of the current state will be created first
+25	About
+26	Above 10 players requires Valheim Plus or MaxPlayerCount on the Mods tab.
+27	Action
+28	Action "{action}" completed
+29	Action completed
+30	Actions
+31	Actions ▾
+32	Activate
+33	Activate world "{name}"? The server will restart and a NEW (empty) world will be created.
+34	Activate world "{name}"? The server will restart.
+35	Activating...
+36	Active
+37	Active World
+38	Active world (quick)
+39	Active — console and moderation available
+40	Adds a global key (e.g. boss defeated)
+41	Adds an administrator
+42	Adds to permitted list
+43	Admin
+44	Admin list
+45	Administrators (Steam IDs)
+46	Advanced options
+47	Age
+48	All items and skills permanently lost on death.
+49	Apply RAM limit
+50	Apply and restart
+51	Applying recreates the container — connected players will be disconnected.
+52	Applying...
+53	Are backups automatic?
+54	Audit
+55	Audit details
+56	Auto (5s)
+57	Auto-update game
+58	Automatic backup of the previous .fwl in <span class="font-mono">panel-data/world_fwl_backups/</span> before each save.
+59	Automatic backups
+60	Automatic scheduling
+61	Awaiting creation
+62	Backup "{name}" deleted
+63	Backup "{name}" restored — server restarting.
+64	Backup created: {name}
+65	Backup details
+66	Backup disk usage
+67	Backup limit saved and cleanup applied
+68	Backup when no players online
+69	Backups
+70	Backups are kept until disk space runs out.
+71	Backups linked to an active restore or undo checkpoint are preserved.
+72	Ban
+73	Ban {label} ({steamId})? The player cannot join until unbanned.
+74	Banned
+75	Banned (Steam IDs)
+76	Bans by Steam ID
+77	Bans by name or Steam ID
+78	BepInEx
+79	BepInEx (mod loader)
+80	BepInEx Configs
+81	BepInEx configs + player lists + .env.
+82	Browser
+83	Build
+84	Building pieces consume no materials. Recipes still need to be discovered.
+85	Building with no material cost, raids disabled, and passive mobs.
+86	Bundled
+87	Bundled — cannot be removed
+88	CPU
+89	Can I import a world I already have?
+90	Can I limit how much disk backups use?
+91	Can I remove ValheimRcon?
+92	Can updates break mods?
+93	Cancel
+94	Casual
+95	Center-screen message for everyone
+96	Chat
+97	Check Console and Audit. Confirm Docker is running and the <code>valheim-server</code> container exists.
+98	Check failed
+99	Check for updates
+100	Check for updates now
+101	Check interval
+102	Check requested
+103	Checking...
+104	Checkpoint
+105	Choose how the Valheim server will run.
+106	Choose the type of manual backup to create now.
+107	Clear all backups
+108	Clear all backups now
+109	Click <b>Create manual backup</b> and choose the type: Active world (quick), Full, or Configs only.
+110	Click a command to fill the console. Use <code class="text-valheim-gold-light">list</code> on the server to see all installed commands.
+111	Click chips such as <b>Config</b>, <b>DLLs</b>, <b>Plugins</b>, or <b>Worlds</b> to narrow the tree to common file types — useful when you only need to edit a few configs or mod files.
+112	Code copied: {count} mod(s){skipped}
+113	Combat
+114	Commercial hosting / resale: paid license
+115	Commercial licensing
+116	Commit
+117	Config
+118	Config corrected: {from} → {to}
+119	Config saved and container recreated!
+120	Config: {name}
+121	Configs only
+122	Configuration applied and container restarted!
+123	Configuration files generated by mods in <code class="font-mono">config/bepinex/</code>.
+124	Confirm and start
+125	Connected Players
+126	Connected players appear on Overview with name and Steam ID. For offline players, use <a href="https://steamid.io" target="_blank" rel="noopener">steamid.io</a> and copy the <b>steamID64</b> (17 digits).
+127	Console
+128	Container RAM limit and maximum player count.
+129	Container running
+130	Container stopped
+131	Contents
+132	Control Valheim updates via valheim-updater (SteamCMD).
+133	Copied!
+134	Copy
+135	Copy <code>.env.example</code> to <code>.env</code>, adjust values, and run <code>docker compose up -d</code>. The panel is at <code>http://YOUR_IP:8080</code>.
+136	Copy address
+137	Copy all
+138	Copy code
+139	Copy key
+140	Copy request
+141	Copy response
+142	Could not load usage
+143	Create
+144	Create Backup
+145	Create New World
+146	Create and Activate
+147	Create and activate this world
+148	Create manual backup
+149	Creating backup...
+150	Creating...
+151	Credits
+152	Ctrl+S to save · Ctrl+F to search
+153	Current usage
+154	Current: {value}
+155	Custom
+156	Custom cron
+157	DB: {value}
+158	Daily (00:00)
+159	Daily (06:00)
+160	Date
+161	Date:
+162	Deals damage to a player
+163	Death penalty
+164	Dedicated server (official guide)
+165	Default game resource rate.
+166	Default:
+167	Delete
+168	Delete all
+169	Delete backup
+170	Deleted {count} backup(s)
+171	Deleting...
+172	Details
+173	Detected from .fwl
+174	Disabled
+175	Disabled — enable to use console and moderation
+176	Discard
+177	Disconnects all players
+178	Disk (Valheim)
+179	Do I need to open ports on my router?
+180	Do players need the mod too?
+181	Docker
+182	Does changing the RAM limit disconnect players?
+183	Does switching worlds delete the previous one?
+184	Donation links are not configured yet. Set <code class="text-gray-400">PANEL_DONATION_*</code> in the server <code class="text-gray-400">.env</code>.
+185	Donations do not replace a commercial license
+186	Download
+187	Download .r2z
+188	Download full log
+189	Drop everything on death. Skill loss: 1% (less than Normal).
+190	Drop everything on death. Skill loss: 2.5%.
+191	Drop everything on death. Skill loss: 5%.
+192	Dur.
+193	E.g. -crossplay to enable crossplay.
+194	Easy
+195	Edit
+196	Edit <code>config/bepinex/org.tristan.rcon.cfg</code> (the <code>Password</code> field) on Mods → ValheimRcon config, or set <code>PANEL_RCON_PASSWORD</code> in <code>.env</code>. Restart the server after changing.
+197	Effective values
+198	Enable the ValheimRcon mod on Mods & Config to use console and moderation.
+199	Enabled
+200	Enables BepInEx, the bundled ValheimRcon mod, and generates the RCON password automatically.
+201	Enemies do not attack until provoked.
+202	Equipment dropped, inventory permanently destroyed. Skill loss: 7.5%.
+203	Equipment kept on death. Inventory dropped. Skill loss: 1%.
+204	Equivalent to game default — all sliders at Normal.
+205	Error
+206	EventRate 0 — daytime raids disabled. Night raids may still occur.
+207	Every 12 hours
+208	Every 15 minutes
+209	Every 6 hours
+210	Every hour
+211	Export r2modman profile
+212	Exports mods linked to Thunderstore and BepInEx configs for import in r2modman. Unlinked mods are skipped.
+213	Extra arguments
+214	Failed to copy
+215	File saved!
+216	Files
+217	Find
+218	Finds a player and shows details
+219	Fire hazard
+220	First world (optional)
+221	Form
+222	Frequently asked questions
+223	Full
+224	Full documentation:
+225	Game default
+226	Game updates
+227	Generated RCON password
+228	Generating...
+229	Getting started
+230	Gives an item to a player
+231	Got it
+232	Hammer mode
+233	Hard
+234	Hard combat and more frequent raids.
+235	Hardcore
+236	Heals player to health value
+237	Help
+238	Hide checkpoints
+239	Hide password
+240	How do I back up right now?
+241	How do I change the RCON password?
+242	How do I create a new world?
+243	How do I enable crossplay (PC + Xbox/Game Pass)?
+244	How do I find a player's Steam ID?
+245	How do I find a specific file quickly?
+246	How do I install a mod?
+247	How do I restore a backup?
+248	How do I run the panel + server?
+249	How do I set the player limit?
+250	How do I update a mod?
+251	How do I use the panel's interactive console?
+252	How do game updates work?
+253	How do my friends join the server?
+254	How much RAM does the server need?
+255	How to connect
+256	I enabled/disabled a mod and nothing changed.
+257	I'm getting permission errors on folders.
+258	Immersive
+259	In <b>Vanilla</b> mode, add your Steam ID under <b>Administrators</b> for in-game admin permissions (without the panel RCON console).
+260	In Valheim, use <b>Join via IP</b> and enter <code>YOUR_IP:2456</code> (the default port is 2456). Then enter the server password. The current address appears on the <b>Overview</b> tab, in the “How to connect” block.
+261	In Valheim, use <strong class="text-gray-200">Join IP</strong> and enter:
+262	In the backup list, click <b>Restore to here</b> on the desired point. The panel creates a checkpoint, restores files, and restarts the server. Use <b>Restore to latest</b> or <b>Undo last restore</b> to go back.
+263	Individual modifiers
+264	Inherit combat difficulty from the selected preset.
+265	Inherit death penalty from the selected preset.
+266	Inherit portal rules from the selected preset.
+267	Inherit raid frequency from the selected preset.
+268	Inherit resource rate from the selected preset.
+269	Install Mod
+270	Install from URL
+271	Installation & Docker
+272	Installed version
+273	Installed: {names}
+274	Installing...
+275	Interval
+276	Interval ~14 min, ~67% chance.
+277	Interval ~28 min, ~33% chance.
+278	Interval ~46 min, 20% chance.
+279	Interval ~69 min, ~13% chance.
+280	Interval ~92 min, 10% chance — far fewer raids.
+281	Invalid Steam ID — use 17 digits
+282	Invalid world name — use only letters, numbers, _ and -
+283	Irreversible — deletes every backup ZIP except those tied to an active restore or undo checkpoint.
+284	Is it safe to mount docker.sock in the panel?
+285	It depends on the mod. Server-side mods (e.g. ServerSideMap) run only on the server; most gameplay/UI mods must be installed on each player's client at the same version.
+286	It is the mod loader used by Valheim. Each mod usually generates a <code>.cfg</code> file in <code>config/bepinex</code>, editable on the Mods & Config tab.
+287	Kick
+288	Kick {label}? The player can rejoin.
+289	Kicks a player
+290	Language
+291	Last restore: {date}
+292	Latest
+293	Latest server log lines
+294	Leave on «Use preset» to inherit from the preset above, or choose a specific value.
+295	Less
+296	License
+297	License text
+298	Licensing contact:
+299	Lighter combat (easy damage) and less frequent raids.
+300	Limit applied
+301	Link Thunderstore
+302	Linking...
+303	Lists active global keys
+304	Lists administrators
+305	Lists all commands on the server
+306	Lists banned players
+307	Lists permitted players
+308	Lists saved! Server restarted if it was online.
+309	Loading details...
+310	Loading...
+311	Loading…
+312	Local draft found (not saved on server).
+313	Make admin
+314	Manage
+315	Manually triggers the same backup job that runs on the configured interval — different from <b>Create manual backup</b>, which lets you choose scope (world, full, or configs).
+316	Many changes (mods, lists, running world config) only take effect after restarting the server.
+317	Map and minimap disabled — navigate by landmarks only.
+318	Map ping for everyone
+319	Maximum
+320	Metadata inferred from ZIP — Thunderstore versions may be unavailable.
+321	Method
+322	Mod
+323	Mod DLLs included
+324	Mod changes require a <b>server restart</b>. Use the Restart button on Overview.
+325	Mod disabled
+326	Mod enabled
+327	Mod is on the latest version
+328	Mod linked to Thunderstore
+329	Mod updated to v{version}
+330	Mod: {name}
+331	Moderation
+332	Moderation actions
+333	Modifiers saved in the <span class="font-mono">.fwl</span> file — equivalent to Valheim's world creation screen.
+334	Mods
+335	Mods & BepInEx
+336	Mods & Config
+337	Mods ({count})
+338	Mods installed via Thunderstore show version status. Use <b>Check for updates</b> and, if a new version is available, <b>Update mod</b>. Uploaded mods must be <b>linked</b> to a Thunderstore URL for automatic checks.
+339	More
+340	Much less
+341	Much more
+342	MyWorld
+343	Name
+344	Name:
+345	Network
+346	Network traffic (chart)
+347	No
+348	No BepInEx and no mods. Add your Steam ID as administrator below.
+349	No backups found in config/backups/
+350	No backups to delete
+351	No boss portals
+352	No build cost
+353	No commands found.
+354	No config
+355	No configuration files found
+356	No events recorded
+357	No limit
+358	No logs available.
+359	No map
+360	No matches
+361	No matching settings
+362	No modifiers (vanilla / Normal world).
+363	No modifiers — vanilla experience, as before the Hildir's Request patch.
+364	No mods installed
+365	No mods recorded in this backup.
+366	No players connected right now.
+367	No portals
+368	No portals allowed in the world.
+369	No — it is integrated into the panel and cannot be removed. You can <b>disable</b> it on the Mods tab; when you switch back to Modded (BepInEx) mode, it is re-enabled automatically.
+370	No. Switching only changes which world is active; progress on other worlds remains saved in <code>config/worlds_local/</code>.
+371	Non-portable items follow default game rules.
+372	None
+373	Normal
+374	Notes
+375	OK
+376	Objects
+377	Off
+378	Official Valheim Wiki
+379	Offline
+380	Oldest backups are deleted first when usage exceeds the limit above.
+381	On
+382	On <b>Mods & Config</b>, paste a <a href="https://thunderstore.io/c/valheim/" target="_blank" rel="noopener">Thunderstore</a> URL (page, download link, or r2modman) and click Install, or upload a <code>.zip</code>/<code>.dll</code>.
+383	On <b>first launch</b> or on <b>Server</b> → <b>Game updates</b>, choose <b>Vanilla</b> (disables BepInEx and all mods) or <b>Modded</b> (enables BepInEx and integrated ValheimRcon). In vanilla mode, use <b>Administrators</b> in Player Lists to be admin in-game.
+384	On the <b>Files</b> tab, use the search box to filter by file name. Matching files appear in a flat list for fast access.
+385	On the <b>Server</b> tab under <b>Server capacity</b>. Vanilla supports up to 10 players; above that you need a mod (Valheim Plus or MaxPlayerCount). The panel syncs the value to the mod's .cfg if installed.
+386	On the <b>Server</b> tab, this irreversibly deletes every backup ZIP in <code>config/backups/</code>, except backups tied to an active restore or undo checkpoint.
+387	On the <b>Server</b> tab. The password must be at least 5 characters and cannot contain the server name. Save and restart to apply.
+388	On the <b>Worlds</b> tab, enter a name and click <b>Create</b> (stays pending) or <b>Create & Activate</b> (switches the server to it). A world is only actually generated on first boot.
+389	On the Server tab, add <code>-crossplay</code> in the <b>Extra arguments</b> field and restart.
+390	Online
+391	Only the world in use (.fwl + .db).
+392	Only when players are online
+393	Only when the server is empty
+394	Open <b>Console</b> (docker/BepInEx) in the Tools section. The <b>Audit</b> tab shows all actions taken by the panel. Real-time CPU and RAM are on <b>Overview</b>.
+395	Optional cap on <code class="text-gray-400">config/backups/</code> ZIP files. Choose <span class="text-valheim-gold font-medium">Unlimited</span> to keep all backups, or pick a size — oldest backups are deleted first when the limit is exceeded.
+396	Optional for now — you can edit later under Server → Player Lists.
+397	Optional — 1-10 characters
+398	Orphaned configs
+399	Overview
+400	Package
+401	Panel
+402	Passive enemies
+403	Password
+404	Password is set on the Server tab. Open UDP <strong>2456–2458</strong> on your router for external access.
+405	Pause
+406	Paused
+407	Pending
+408	Per-player raids
+409	Performance
+410	Permanently delete world "{name}"?
+411	Permanently delete {name}?
+412	Permitted / whitelist (Steam IDs)
+413	Persistent log of all actions (POST/PUT/DELETE) for diagnostics and error recovery.
+414	Personal use and open-source contribution: free
+415	Pix (Brasil)
+416	Player Lists
+417	Player limit
+418	Player limit saved
+419	Players
+420	Players Online
+421	Port
+422	Portals
+423	Portals forbidden, fire spreads across the world, and no map/minimap.
+424	Portals unavailable while a boss is active in the area.
+425	Preset
+426	PsyDev Server Manager
+427	Public (true/false)
+428	Publishing...
+429	Quick Controls
+430	RAM
+431	RAM limit
+432	RCON command (e.g. save, list, kick Name...)
+433	RCON commands
+434	RCON console only works with BepInEx active — choose Modded on the Server tab.
+435	RCON password generated — copy it before closing the notice
+436	RCON unavailable
+437	RCON unavailable at the moment.
+438	Raids
+439	Raids based on each player's individual progress, not bosses killed on the server.
+440	Raw
+441	Real-time
+442	Recreating container...
+443	Redo
+444	Refresh
+445	Remove
+446	Remove admin
+447	Remove mod {name}?
+448	Remove orphaned config {names}?
+449	Remove orphaned configs
+450	Remove {count} orphaned config file(s)?
+
+{names}
+451	Removes a ban
+452	Removes a global key
+453	Removes an administrator
+454	Removes from permitted list
+455	Removing...
+456	Repository
+457	Request
+458	Request commercial license
+459	Resources
+460	Resources & performance
+461	Response
+462	Restart
+463	Restarting...
+464	Restore always restarts the server. An automatic checkpoint is created before each restore.
+465	Restore and restart
+466	Restore backup
+467	Restore draft
+468	Restore latest
+469	Restore the latest backup? The server will restart.
+470	Restore the server to this backup's state:
+471	Restore to here
+472	Restore undone — "{name}" is active.
+473	Restored from: {name}
+474	Restoring...
+475	Resume
+476	Retention
+477	Run scheduled job now
+478	Running
+479	Running...
+480	Runs a Valheim console command
+481	Runs now the same job that runs on the scheduled interval
+482	Save
+483	Save .db
+484	Save Lists
+485	Save Settings
+486	Save and Restart
+487	Save and recreate container
+488	Save and restart
+489	Save backup limit
+490	Save player limit
+491	Save settings
+492	Saves the current world
+493	Saving...
+494	Scheduled backup triggered — wait a few seconds.
+495	Search FAQ...
+496	Search by file name...
+497	Search command...
+498	Search settings...
+499	Searches for objects in the world
+500	Seed
+501	Select a file to edit
+502	Send
+503	Sends a chat message (shout)
+504	Server
+505	Server Console (live)
+506	Server Name
+507	Server Settings (.env)
+508	Server capacity
+509	Server configured in Vanilla mode
+510	Server configured with BepInEx
+511	Server in <strong>live</strong> state — no panel restore recorded.
+512	Server mode
+513	Server state
+514	Server statistics (FPS, RAM, players)
+515	Set RAM limit to {label}? The container will be recreated and players disconnected.
+516	Set up server
+517	Settings saved and server restarted
+518	Settings saved!
+519	Show password
+520	Shown in the in-game server list.
+521	Shows online players with position
+522	Shows server time and day
+523	Size
+524	Spawns objects/creatures
+525	Start
+526	Start the server to use the interactive console.
+527	Starting
+528	State
+529	Status
+530	Steam ID lists. <b>Admin</b> gets moderation commands; <b>Banned</b> players cannot join; <b>Permitted</b> works as a whitelist (if filled, only those IDs can join). On <b>Overview</b>, use the <b>Actions</b> menu next to each connected player to promote, kick, or ban without editing files manually.
+531	Stop
+532	Stored backups
+533	Suggested RAM
+534	Supervisor
+535	Support
+536	Support the Project
+537	Support the project
+538	Tab autocompletes · Enter sends · output appears in the logs above
+539	Technical details — strings saved in .fwl
+540	TeleportAll — almost everything can go through portals (except tamed animals).
+541	Teleports a player
+542	The <b>ValheimRcon</b> mod is built into the panel (<b>Integrated</b> badge on the Mods tab). In <b>Modded (BepInEx)</b> mode, the RCON password is generated automatically on first setup. Console and moderation require BepInEx active and the mod enabled.
+543	The Valheim container periodically copies the <code class="text-gray-400">worlds_local/</code> folder to <code class="text-gray-400">config/backups/</code>. Files appear as <code class="text-gray-400">worlds-YYYYMMDD-HHMMSS.zip</code>. Retention: 30 days.
+544	The container uses <code>valheim-updater</code> (SteamCMD). On the <b>Server</b> tab you can enable auto-update, disable it, or click <b>Check for updates now</b>. With mods installed, prefer updating manually after checking compatibility.
+545	The panel has configured ValheimRcon. Copy the password — it will not be shown again.
+546	The panel is free for personal use. If it helps you, any contribution funds new features, fixes, and documentation.
+547	The panel is unresponsive / showing error 500.
+548	The panel needs <code>docker.sock</code> to control the Valheim container. This grants Docker control to the panel container — keep the panel on a private network/behind a proxy with authentication in production.
+549	The server doesn't show up in the public list. What now?
+550	The server will be stopped and restarted automatically
+551	They are the same modifiers as Valheim's world creation screen, saved in the <code>.fwl</code> file. You can use a preset and still override individual settings (combat, resources, raids, portals, death penalty).
+552	This action is <strong>irreversible</strong>. Every backup ZIP in <code class="text-gray-400">config/backups/</code> will be deleted.
+553	This backup contains only world/configs — mods were not included. Use Manual backup — Full for a snapshot with DLLs.
+554	This backup does not include mod files (.dll) — the list below reflects the server state at backup time.
+555	Thunderstore (Valheim mods)
+556	Thunderstore URL
+557	Thunderstore URL (page, download, or r2modman)
+558	Time
+559	To change later: edit <code class="text-gray-400">config/bepinex/org.tristan.rcon.cfg</code> or set <code class="text-gray-400">PANEL_RCON_PASSWORD</code> in .env.
+560	Tools
+561	Total backup limit
+562	Troubleshooting
+563	Type
+564	Type:
+565	UID
+566	Unban
+567	Undo
+568	Undo last restore
+569	Undo the last restore? The server will return to the previous state.
+570	Undoing...
+571	Unknown source
+572	Unlimited
+573	Unsaved changes
+574	Up to date
+575	Update available
+576	Update available: v{installed} → v{latest}
+577	Update mod
+578	Update settings saved!
+579	Update {name}? The server may need to be restarted.
+580	Updater
+581	Updating...
+582	Upload
+583	Uploading...
+584	Use preset
+585	Used only when creating the .fwl file for the first time.
+586	Useful links
+587	Valheim build:
+588	Valheim updates may break mods. Back up first. Check each mod's compatibility after updating the game.
+589	Valheim's public list often takes a few minutes and sometimes fails. Prefer <b>Join via IP</b>. Also confirm that <code>SERVER_PUBLIC</code> is set to <code>true</code> on the Server tab.
+590	ValheimRcon no GitHub
+591	Vanilla
+592	Vanilla (max. 10)
+593	Vanilla disables BepInEx and turns off all mods. With mods enables BepInEx and the bundled ValheimRcon.
+594	Vanilla or modded?
+595	Version
+596	Very easy
+597	Very easy combat, light death penalty, more resources, no raids, casual portals, per-player events, and passive mobs.
+598	Very hard
+599	Very hard combat, maximum death penalty, frequent raids, hard portals, and no map.
+600	View
+601	View available commands
+602	Vikinger Panel
+603	Vikinger Panel is free for personal use. Sponsors help maintain the project and keep development going. Contributors at $1+/month get direct support from the maintainer. Sponsorship does not replace a commercial license — hosting providers still need one (see below).
+604	Voluntary donations
+605	Waiting for RCON configuration — restart the panel or Valheim server.
+606	Waiting for server output...
+607	Web manager for a dockerized Valheim server
+608	What are the Administrators, Banned, and Permitted lists?
+609	What are the file type filters?
+610	What are the presets (Easy, Hard, Hardcore...)?
+611	What does Clear all backups now do?
+612	What is BepInEx?
+613	What is Run scheduled now?
+614	What will be applied to the world after saving (preset + overrides).
+615	What's new
+616	What's the difference between Start, Stop, Restart, Pause, and Resume?
+617	What's the difference between kick and ban?
+618	When running via Docker, the panel and server use the same user (UID/GID 1000) and share volumes, so permission errors should not occur. Confirm that <code>config/</code> and <code>data/</code> belong to UID 1000.
+619	Where do I see what's happening?
+620	Where do I set the server name and password?
+621	Wiki guide
+622	With mods (BepInEx)
+623	Wood can catch fire and fire spreads across the entire world, not just Ashlands.
+624	World
+625	World "{name}" activated
+626	World "{name}" created and activated
+627	World "{name}" deleted
+628	World "{name}" registered
+629	World Settings
+630	World is running — restart the server after saving to apply .fwl changes.
+631	World name
+632	World preset
+633	World settings saved
+634	World/config files will be overwritten
+635	World:
+636	Worlds
+637	Worlds + BepInEx configs + mods + lists + .env.
+638	Worlds included
+639	Worlds: {names}
+640	Yes
+641	Yes — applying a new limit recreates the container and disconnects anyone online. Do this during quiet hours.
+642	Yes — back up even when empty
+643	Yes — even with no players
+644	Yes — to play over the internet, forward UDP ports <b>2456–2458</b> to the server machine (port forwarding).
+645	Yes. A Valheim patch may require new mod versions. Back up, update the game, then use <b>Check for updates</b> on each Thunderstore-linked mod.
+646	Yes. Copy <code>WorldName.fwl</code> and <code>WorldName.db</code> to <code>config/worlds_local/</code> (Files tab or Docker volume) and it will appear in the list.
+647	Yes. On the <b>Backups</b> tab, under <b>Automatic schedule</b>, you set the interval. The container copies <code>worlds_local/</code> to <code>config/backups/</code> as <code>worlds-*.zip</code> files. Retention: 30 days.
+648	Yes. On the <b>Server</b> tab, under <b>Backup disk usage</b>, use the <b>Total backup limit</b> dropdown. Leave it on <b>Unlimited</b> for no cap, or pick a size (1 GB, 2 GB, 10 GB, etc.) and click <b>Save backup limit</b>. Oldest backups are removed automatically when the cap is exceeded.
+649	Your Steam ID (admin)
+650	addAdmin <SteamID>
+651	addGlobalKey <key>
+652	addPermitted <SteamID>
+653	adminlist
+654	backups
+655	ban <player|SteamID>
+656	banSteamId <SteamID>
+657	banlist
+658	consoleCommand <command>
+659	damage <player|SteamID> <damage>
+660	disconnectAll
+661	en-US
+662	findObjects [options]
+663	findPlayer <name>
+664	game
+665	give <player|SteamID> <item> [options]
+666	globalKeys
+667	heal <player|SteamID> <health>
+668	https://docs.bepinex.dev/
+669	https://github.com/lloesche/valheim-server-docker
+670	https://thunderstore.io/c/valheim/
+671	https://valheim.fandom.com/wiki/Hosting_a_Dedicated_Server
+672	https://valheim.fandom.com/wiki/Valheim_Wiki
+673	kick <player|SteamID>
+674	list
+675	lloesche/valheim-server Docker image
+676	logs
+677	match
+678	match(es)
+679	matches
+680	mod
+681	mods
+682	ms
+683	not created
+684	of limit
+685	permitted
+686	ping <x> <y> <z>
+687	player(s)
+688	players
+689	removeAdmin <SteamID>
+690	removeGlobalKey <key>
+691	removePermitted <SteamID>
+692	save
+693	say <message>
+694	serverStats
+695	showMessage <message>
+696	spawn <prefab> <x> <y> <z> [options]
+697	teleport <player|SteamID> <x> <y> <z>
+698	time
+699	true = listed publicly; false = direct connection only.
+700	unban <player|SteamID>
+701	worlds
+702	{count} active
+703	{count} config file(s) from removed mods are still on disk.
+704	{count} day
+705	{count} days
+706	{count} file(s) in ZIP
+707	{count} mod(s) without a Thunderstore link will be skipped
+708	{count} orphaned config(s) removed
+709	{label} banned
+710	{label} kicked
+711	{label} promoted to admin
+712	{label} removed from admin
+713	{label} unbanned
+714	{name} removed
+715	{preset} · Portals: {portals}
+716	{used} of {limit} GB
+717	{used} used (no limit)
+718	—
+719	↻ Refresh
+720	✕
+721	🌱 Seed (new world)
+722	💾 Backup
+723	📁 Upload (.zip / .dll)

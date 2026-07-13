@@ -48,13 +48,13 @@ export const mods = {
     if (!count) return;
     const names = this.orphanedConfigs.map((c) => c.name).join(", ");
     const msg = count === 1
-      ? `Remove orphaned config ${names}?`
-      : `Remove ${count} orphaned config file(s)?\n\n${names}`;
+      ? this.t("common.confirm.removeOrphanedConfig", { names })
+      : this.t("common.confirm.removeOrphanedConfigs", { count, names });
     if (!confirm(msg)) return;
     return this.withBusy("cleanupOrphanedConfigs", async () => {
       try {
         const data = await this.api("DELETE", "/api/bepinex/orphaned-configs", {});
-        this.toast(`${data.count} orphaned config(s) removed`);
+        this.toast(this.t("common.toasts.orphanedConfigsRemoved", { count: data.count }));
         await this.loadBepinexConfigs();
         await this.loadOrphanedConfigs();
       } catch (e) { this.toast(e.message, "error"); }
@@ -69,7 +69,7 @@ export const mods = {
     await this.withBusy("uploadMod", async () => {
       try {
         const data = await this.api("POST", "/api/mods/upload", fd);
-        this.toast(`Installed: ${data.installed.join(", ")}`);
+        this.toast(this.t("common.toasts.installed", { names: data.installed.join(", ") }));
         await this.loadMods();
       } catch (e) { this.toast(e.message, "error"); }
     });
@@ -81,7 +81,7 @@ export const mods = {
     return this.withBusy("installModUrl", async () => {
       try {
         const data = await this.api("POST", "/api/mods/install-url", { url: this.modUrl });
-        this.toast(`Installed: ${data.installed.join(", ")}`);
+        this.toast(this.t("common.toasts.installed", { names: data.installed.join(", ") }));
         this.modUrl = "";
         await this.loadMods();
       } catch (e) { this.toast(e.message, "error"); }
@@ -89,11 +89,11 @@ export const mods = {
   },
 
   async deleteMod(name) {
-    if (!confirm(`Remove mod ${name}?`)) return;
+    if (!confirm(this.t("common.confirm.removeMod", { name }))) return;
     return this.withBusy(`deleteMod:${name}`, async () => {
       try {
         await this.api("DELETE", `/api/mods/${encodeURIComponent(name)}`);
-        this.toast(`${name} removed`);
+        this.toast(this.t("common.toasts.modRemoved", { name }));
         await this.loadMods();
         await this.loadOrphanedConfigs();
       } catch (e) { this.toast(e.message, "error"); }
@@ -104,19 +104,30 @@ export const mods = {
     return this.withBusy(`toggleMod:${name}`, async () => {
       try {
         const data = await this.api("POST", `/api/mods/${encodeURIComponent(name)}/toggle`, { enabled });
-        this.toast(data.message || (enabled ? "Mod enabled" : "Mod disabled"));
+        this.toast(data.message || (enabled ? this.t("common.toasts.modEnabled") : this.t("common.toasts.modDisabled")));
         await this.loadMods();
       } catch (e) { this.toast(e.message, "error"); }
     });
   },
 
   modStatusLabel(status) {
-    return {
-      up_to_date: "Up to date",
-      update_available: "Update available",
-      unknown: "Unknown source",
-      error: "Check failed",
-    }[status] || status;
+    void this.localeVersion;
+    const key = `mods.status.${status}`;
+    const val = this.t(key);
+    return val !== key ? val : status;
+  },
+
+  modEnabledStatusLabel(mod) {
+    void this.localeVersion;
+    if (mod.protected) {
+      return mod.enabled ? this.t("mods.activeConsole") : this.t("mods.disabledConsole");
+    }
+    return mod.enabled ? this.t("mods.active") : this.t("mods.disabled");
+  },
+
+  modConfigLabel(mod) {
+    void this.localeVersion;
+    return mod.config ? this.t("mods.configPrefix", { name: mod.config }) : this.t("mods.noConfig");
   },
 
   modStatusClass(status) {
@@ -133,8 +144,8 @@ export const mods = {
       try {
         const data = await this.api("POST", `/api/mods/${encodeURIComponent(name)}/check-update`);
         const msg = data.update_available
-          ? `Update available: v${data.installed_version} → v${data.latest_version}`
-          : "Mod is on the latest version";
+          ? this.t("common.toasts.modUpdateAvailable", { installed: data.installed_version, latest: data.latest_version })
+          : this.t("common.toasts.modOnLatest");
         this.toast(msg);
         await this.loadMods();
       } catch (e) { this.toast(e.message, "error"); }
@@ -142,11 +153,11 @@ export const mods = {
   },
 
   async updateMod(name) {
-    if (!confirm(`Update ${name}? The server may need to be restarted.`)) return;
+    if (!confirm(this.t("common.confirm.updateMod", { name }))) return;
     return this.withBusy(`updateMod:${name}`, async () => {
       try {
         const data = await this.api("POST", `/api/mods/${encodeURIComponent(name)}/update`);
-        this.toast(data.message || `Mod updated to v${data.version}`);
+        this.toast(data.message || this.t("common.toasts.modUpdated", { version: data.version }));
         await this.loadMods();
       } catch (e) { this.toast(e.message, "error"); }
     });
@@ -157,7 +168,7 @@ export const mods = {
     return this.withBusy(`linkMod:${name}`, async () => {
       try {
         await this.api("POST", `/api/mods/${encodeURIComponent(name)}/link`, { url: this.modLinkUrl });
-        this.toast("Mod linked to Thunderstore");
+        this.toast(this.t("common.toasts.modLinked"));
         this.cancelModLink();
         await this.loadMods();
       } catch (e) { this.toast(e.message, "error"); }
@@ -182,7 +193,7 @@ export const mods = {
         a.download = filename;
         a.click();
         URL.revokeObjectURL(url);
-        this.toast(".r2z profile downloaded");
+        this.toast(this.t("common.toasts.r2zDownloaded"));
       } catch (e) { this.toast(e.message, "error"); }
     });
   },
@@ -192,8 +203,8 @@ export const mods = {
       try {
         const data = await this.api("POST", "/api/mods/export-code");
         await navigator.clipboard.writeText(data.code);
-        const skipped = data.skipped ? ` (${data.skipped} mod(s) skipped)` : "";
-        this.toast(`Code copied: ${data.mods_count} mod(s)${skipped}`);
+        const skipped = data.skipped ? this.t("common.toasts.codeCopiedSkipped", { skipped: data.skipped }) : "";
+        this.toast(this.t("common.toasts.codeCopied", { count: data.mods_count, skipped }));
       } catch (e) { this.toast(e.message, "error"); }
     });
   },

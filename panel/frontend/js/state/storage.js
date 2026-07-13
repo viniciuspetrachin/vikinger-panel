@@ -36,30 +36,31 @@ export const storage = {
         this.backupStorageMaxGb = this._resolveBackupMaxGb(cfg.max_gb);
       }
     } catch (e) {
-      this.storageLoadError = "Could not load usage";
+      this.storageLoadError = this.t("common.errors.couldNotLoadUsage");
       this.toast(e.message, "error");
     }
   },
 
   backupStorageLimitLabel() {
-    if (!this.backupStorageLimitEnabled()) return "Unlimited";
+    void this.localeVersion;
+    if (!this.backupStorageLimitEnabled()) return this.t("common.status.unlimited");
     return `${this.backupStorageMaxGb} GB`;
   },
 
   backupStorageUsedLabel() {
     if (this.storageLoadError) return this.storageLoadError;
-    if (!this.storageData) return "Loading…";
+    if (!this.storageData) return this.t("common.loading.loadingEllipsis");
     return this.formatBytes(this.backupStorageStatus().used_bytes);
   },
 
   backupStorageUsageDetail() {
     if (this.storageLoadError) return "";
-    if (!this.storageData) return "Loading…";
+    if (!this.storageData) return this.t("common.loading.loadingEllipsis");
     const used = this.formatBytes(this.backupStorageStatus().used_bytes);
     if (!this.backupStorageLimitEnabled()) {
-      return `${used} used (no limit)`;
+      return this.t("storage.usageNoLimit", { used });
     }
-    return `${used} of ${this.backupStorageMaxGb} GB`;
+    return this.t("storage.usageOfLimit", { used, limit: this.backupStorageMaxGb });
   },
 
   backupStorageStatus() {
@@ -101,7 +102,7 @@ export const storage = {
           },
         };
         await this.api("PUT", "/api/storage/limits", payload);
-        this.toast("Backup limit saved and cleanup applied");
+        this.toast(this.t("common.toasts.backupLimitSaved"));
         await this.loadStorageLimits();
         if (this.page === "dashboard") await this.loadMetrics(false);
         if (this.page === "backups") await this.loadBackups();
@@ -124,7 +125,7 @@ export const storage = {
       try {
         const data = await this.api("POST", "/api/backups/purge-all", { confirm: true });
         const count = (data.deleted || []).length;
-        this.toast(count ? `Deleted ${count} backup(s)` : "No backups to delete");
+        this.toast(count ? this.t("common.toasts.purgeDeleted", { count }) : this.t("common.toasts.purgeNone"));
         this.closePurgeAllBackupsModal();
         await this.loadStorageLimits();
         if (this.page === "backups") await this.loadBackups();

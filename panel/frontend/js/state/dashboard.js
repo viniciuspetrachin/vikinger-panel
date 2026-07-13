@@ -62,9 +62,18 @@ export const dashboard = {
   },
 
   playerActionLabel(action, steamId) {
-    if (action === "promote") return this.isPlayerAdmin(steamId) ? "Remove admin" : "Make admin";
-    if (action === "ban") return this.isPlayerBanned(steamId) ? "Unban" : "Ban";
-    if (action === "kick") return "Kick";
+    void this.localeVersion;
+    if (action === "promote") {
+      return this.isPlayerAdmin(steamId)
+        ? this.t("dashboard.players.demote")
+        : this.t("dashboard.players.promote");
+    }
+    if (action === "ban") {
+      return this.isPlayerBanned(steamId)
+        ? this.t("dashboard.players.unban")
+        : this.t("dashboard.players.ban");
+    }
+    if (action === "kick") return this.t("dashboard.players.kick");
     return action;
   },
 
@@ -74,9 +83,9 @@ export const dashboard = {
     this.closePlayerMenu();
 
     if (action === "kick") {
-      if (!confirm(`Kick ${label}? The player can rejoin.`)) return;
+      if (!confirm(this.t("common.confirm.kickPlayer", { label }))) return;
     } else if (action === "ban" && !this.isPlayerBanned(sid)) {
-      if (!confirm(`Ban ${label} (${sid})? The player cannot join until unbanned.`)) return;
+      if (!confirm(this.t("common.confirm.banPlayer", { label, steamId: sid }))) return;
     } else if (action === "promote") {
       action = this.isPlayerAdmin(sid) ? "demote" : "promote";
     } else if (action === "ban") {
@@ -87,13 +96,13 @@ export const dashboard = {
       try {
         const data = await this.api("POST", `/api/players/${encodeURIComponent(sid)}/action`, { action });
         const messages = {
-          kick: `${label} kicked`,
-          ban: `${label} banned`,
-          unban: `${label} unbanned`,
-          promote: `${label} promoted to admin`,
-          demote: `${label} removed from admin`,
+          kick: this.t("common.toasts.playerKicked", { label }),
+          ban: this.t("common.toasts.playerBanned", { label }),
+          unban: this.t("common.toasts.playerUnbanned", { label }),
+          promote: this.t("common.toasts.playerPromoted", { label }),
+          demote: this.t("common.toasts.playerDemoted", { label }),
         };
-        this.toast(messages[action] || "Action completed");
+        this.toast(messages[action] || this.t("common.toasts.actionCompleted"));
         if (data.synced) {
           this.playerLists[data.synced.kind] = data.synced.ids;
         } else {
@@ -108,7 +117,7 @@ export const dashboard = {
     return this.withBusy(`server:${action}`, async () => {
       try {
         await this.api("POST", `/api/server/${action}`);
-        this.toast(`Action "${action}" completed`);
+        this.toast(this.t("common.toasts.serverActionCompleted", { action }));
         setTimeout(() => this.refreshStatus(), 2000);
       } catch (e) { this.toast(e.message, "error"); }
     });
@@ -187,7 +196,10 @@ export const dashboard = {
     const canvas = this.$refs.netChartCanvas;
     if (!canvas) return false;
     if (canvas.offsetWidth === 0 || canvas.offsetHeight === 0) return false;
-    if (this.netChartInstance) return true;
+    if (this.netChartInstance) {
+      this.syncNetChartLabels();
+      return true;
+    }
 
     const ctx = canvas.getContext("2d");
     this.netChartInstance = new Chart(ctx, {
@@ -195,8 +207,8 @@ export const dashboard = {
       data: {
         labels: [],
         datasets: [
-          { label: "Download", data: [], borderColor: "#4ade80", backgroundColor: "rgba(74, 222, 128, 0.12)", fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2 },
-          { label: "Upload", data: [], borderColor: "#fbbf24", backgroundColor: "rgba(251, 191, 36, 0.12)", fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2 },
+          { label: this.t("console.chart.download"), data: [], borderColor: "#4ade80", backgroundColor: "rgba(74, 222, 128, 0.12)", fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2 },
+          { label: this.t("console.chart.upload"), data: [], borderColor: "#fbbf24", backgroundColor: "rgba(251, 191, 36, 0.12)", fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2 },
         ],
       },
       options: {
@@ -217,12 +229,20 @@ export const dashboard = {
     return true;
   },
 
+  syncNetChartLabels() {
+    if (!this.netChartInstance) return;
+    void this.localeVersion;
+    this.netChartInstance.data.datasets[0].label = this.t("console.chart.download");
+    this.netChartInstance.data.datasets[1].label = this.t("console.chart.upload");
+    this.netChartInstance.update("none");
+  },
+
   pushNetChartPoint(rx, tx) {
     if (!this.netChartInstance) return;
     const labels = this.netChartInstance.data.labels;
     const rxData = this.netChartInstance.data.datasets[0].data;
     const txData = this.netChartInstance.data.datasets[1].data;
-    const t = new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    const t = new Date().toLocaleTimeString(this.locale || "en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     labels.push(t);
     rxData.push(Number(rx) || 0);
     txData.push(Number(tx) || 0);

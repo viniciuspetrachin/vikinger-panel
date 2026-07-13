@@ -18,6 +18,14 @@ from fwl_io import WorldConfig, write_fwl  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
+def force_en_locale(page: Page):
+    """E2E tests assume en-US strings."""
+    page.add_init_script(
+        "localStorage.setItem('vikinger-panel-locale', 'en-US');"
+    )
+
+
+@pytest.fixture(autouse=True)
 def track_api_errors(page: Page):
     """Falha o teste se qualquer chamada /api retornar 5xx."""
     errors: list[str] = []

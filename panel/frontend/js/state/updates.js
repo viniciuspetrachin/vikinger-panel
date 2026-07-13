@@ -10,22 +10,31 @@ export const updates = {
   modLinkUrl: "",
   modLinkTarget: null,
 
-  updateIntervalPresets: [
-    { id: "15min", label: "Every 15 minutes", cron: "*/15 * * * *" },
-    { id: "1h", label: "Every hour", cron: "0 * * * *" },
-    { id: "6h", label: "Every 6 hours", cron: "0 */6 * * *" },
-    { id: "daily", label: "Daily (06:00)", cron: "0 6 * * *" },
-    { id: "custom", label: "Custom", cron: "" },
-  ],
+  getUpdateIntervalPresets() {
+    void this.localeVersion;
+    const presets = this.tObj("updates.presets") || {};
+    const crons = {
+      "15min": "*/15 * * * *",
+      "1h": "0 * * * *",
+      "6h": "0 */6 * * *",
+      daily: "0 6 * * *",
+      custom: "",
+    };
+    return Object.keys(crons).map((id) => ({
+      id,
+      label: presets[id] || id,
+      cron: crons[id],
+    }));
+  },
 
   cronFromUpdatePreset() {
     if (this.updateIntervalPreset === "custom") return this.updateCronCustom;
-    const preset = this.updateIntervalPresets.find((p) => p.id === this.updateIntervalPreset);
+    const preset = this.getUpdateIntervalPresets().find((p) => p.id === this.updateIntervalPreset);
     return preset?.cron || "*/15 * * * *";
   },
 
   syncUpdatePresetFromCron(cron) {
-    const match = this.updateIntervalPresets.find((p) => p.cron && p.cron === cron);
+    const match = this.getUpdateIntervalPresets().find((p) => p.cron && p.cron === cron);
     if (match) {
       this.updateIntervalPreset = match.id;
     } else {
@@ -70,7 +79,7 @@ export const updates = {
           bepinex: this.bepinexEnabled,
           restart,
         });
-        this.toast(restart ? "Config saved and container recreated!" : "Update settings saved!");
+        this.toast(restart ? this.t("common.toasts.configSavedRecreated") : this.t("common.toasts.updateSettingsSaved"));
         if (data.mode_result?.rcon?.created && data.mode_result.rcon.password) {
           this.setupRconPassword = data.mode_result.rcon.password;
         }
@@ -84,7 +93,7 @@ export const updates = {
     return this.withBusy("checkGameUpdate", async () => {
       try {
         const data = await this.api("POST", "/api/updates/check");
-        this.toast(data.message || "Check requested");
+        this.toast(data.message || this.t("common.toasts.checkRequested"));
         await this.loadUpdatesStatus();
       } catch (e) { this.toast(e.message, "error"); }
     });
