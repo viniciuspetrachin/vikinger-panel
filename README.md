@@ -5,7 +5,7 @@ Manage worlds, passwords, **BepInEx mods**, Thunderstore installs, backups, and 
 from your browser.
 
 [![License: Polyform Shield](https://img.shields.io/badge/License-Polyform%20Shield-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.1.8-gold.svg)](https://github.com/viniciuspetrachin/vikinger-panel/releases)
+[![Version](https://img.shields.io/badge/version-2.1.9-gold.svg)](https://github.com/viniciuspetrachin/vikinger-panel/releases)
 [![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa)](https://github.com/sponsors/viniciuspetrachin/dashboard)
 
 > **Self-hosted Valheim** · Docker one-click setup · Modded & vanilla · English UI · Free for personal use
