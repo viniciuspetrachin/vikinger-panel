@@ -40,7 +40,7 @@ All notable changes to this project will be documented in this file.
 
 - Release automático v2.1.4.
 
-## [Unreleased]
+## [2.1.5]
 
 ### Added
 
@@ -57,3 +57,11 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - Translation fixes for technical terms (RAM, Mods, Plugins, etc.).
+
+## [Unreleased]
+
+### Added
+
+### Changed
+
+### Fixed

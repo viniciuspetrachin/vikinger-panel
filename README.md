@@ -4,7 +4,7 @@ A modern web panel to manage **dockerized Valheim servers** — worlds, BepInEx 
 backups, metrics, logs, and more, all in one interface.
 
 [![License: Polyform Shield](https://img.shields.io/badge/License-Polyform%20Shield-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.1.4-gold.svg)](https://github.com/viniciuspetrachin/vikinger-panel/releases)
+[![Version](https://img.shields.io/badge/version-2.1.5-gold.svg)](https://github.com/viniciuspetrachin/vikinger-panel/releases)
 [![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa)](https://github.com/sponsors/viniciuspetrachin/dashboard)
 
 > Docker-native · Unit & E2E tests · No external CDN · English UI
