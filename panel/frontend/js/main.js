@@ -85,7 +85,9 @@ function panel() {
       if (this.page === "files") {
         await this._fetchFileTree();
         this.$nextTick(() => {
-          if (this.editPath && this.editContent) this.mountFileEditor(this.editContent);
+          if (this.editPath && this.cfgEditorMode === "raw" && this.editContent) {
+            this.mountFileEditor(this.editContent);
+          }
         });
       }
       if (this.page === "logs") {

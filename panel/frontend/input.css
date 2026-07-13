@@ -386,6 +386,25 @@
     color: #e8c547;
   }
 
+  .cfg-form-panel { scrollbar-gutter: stable; }
+  .cfg-type-badge {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.25rem;
+    background: rgba(42, 61, 53, 0.8);
+    border: 1px solid #2a3d35;
+    color: #9ca3af;
+    font-family: ui-monospace, monospace;
+  }
+  .cfg-input:focus { border-color: #c9a227; outline: none; box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.2); }
+  .cm-panel.cm-search {
+    background: #0f1614;
+    border: 1px solid #2a3d35;
+    border-radius: 0.5rem;
+    padding: 0.35rem 0.5rem;
+  }
+  .cm-panel.cm-search input { background: #0a0e0d; color: #d1d5db; border: 1px solid #2a3d35; border-radius: 0.25rem; }
+
   .backup-badge {
     font-size: 0.65rem;
     padding: 0.125rem 0.5rem;

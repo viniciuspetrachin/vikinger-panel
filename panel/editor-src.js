@@ -5,6 +5,7 @@ import { EditorView, keymap, lineNumbers, drawSelection, highlightActiveLine, pl
 import { EditorState, Compartment } from '@codemirror/state';
 import { defaultHighlightStyle, syntaxHighlighting, indentOnInput, bracketMatching } from '@codemirror/language';
 import { history, defaultKeymap, historyKeymap, indentWithTab, undo, redo } from '@codemirror/commands';
+import { search, searchKeymap, highlightSelectionMatches, openSearchPanel, closeSearchPanel } from '@codemirror/search';
 import { json } from '@codemirror/lang-json';
 import { yaml } from '@codemirror/lang-yaml';
 
@@ -90,11 +91,13 @@ class PanelEditorInstance {
       indentOnInput(),
       bracketMatching(),
       syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+      search({ top: true }),
+      highlightSelectionMatches(),
       valheimTheme,
       EditorView.lineWrapping,
       languageCompartment.of(langForPath(this.path)),
       EditorState.readOnly.of(this.readOnly),
-      keymap.of([saveBinding, ...defaultKeymap, ...historyKeymap, indentWithTab]),
+      keymap.of([saveBinding, ...searchKeymap, ...defaultKeymap, ...historyKeymap, indentWithTab]),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           this._scheduleDraft();
@@ -170,6 +173,21 @@ class PanelEditorInstance {
 
   undo() { undo(this.view); }
   redo() { redo(this.view); }
+
+  openSearch(query = '') {
+    openSearchPanel(this.view);
+    if (query) {
+      const panel = this.view.dom.querySelector('.cm-search input[name="search"]');
+      if (panel) {
+        panel.value = query;
+        panel.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+  }
+
+  closeSearch() {
+    closeSearchPanel(this.view);
+  }
 
   async save() {
     if (this.readOnly) return;

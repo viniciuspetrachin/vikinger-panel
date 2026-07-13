@@ -5,11 +5,14 @@ export const mods = {
   modUrl: "",
   bepinexConfigs: [],
   exportSkipped: 0,
+  orphanedConfigs: [],
+  orphanedConfigsCount: 0,
 
   async loadModsPage() {
     await this.loadUpdatesConfig();
     await this.loadMods();
     await this.loadBepinexConfigs();
+    await this.loadOrphanedConfigs();
     this.updateExportSkipped();
   },
 
@@ -30,6 +33,32 @@ export const mods = {
       const data = await this.api("GET", "/api/bepinex/configs");
       this.bepinexConfigs = data.configs || [];
     } catch (e) { this.toast(e.message, "error"); }
+  },
+
+  async loadOrphanedConfigs() {
+    try {
+      const data = await this.api("GET", "/api/bepinex/orphaned-configs");
+      this.orphanedConfigs = data.configs || [];
+      this.orphanedConfigsCount = data.count || 0;
+    } catch (e) { this.toast(e.message, "error"); }
+  },
+
+  async cleanupOrphanedConfigs() {
+    const count = this.orphanedConfigsCount;
+    if (!count) return;
+    const names = this.orphanedConfigs.map((c) => c.name).join(", ");
+    const msg = count === 1
+      ? `Remove orphaned config ${names}?`
+      : `Remove ${count} orphaned config file(s)?\n\n${names}`;
+    if (!confirm(msg)) return;
+    return this.withBusy("cleanupOrphanedConfigs", async () => {
+      try {
+        const data = await this.api("DELETE", "/api/bepinex/orphaned-configs", {});
+        this.toast(`${data.count} orphaned config(s) removed`);
+        await this.loadBepinexConfigs();
+        await this.loadOrphanedConfigs();
+      } catch (e) { this.toast(e.message, "error"); }
+    });
   },
 
   async uploadMod(event) {
@@ -66,6 +95,7 @@ export const mods = {
         await this.api("DELETE", `/api/mods/${encodeURIComponent(name)}`);
         this.toast(`${name} removed`);
         await this.loadMods();
+        await this.loadOrphanedConfigs();
       } catch (e) { this.toast(e.message, "error"); }
     });
   },
