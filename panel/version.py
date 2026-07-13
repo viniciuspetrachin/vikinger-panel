@@ -7,6 +7,8 @@ import subprocess
 from functools import lru_cache
 from pathlib import Path
 
+from changelog import load_changelog_json
+
 __version__ = "2.1.4"
 
 DEFAULT_LOCALE = "en-US"
@@ -85,11 +87,15 @@ def default_locale() -> str:
 
 
 def version_info() -> dict:
+    repo_url = os.environ.get("PANEL_REPO_URL", REPO_URL)
+    version = __version__
     return {
-        "version": __version__,
+        "version": version,
         "commit": git_commit(),
         "build_date": build_date(),
-        "repo_url": os.environ.get("PANEL_REPO_URL", REPO_URL),
+        "repo_url": repo_url,
+        "changelog_url": f"{repo_url}/releases/tag/v{version}",
+        "changelog": load_changelog_json(limit=5),
         "license": LICENSE,
         "license_url": LICENSE_URL,
         "donation": donation_info(),

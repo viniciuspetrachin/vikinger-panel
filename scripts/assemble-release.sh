@@ -42,6 +42,7 @@ cp "$ROOT/COMMERCIAL-LICENSE.md" "$STAGING/"
 cp "$ROOT/release/README-INSTALL.md" "$STAGING/"
 cp "$ROOT/scripts/fix-plugins-permissions.sh" "$STAGING/scripts/"
 cp "$ROOT/scripts/fix-worlds-permissions.sh" "$STAGING/scripts/"
+cp "$ROOT/scripts/panel-self-update.sh" "$STAGING/scripts/"
 cp "$ROOT/release/scripts/start.sh" "$STAGING/scripts/"
 cp "$ROOT/release/scripts/reload-panel.sh" "$STAGING/scripts/"
 chmod +x "$STAGING/scripts/"*.sh

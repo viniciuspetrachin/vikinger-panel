@@ -55,7 +55,8 @@ def test_about_version(page: Page, base_url: str) -> None:
 
     expect(page.get_by_role("main").get_by_role("heading", name="Vikinger Panel")).to_be_visible()
     expect(page.get_by_text("What's new")).to_be_visible()
-    expect(page.get_by_role("main").get_by_text("v2.0.0")).to_be_visible()
+    expect(page.get_by_text("Panel update")).to_be_visible()
+    expect(page.get_by_text("Up to date", exact=False)).to_be_visible()
 
 
 def test_dashboard_connect_block(page: Page, base_url: str) -> None:

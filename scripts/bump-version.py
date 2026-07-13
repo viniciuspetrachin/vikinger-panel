@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -14,6 +15,10 @@ VERSION_PY = ROOT / "panel" / "version.py"
 PACKAGE_JSON = ROOT / "panel" / "package.json"
 README = ROOT / "README.md"
 CHANGELOG = ROOT / "CHANGELOG.md"
+EXTRACT_SCRIPT = ROOT / "scripts" / "extract-changelog.py"
+
+sys.path.insert(0, str(ROOT / "panel"))
+from changelog import promote_unreleased_to_version  # noqa: E402
 
 _VERSION_RE = re.compile(r'^__version__\s*=\s*["\'](\d+)\.(\d+)\.(\d+)["\']', re.M)
 _BADGE_RE = re.compile(
@@ -57,11 +62,18 @@ def write_readme_badge(version: str) -> None:
 
 def write_changelog(version: str) -> None:
     text = CHANGELOG.read_text(encoding="utf-8")
-    entry = f"## [{version}]\n\n### Changed\n\n- Release automático v{version}.\n\n"
-    marker = "## [Unreleased]"
-    if marker not in text:
-        raise SystemExit(f"Marcador {marker!r} não encontrado em CHANGELOG.md")
-    CHANGELOG.write_text(text.replace(marker, entry + marker, 1), encoding="utf-8")
+    CHANGELOG.write_text(promote_unreleased_to_version(text, version), encoding="utf-8")
+
+
+def run_extract_changelog() -> None:
+    result = subprocess.run(
+        [sys.executable, str(EXTRACT_SCRIPT)],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise SystemExit(result.stderr or "extract-changelog.py failed")
 
 
 def main() -> int:
@@ -81,10 +93,11 @@ def main() -> int:
         write_package_json(new_version)
         write_readme_badge(new_version)
         write_changelog(new_version)
+        run_extract_changelog()
 
     print(new_version)
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

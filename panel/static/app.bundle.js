@@ -1277,20 +1277,24 @@
       },
       repository: "Repository",
       whatsNew: "What's new",
+      changelogEmpty: "No changelog entries.",
       creditsTitle: "Credits",
-      changelog: {
-        "2.2.0": [
-          "Files tab: fast search by name with type filters (Config, DLLs, Plugins, Worlds, Lists, Backups, Logs).",
-          "Server tab: optional backup disk cap with automatic pruning of oldest ZIPs when exceeded.",
-          "Clear all backups now \u2014 irreversible purge with protection for active restore checkpoints."
-        ],
-        "2.0.0": [
-          "Complete UI/UX overhaul with section-based navigation.",
-          "New Help (searchable FAQ), Support the Project, and About/Version screens.",
-          "Polyform Shield license \u2014 free use, no commercial resale without authorization.",
-          "Metrics on Overview; capacity (RAM and players) on Server tab; Tools with Files, Console, and Audit.",
-          "100% dockerized, no permission headaches; local assets (no CDN)."
-        ]
+      changelogSections: {
+        added: "Added",
+        changed: "Changed",
+        deprecated: "Deprecated",
+        removed: "Removed",
+        fixed: "Fixed",
+        security: "Security"
+      },
+      update: {
+        title: "Panel update",
+        upToDate: "Up to date (v{current})",
+        available: "Update available: v{latest}",
+        viewRelease: "View release on GitHub",
+        apply: "Update now",
+        updating: "Updating\u2026 restarting",
+        started: "Panel update started \u2014 the page will reload when the container restarts."
       },
       credits: {
         valheimDocker: {
@@ -2591,20 +2595,24 @@
       },
       repository: "Reposit\xF3rio",
       whatsNew: "O que h\xE1 de novo",
+      changelogEmpty: "Nenhuma entrada no changelog.",
       creditsTitle: "Cr\xE9ditos",
-      changelog: {
-        "2.2.0": [
-          "Aba Arquivos: busca r\xE1pida por nome com filtros de tipo (Config, DLLs, Plugins, Mundos, Listas, Backups, Logs).",
-          "Guia Servidor: tampa de disco de backup opcional com poda autom\xE1tica de ZIPs mais antigos quando excedida.",
-          "Limpe todos os backups agora \u2014 limpeza irrevers\xEDvel com prote\xE7\xE3o para pontos de verifica\xE7\xE3o de restaura\xE7\xE3o ativos."
-        ],
-        "2.0.0": [
-          "Revis\xE3o completa de UI/UX com navega\xE7\xE3o baseada em se\xE7\xE3o.",
-          "Nova Ajuda (FAQ pesquis\xE1vel), Telas de Suporte ao Projeto e Sobre/Vers\xE3o.",
-          "Licen\xE7a Polyform Shield \u2014 uso gratuito, sem revenda comercial sem autoriza\xE7\xE3o.",
-          "M\xE9tricas na Vis\xE3o Geral; capacidade (RAM e players) na guia Servidor; Ferramentas com Arquivos, Console e Auditoria.",
-          "100% dockerized, sem dores de cabe\xE7a de permiss\xE3o; ativos locais (sem CDN)."
-        ]
+      changelogSections: {
+        added: "Adicionado",
+        changed: "Alterado",
+        deprecated: "Obsoleto",
+        removed: "Removido",
+        fixed: "Corrigido",
+        security: "Seguran\xE7a"
+      },
+      update: {
+        title: "Atualiza\xE7\xE3o do painel",
+        upToDate: "Atualizado (v{current})",
+        available: "Atualiza\xE7\xE3o dispon\xEDvel: v{latest}",
+        viewRelease: "Ver release no GitHub",
+        apply: "Atualizar agora",
+        updating: "Atualizando\u2026 reiniciando",
+        started: "Atualiza\xE7\xE3o iniciada \u2014 a p\xE1gina recarrega quando o container reiniciar."
       },
       credits: {
         valheimDocker: {
@@ -3905,20 +3913,24 @@
       },
       repository: "Repository",
       whatsNew: "Was ist neu",
+      changelogEmpty: "Keine Changelog-Eintr\xE4ge.",
       creditsTitle: "Credits",
-      changelog: {
-        "2.2.0": [
-          "Registerkarte \u201EDateien\u201C: schnelle Suche nach Namen mit Typfiltern (Konfiguration, DLLs, Plugins, Welten, Listen, Backups, Protokolle).",
-          "Registerkarte \u201EServer\u201C: optionale Backup-Festplattenobergrenze mit automatischer Bereinigung der \xE4ltesten ZIPs bei \xDCberschreitung.",
-          "Jetzt alle Backups l\xF6schen \u2013 irreversibles L\xF6schen mit Schutz f\xFCr aktive Wiederherstellungskontrollpunkte."
-        ],
-        "2.0.0": [
-          "Komplette UI/UX-\xDCberarbeitung mit abschnittsbasierter Navigation.",
-          "Neue Hilfe (durchsuchbare FAQ), \u201EProjekt unterst\xFCtzen\u201C und \u201E\xDCber/Version\u201C-Bildschirme.",
-          "Polyform Shield-Lizenz \u2013 kostenlose Nutzung, kein kommerzieller Weiterverkauf ohne Genehmigung.",
-          "Metriken zur \xDCbersicht; Kapazit\xE4t (RAM und Spieler) auf der Registerkarte \u201EServer\u201C; Tools mit Dateien, Konsole und Audit.",
-          "100 % dockerisiert, keine Probleme mit Berechtigungen; lokale Verm\xF6genswerte (kein CDN)."
-        ]
+      changelogSections: {
+        added: "Added",
+        changed: "Changed",
+        deprecated: "Deprecated",
+        removed: "Removed",
+        fixed: "Fixed",
+        security: "Security"
+      },
+      update: {
+        title: "Panel-Update",
+        upToDate: "Aktuell (v{current})",
+        available: "Update verf\xFCgbar: v{latest}",
+        viewRelease: "Release auf GitHub ansehen",
+        apply: "Jetzt aktualisieren",
+        updating: "Aktualisiere\u2026 Neustart",
+        started: "Panel-Update gestartet \u2014 die Seite l\xE4dt neu, wenn der Container neu startet."
       },
       credits: {
         valheimDocker: {
@@ -5219,20 +5231,24 @@
       },
       repository: "\u0420\u0435\u043F\u043E\u0437\u0438\u0442\u043E\u0440\u0438\u0439",
       whatsNew: "\u0427\u0442\u043E \u043D\u043E\u0432\u043E\u0433\u043E",
+      changelogEmpty: "\u041D\u0435\u0442 \u0437\u0430\u043F\u0438\u0441\u0435\u0439 \u0432 \u0436\u0443\u0440\u043D\u0430\u043B\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439.",
       creditsTitle: "\u041A\u0440\u0435\u0434\u0438\u0442\u044B",
-      changelog: {
-        "2.2.0": [
-          "\u0412\u043A\u043B\u0430\u0434\u043A\u0430 \xAB\u0424\u0430\u0439\u043B\u044B\xBB: \u0431\u044B\u0441\u0442\u0440\u044B\u0439 \u043F\u043E\u0438\u0441\u043A \u043F\u043E \u0438\u043C\u0435\u043D\u0438 \u0441 \u0444\u0438\u043B\u044C\u0442\u0440\u0430\u043C\u0438 \u043F\u043E \u0442\u0438\u043F\u0430\u043C (\u041A\u043E\u043D\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u044F, DLL, \u041F\u043B\u0430\u0433\u0438\u043D\u044B, \u041C\u0438\u0440\u044B, \u0421\u043F\u0438\u0441\u043A\u0438, \u0420\u0435\u0437\u0435\u0440\u0432\u043D\u044B\u0435 \u043A\u043E\u043F\u0438\u0438, \u0416\u0443\u0440\u043D\u0430\u043B\u044B).",
-          "\u0412\u043A\u043B\u0430\u0434\u043A\u0430 \xAB\u0421\u0435\u0440\u0432\u0435\u0440\xBB: \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u043B\u0438\u043C\u0438\u0442 \u0440\u0435\u0437\u0435\u0440\u0432\u043D\u043E\u0433\u043E \u0434\u0438\u0441\u043A\u0430 \u0441 \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u043C \u0443\u0434\u0430\u043B\u0435\u043D\u0438\u0435\u043C \u0441\u0430\u043C\u044B\u0445 \u0441\u0442\u0430\u0440\u044B\u0445 ZIP-\u0444\u0430\u0439\u043B\u043E\u0432 \u043F\u0440\u0438 \u043F\u0440\u0435\u0432\u044B\u0448\u0435\u043D\u0438\u0438.",
-          "\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u0435 \u0432\u0441\u0435 \u0440\u0435\u0437\u0435\u0440\u0432\u043D\u044B\u0435 \u043A\u043E\u043F\u0438\u0438 \u0441\u0435\u0439\u0447\u0430\u0441 \u2014 \u043D\u0435\u043E\u0431\u0440\u0430\u0442\u0438\u043C\u0430\u044F \u043E\u0447\u0438\u0441\u0442\u043A\u0430 \u0441 \u0437\u0430\u0449\u0438\u0442\u043E\u0439 \u0430\u043A\u0442\u0438\u0432\u043D\u044B\u0445 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u044B\u0445 \u0442\u043E\u0447\u0435\u043A \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F."
-        ],
-        "2.0.0": [
-          "\u041F\u043E\u043B\u043D\u044B\u0439 \u043F\u0435\u0440\u0435\u0441\u043C\u043E\u0442\u0440 UI/UX \u0441 \u043D\u0430\u0432\u0438\u0433\u0430\u0446\u0438\u0435\u0439 \u043F\u043E \u0440\u0430\u0437\u0434\u0435\u043B\u0430\u043C.",
-          "\u041D\u043E\u0432\u044B\u0435 \u044D\u043A\u0440\u0430\u043D\u044B \xAB\u0421\u043F\u0440\u0430\u0432\u043A\u0430\xBB (\u0447\u0430\u0441\u0442\u043E \u0437\u0430\u0434\u0430\u0432\u0430\u0435\u043C\u044B\u0435 \u0432\u043E\u043F\u0440\u043E\u0441\u044B \u0441 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u044C\u044E \u043F\u043E\u0438\u0441\u043A\u0430), \xAB\u041F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0430 \u043F\u0440\u043E\u0435\u043A\u0442\u0430\xBB \u0438 \xAB\u041E \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0435/\u0412\u0435\u0440\u0441\u0438\u044F\xBB.",
-          "\u041B\u0438\u0446\u0435\u043D\u0437\u0438\u044F Polyform Shield \u2014 \u0431\u0435\u0441\u043F\u043B\u0430\u0442\u043D\u043E\u0435 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u0435, \u043A\u043E\u043C\u043C\u0435\u0440\u0447\u0435\u0441\u043A\u0430\u044F \u043F\u0435\u0440\u0435\u043F\u0440\u043E\u0434\u0430\u0436\u0430 \u0431\u0435\u0437 \u0440\u0430\u0437\u0440\u0435\u0448\u0435\u043D\u0438\u044F \u0437\u0430\u043F\u0440\u0435\u0449\u0435\u043D\u0430.",
-          "\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0435\u043B\u0438 \u0432 \u043E\u0431\u0437\u043E\u0440\u0435; \u0435\u043C\u043A\u043E\u0441\u0442\u044C (\u041E\u0417\u0423 \u0438 \u043F\u043B\u0435\u0435\u0440\u044B) \u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0435 \u0421\u0435\u0440\u0432\u0435\u0440; \u0418\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442\u044B \u0434\u043B\u044F \u0440\u0430\u0431\u043E\u0442\u044B \u0441 \u0444\u0430\u0439\u043B\u0430\u043C\u0438, \u043A\u043E\u043D\u0441\u043E\u043B\u044C\u044E \u0438 \u0430\u0443\u0434\u0438\u0442\u043E\u043C.",
-          "100% \u0434\u043E\u043A\u0435\u0440\u0438\u0437\u0430\u0446\u0438\u044F, \u043D\u0438\u043A\u0430\u043A\u0438\u0445 \u043F\u0440\u043E\u0431\u043B\u0435\u043C \u0441 \u0440\u0430\u0437\u0440\u0435\u0448\u0435\u043D\u0438\u044F\u043C\u0438; \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u044B\u0435 \u0430\u043A\u0442\u0438\u0432\u044B (\u0431\u0435\u0437 CDN)."
-        ]
+      changelogSections: {
+        added: "Added",
+        changed: "Changed",
+        deprecated: "Deprecated",
+        removed: "Removed",
+        fixed: "Fixed",
+        security: "Security"
+      },
+      update: {
+        title: "\u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u043F\u0430\u043D\u0435\u043B\u0438",
+        upToDate: "\u0410\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F (v{current})",
+        available: "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u043E \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435: v{latest}",
+        viewRelease: "\u041E\u0442\u043A\u0440\u044B\u0442\u044C \u0440\u0435\u043B\u0438\u0437 \u043D\u0430 GitHub",
+        apply: "\u041E\u0431\u043D\u043E\u0432\u0438\u0442\u044C \u0441\u0435\u0439\u0447\u0430\u0441",
+        updating: "\u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435\u2026 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u043A",
+        started: "\u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u0437\u0430\u043F\u0443\u0449\u0435\u043D\u043E \u2014 \u0441\u0442\u0440\u0430\u043D\u0438\u0446\u0430 \u043F\u0435\u0440\u0435\u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u0441\u044F \u043F\u043E\u0441\u043B\u0435 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u043A\u0430 \u043A\u043E\u043D\u0442\u0435\u0439\u043D\u0435\u0440\u0430."
       },
       credits: {
         valheimDocker: {
@@ -6533,20 +6549,24 @@
       },
       repository: "Repositorio",
       whatsNew: "Qu\xE9 hay de nuevo",
+      changelogEmpty: "No hay entradas en el changelog.",
       creditsTitle: "Cr\xE9ditos",
-      changelog: {
-        "2.2.0": [
-          "Pesta\xF1a Archivos: b\xFAsqueda r\xE1pida por nombre con filtros de tipo (Configuraci\xF3n, DLL, complementos, mundos, listas, copias de seguridad, registros).",
-          "Pesta\xF1a Servidor: l\xEDmite de disco de respaldo opcional con poda autom\xE1tica de archivos ZIP m\xE1s antiguos cuando se excede.",
-          "Borre todas las copias de seguridad ahora: purga irreversible con protecci\xF3n para puntos de control de restauraci\xF3n activos."
-        ],
-        "2.0.0": [
-          "Revisi\xF3n completa de UI/UX con navegaci\xF3n basada en secciones.",
-          "Nuevas pantallas de Ayuda (Preguntas frecuentes con capacidad de b\xFAsqueda), Soporte para el proyecto y Acerca de/Versi\xF3n.",
-          "Licencia Polyform Shield: uso gratuito, no reventa comercial sin autorizaci\xF3n.",
-          "M\xE9tricas en descripci\xF3n general; capacidad (RAM y jugadores) en la pesta\xF1a Servidor; Herramientas con Archivos, Consola y Auditor\xEDa.",
-          "100% acoplado, sin dolores de cabeza por permisos; Activos locales (sin CDN)."
-        ]
+      changelogSections: {
+        added: "Added",
+        changed: "Changed",
+        deprecated: "Deprecated",
+        removed: "Removed",
+        fixed: "Fixed",
+        security: "Security"
+      },
+      update: {
+        title: "Actualizaci\xF3n del panel",
+        upToDate: "Actualizado (v{current})",
+        available: "Actualizaci\xF3n disponible: v{latest}",
+        viewRelease: "Ver release en GitHub",
+        apply: "Actualizar ahora",
+        updating: "Actualizando\u2026 reiniciando",
+        started: "Actualizaci\xF3n iniciada \u2014 la p\xE1gina se recargar\xE1 al reiniciar el contenedor."
       },
       credits: {
         valheimDocker: {
@@ -9080,17 +9100,42 @@
   };
 
   // frontend/js/state/about.js
-  var CHANGELOG_VERSIONS = ["2.2.0", "2.0.0"];
   var CREDIT_KEYS = ["valheimDocker", "backend", "frontend"];
+  var CHANGELOG_SECTION_ORDER = ["Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"];
   var about = {
-    versionInfo: { version: "", commit: "", build_date: "", repo_url: "", license: "", default_locale: "en-US" },
+    versionInfo: {
+      version: "",
+      commit: "",
+      build_date: "",
+      repo_url: "",
+      license: "",
+      changelog: [],
+      default_locale: "en-US"
+    },
+    panelUpdate: {
+      current: "",
+      latest: "",
+      update_available: false,
+      can_update: false,
+      deploy_mode: "",
+      release_url: "",
+      message: "",
+      error: ""
+    },
+    panelUpdating: false,
     getChangelogHighlights() {
-      void this.localeVersion;
-      const raw = this.tObj("about.changelog") || {};
-      return CHANGELOG_VERSIONS.filter((v) => raw[v]).map((version) => ({
-        version,
-        items: raw[version]
-      }));
+      const entries = this.versionInfo.changelog || [];
+      return entries.map((entry) => ({
+        version: entry.version,
+        sections: CHANGELOG_SECTION_ORDER.filter((name) => entry.sections?.[name]?.length).map((name) => ({
+          name,
+          label: this.t(`about.changelogSections.${name.toLowerCase()}`) || name,
+          items: entry.sections[name]
+        }))
+      })).filter((e) => e.sections.length);
+    },
+    changelogSectionLabel(section) {
+      return this.t(`about.changelogSections.${String(section).toLowerCase()}`) || section;
     },
     getCredits() {
       void this.localeVersion;
@@ -9105,6 +9150,28 @@
         this.versionInfo = await this.api("GET", "/api/version");
       } catch (e) {
       }
+      await this.checkPanelUpdate();
+    },
+    async checkPanelUpdate() {
+      try {
+        this.panelUpdate = await this.api("GET", "/api/panel/update/check");
+      } catch (e) {
+        this.panelUpdate = { ...this.panelUpdate, error: e.message || String(e) };
+      }
+    },
+    async applyPanelUpdate() {
+      if (!this.panelUpdate.can_update || this.panelUpdating) return;
+      return this.withBusy("panelUpdate", async () => {
+        this.panelUpdating = true;
+        try {
+          const body = this.panelUpdate.latest ? { version: this.panelUpdate.latest } : {};
+          await this.api("POST", "/api/panel/update", body);
+          this.toast(this.t("about.update.started"));
+        } catch (e) {
+          this.panelUpdating = false;
+          this.toast(e.message, "error");
+        }
+      });
     }
   };
 

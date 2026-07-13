@@ -1536,15 +1536,40 @@
                class="btn btn-sm btn-ghost mt-4 inline-flex" x-text="t('about.repository')">Repository</a>
           </div>
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4">
+            <h4 class="section-title" x-text="t('about.update.title')">Panel update</h4>
+            <p class="text-sm text-gray-400" x-show="panelUpdate.error" x-text="panelUpdate.error"></p>
+            <p class="text-sm text-gray-400" x-show="!panelUpdate.error && panelUpdate.message" x-text="panelUpdate.message"></p>
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="text-sm"
+                    :class="panelUpdate.update_available ? 'text-amber-400' : 'text-green-400'"
+                    x-text="panelUpdate.update_available
+                      ? t('about.update.available', { latest: panelUpdate.latest })
+                      : t('about.update.upToDate', { current: versionInfo.version || panelUpdate.current })"></span>
+              <a x-show="panelUpdate.release_url" :href="panelUpdate.release_url" target="_blank" rel="noopener"
+                 class="text-sm text-valheim-gold-light hover:underline" x-text="t('about.update.viewRelease')">View release</a>
+            </div>
+            <button type="button"
+                    @click="applyPanelUpdate()"
+                    :disabled="!panelUpdate.can_update || panelUpdating || isBusy('panelUpdate')"
+                    class="btn btn-sm btn-primary">
+              <span x-show="panelUpdating || actionPending === 'panelUpdate'" class="spinner"></span>
+              <span x-text="panelUpdating ? t('about.update.updating') : t('about.update.apply')">Update now</span>
+            </button>
+          </div>
+          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4">
             <h4 class="section-title" x-text="t('about.whatsNew')">What's new</h4>
+            <p class="text-sm text-gray-500" x-show="!getChangelogHighlights().length" x-text="t('about.changelogEmpty')">No changelog entries.</p>
             <template x-for="entry in getChangelogHighlights()" :key="entry.version">
               <div>
                 <p class="text-sm font-semibold text-gray-200 mb-2">v<span x-text="entry.version"></span></p>
-                <ul class="list-disc list-inside text-sm text-gray-400 space-y-1">
-                  <template x-for="(line, i) in entry.items" :key="entry.version + '-' + i">
-                    <li x-text="line"></li>
-                  </template>
-                </ul>
+                <template x-for="section in entry.sections" :key="entry.version + '-' + section.name">
+                  <p class="text-xs uppercase tracking-wider text-gray-500 mt-2 mb-1" x-text="section.label"></p>
+                  <ul class="list-disc list-inside text-sm text-gray-400 space-y-1 mb-2">
+                    <template x-for="(line, i) in section.items" :key="entry.version + '-' + section.name + '-' + i">
+                      <li x-text="line"></li>
+                    </template>
+                  </ul>
+                </template>
               </div>
             </template>
           </div>
