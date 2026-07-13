@@ -2,7 +2,7 @@
   "meta": {
     "locale": "en-US",
     "appTitle": "Vikinger Panel",
-    "appSubtitle": "PsyDev Server Manager"
+    "appSubtitle": "Valheim Server Manager"
   },
   "nav": {
     "sections": {
@@ -940,7 +940,8 @@
       "showPassword": "Show password",
       "hidePassword": "Hide password",
       "save": "Save Settings",
-      "saveAndRestart": "Save and Restart"
+      "saveAndRestart": "Save and Restart",
+      "envRecreateHint": "Name, password, and public listing require recreating the container to take effect in-game."
     },
     "envFields": {
       "SERVER_NAME": {
@@ -948,8 +949,8 @@
         "hint": "Shown in the in-game server list."
       },
       "SERVER_PUBLIC": {
-        "label": "Public (true/false)",
-        "hint": "true = listed publicly; false = direct connection only."
+        "label": "Public listing",
+        "hint": "When enabled, the server appears in Valheim's public server list."
       },
       "SERVER_ARGS": {
         "label": "Extra arguments",
@@ -1314,6 +1315,10 @@
       "apply": "Update now",
       "updating": "Updating… restarting",
       "started": "Panel update started — the page will reload when the container restarts."
+    },
+    "serverName": {
+      "advanced": "Edit full server name",
+      "save": "Save server name"
     },
     "credits": {
       "valheimDocker": {

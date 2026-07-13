@@ -1,20 +1,23 @@
-# Vikinger Panel — Web Panel for Self-Hosted Valheim Servers
+# Vikinger Panel — Free Valheim Server Manager (Docker)
 
-A modern web panel to manage **dockerized Valheim servers** — worlds, BepInEx mods,
-backups, metrics, logs, and more, all in one interface.
+**Host a Valheim dedicated server at home** with a modern web panel — no coding required.
+Manage worlds, passwords, **BepInEx mods**, Thunderstore installs, backups, and player lists
+from your browser.
 
 [![License: Polyform Shield](https://img.shields.io/badge/License-Polyform%20Shield-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-2.1.8-gold.svg)](https://github.com/viniciuspetrachin/vikinger-panel/releases)
 [![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa)](https://github.com/sponsors/viniciuspetrachin/dashboard)
 
-> Docker-native · Unit & E2E tests · No external CDN · English UI
+> **Self-hosted Valheim** · Docker one-click setup · Modded & vanilla · English UI · Free for personal use
 
-**Keywords:** valheim server panel · valheim server manager · docker valheim · bepinex mod manager · thunderstore · self-hosted valheim · world backups · game server admin
+**Looking for a step-by-step guide?** → **[Documentation for beginners](docs/getting-started.md)** (install Docker, download, connect friends)
 
 ---
 
 ## Table of contents
 
+- [Who is this for?](#who-is-this-for)
+- [Documentation](#documentation)
 - [Quick start (recommended — GitHub Release)](#quick-start-recommended--github-release)
 - [Install from source](#install-from-source)
 - [Updating](#updating)
@@ -26,6 +29,27 @@ backups, metrics, logs, and more, all in one interface.
 - [Development](#development)
 - [CI/CD and releases](#cicd-and-releases)
 - [Credits](#credits)
+
+---
+
+## Who is this for?
+
+- **First-time server hosts** who want Valheim with friends without reading wiki threads
+- **Home lab / VPS owners** who prefer Docker over manual SteamCMD setup
+- **Modded communities** using Thunderstore, BepInEx, and scheduled backups
+- **Not for** commercial hosting providers reselling the panel (see [licensing](#licensing))
+
+---
+
+## Documentation
+
+| Guide | Description |
+|-------|-------------|
+| [**Getting started**](docs/getting-started.md) | Full walkthrough — Docker, `.env`, first boot, connect in-game |
+| [**Port forwarding**](docs/port-forwarding.md) | Router, firewall, VPS — let friends join from the internet |
+| [**Installing mods**](docs/installing-mods.md) | Thunderstore, BepInEx, what players need on their PC |
+| [**Troubleshooting**](docs/troubleshooting.md) | Permissions, ports, slow first boot, common errors |
+| [**FAQ**](docs/faq.md) | Quick answers (same topics as the in-panel Help tab) |
 
 ---
 
@@ -88,12 +112,15 @@ password if set. The current address is shown on the **Overview** tab under “H
 
 ### Troubleshooting
 
+See **[docs/troubleshooting.md](docs/troubleshooting.md)** for detailed fixes. Quick reference:
+
 | Issue | Fix |
 |-------|-----|
 | Permission errors on folders | Ensure `config/` and `data/` are owned by UID 1000 |
-| Players cannot connect | Forward UDP **2456–2458** to the host |
+| Players cannot connect | Forward UDP **2456–2458** to the host — [port forwarding guide](docs/port-forwarding.md) |
 | Panel looks stale after update | Hard refresh: `Ctrl+Shift+R` |
 | `DOCKER_GID` wrong | Run `getent group docker` and update `.env` |
+| First boot very slow | Normal — Valheim downloads ~2–3 GB; watch Overview console |
 
 ---
 

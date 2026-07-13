@@ -2,6 +2,8 @@
 
 Ready-to-use package **without source code**. You only need Docker and Docker Compose.
 
+**New to game servers?** Read **[docs/getting-started.md](docs/getting-started.md)** for a full beginner walkthrough.
+
 ## Requirements
 
 - Linux with **Docker** and **Docker Compose** v2
@@ -100,6 +102,18 @@ docker compose up -d
 | `panel-data/` | Audit log, FWL backups, mod registry |
 
 **Back up** `config/`, `data/`, and `panel-data/` before major updates.
+
+---
+
+## Documentation (included in this package)
+
+| Guide | Topic |
+|-------|-------|
+| [docs/getting-started.md](docs/getting-started.md) | Install, configure, connect |
+| [docs/port-forwarding.md](docs/port-forwarding.md) | Friends join from the internet |
+| [docs/installing-mods.md](docs/installing-mods.md) | Thunderstore & BepInEx |
+| [docs/troubleshooting.md](docs/troubleshooting.md) | Common errors |
+| [docs/faq.md](docs/faq.md) | Quick answers |
 
 ---
 

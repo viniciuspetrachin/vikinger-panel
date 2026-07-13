@@ -117,7 +117,10 @@ export const dashboard = {
     return this.withBusy(`server:${action}`, async () => {
       try {
         await this.api("POST", `/api/server/${action}`);
-        this.toast(this.t("common.toasts.serverActionCompleted", { action }));
+        const toastKey = action === "recreate"
+          ? "common.toasts.configSavedRecreated"
+          : "common.toasts.serverActionCompleted";
+        this.toast(this.t(toastKey, { action }));
         setTimeout(() => this.refreshStatus(), 2000);
       } catch (e) { this.toast(e.message, "error"); }
     });

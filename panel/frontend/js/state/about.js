@@ -54,15 +54,19 @@ export const about = {
     try {
       this.versionInfo = await this.api("GET", "/api/version");
     } catch (e) { /* silent */ }
-    await this.checkPanelUpdate();
   },
 
-  async checkPanelUpdate() {
+  async checkPanelUpdate(force = false) {
     try {
-      this.panelUpdate = await this.api("GET", "/api/panel/update/check");
+      const qs = force ? "?force=true" : "";
+      this.panelUpdate = await this.api("GET", `/api/panel/update/check${qs}`);
     } catch (e) {
       this.panelUpdate = { ...this.panelUpdate, error: e.message || String(e) };
     }
+  },
+
+  async loadAboutPage() {
+    await Promise.all([this.loadVersion(), this.checkPanelUpdate(), this.loadEnv()]);
   },
 
   async applyPanelUpdate() {

@@ -1,0 +1,42 @@
+name: Feature request
+description: Suggest an improvement or new capability
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature ideas are welcome. For usage questions, prefer [Discussions](https://github.com/viniciuspetrachin/vikinger-panel/discussions) instead.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What problem does this solve? Who benefits (home hosters, modded servers, etc.)?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How would you like it to work in the panel?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workarounds you tried?
+
+  - type: dropdown
+    id: willingness
+    attributes:
+      label: Would you contribute a PR?
+      options:
+        - Yes, I can open a PR
+        - Maybe, with some guidance
+        - No, suggestion only
+    validations:
+      required: true

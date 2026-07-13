@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
@@ -12,7 +13,7 @@ import httpx
 
 from version import REPO_URL, __version__
 
-_CACHE_TTL_SEC = 900
+_CACHE_TTL_SEC = 86400
 _cache: dict | None = None
 _cache_at: float = 0.0
 
@@ -23,6 +24,16 @@ _GHCR_IMAGE_RE = re.compile(
     re.MULTILINE | re.IGNORECASE,
 )
 _BUILD_RE = re.compile(r"^\s*build:\s*", re.MULTILINE)
+
+
+def _panel_root() -> Path:
+    return Path(os.environ.get("VALHEIM_PANEL_ROOT", Path(__file__).resolve().parent.parent)).resolve()
+
+
+def _cache_file() -> Path:
+    cache_dir = _panel_root() / "panel-data"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return cache_dir / "github-release-cache.json"
 
 
 def _repo_slug() -> str:
@@ -78,12 +89,37 @@ def _github_headers() -> dict[str, str]:
     return headers
 
 
-def fetch_latest_release(*, force: bool = False) -> dict:
-    global _cache, _cache_at
-    now = time.time()
-    if not force and _cache and now - _cache_at < _CACHE_TTL_SEC:
-        return _cache
+def _read_disk_cache() -> tuple[dict | None, float]:
+    path = _cache_file()
+    if not path.exists():
+        return None, 0.0
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return payload.get("data"), float(payload.get("fetched_at", 0))
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        return None, 0.0
 
+
+def _write_disk_cache(data: dict, fetched_at: float) -> None:
+    path = _cache_file()
+    path.write_text(
+        json.dumps({"fetched_at": fetched_at, "data": data}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+def _cache_fresh(fetched_at: float, now: float) -> bool:
+    return fetched_at > 0 and now - fetched_at < _CACHE_TTL_SEC
+
+
+def _store_cache(result: dict, fetched_at: float) -> None:
+    global _cache, _cache_at
+    _cache = result
+    _cache_at = fetched_at
+    _write_disk_cache(result, fetched_at)
+
+
+def _fetch_from_github() -> dict:
     slug = _repo_slug()
     url = f"https://api.github.com/repos/{slug}/releases/latest"
     with httpx.Client(timeout=20.0) as client:
@@ -92,15 +128,41 @@ def fetch_latest_release(*, force: bool = False) -> dict:
         data = resp.json()
 
     tag = (data.get("tag_name") or "").lstrip("v")
-    result = {
+    return {
         "latest": tag,
         "release_url": data.get("html_url") or f"{REPO_URL}/releases/latest",
         "published_at": data.get("published_at") or "",
         "release_notes": data.get("body") or "",
     }
-    _cache = result
-    _cache_at = now
-    return result
+
+
+def fetch_latest_release(*, force: bool = False) -> dict:
+    global _cache, _cache_at
+    now = time.time()
+
+    if not force and _cache and _cache_fresh(_cache_at, now):
+        return _cache
+
+    disk_data, disk_at = _read_disk_cache()
+    if not force and disk_data and _cache_fresh(disk_at, now):
+        _cache = disk_data
+        _cache_at = disk_at
+        return disk_data
+
+    try:
+        result = _fetch_from_github()
+        _store_cache(result, now)
+        return result
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code not in (403, 429):
+            raise
+        stale = _cache or disk_data
+        if stale:
+            if disk_data and not _cache:
+                _cache = disk_data
+                _cache_at = disk_at
+            return stale
+        raise
 
 
 def _deployed_version(deploy: dict) -> str:
@@ -112,11 +174,11 @@ def _deployed_version(deploy: dict) -> str:
     return __version__
 
 
-def check_panel_update(compose_path: Path) -> dict:
+def check_panel_update(compose_path: Path, *, force: bool = False) -> dict:
     deploy = detect_deploy_mode(compose_path)
     current = _deployed_version(deploy)
     try:
-        release = fetch_latest_release()
+        release = fetch_latest_release(force=force)
         latest = release["latest"]
         update_available = compare_semver(latest, current) > 0
         error = ""

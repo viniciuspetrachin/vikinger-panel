@@ -1,0 +1,17 @@
+title: "General — "
+labels: ["General"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        General discussion about Vikinger Panel and self-hosted Valheim servers.
+
+        For **questions**, use the [Q&A template](https://github.com/viniciuspetrachin/vikinger-panel/discussions/new?category=q-a).
+        For **bugs**, open an [issue](https://github.com/viniciuspetrachin/vikinger-panel/issues/new?template=bug_report.yml).
+
+  - type: textarea
+    id: discussion
+    attributes:
+      label: What would you like to discuss?
+    validations:
+      required: true

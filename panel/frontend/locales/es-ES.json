@@ -2,7 +2,7 @@
   "meta": {
     "locale": "es-ES",
     "appTitle": "Vikinger Panel",
-    "appSubtitle": "Gestor de servidor PsyDev"
+    "appSubtitle": "Gestor de servidor Valheim"
   },
   "nav": {
     "sections": {
@@ -940,7 +940,8 @@
       "showPassword": "Mostrar contraseña",
       "hidePassword": "Ocultar contraseña",
       "save": "Guardar configuración",
-      "saveAndRestart": "Guardar y reiniciar"
+      "saveAndRestart": "Guardar y reiniciar",
+      "envRecreateHint": "Nombre, contraseña y listado público requieren recrear el contenedor para aplicarse en el juego."
     },
     "envFields": {
       "SERVER_NAME": {
@@ -948,8 +949,8 @@
         "hint": "Se muestra en la lista de servidores del juego."
       },
       "SERVER_PUBLIC": {
-        "label": "Público (verdadero/falso)",
-        "hint": "verdadero = listado públicamente; false = solo conexión directa."
+        "label": "Listado público",
+        "hint": "Cuando está activado, el servidor aparece en la lista pública de Valheim."
       },
       "SERVER_ARGS": {
         "label": "Argumentos adicionales",
@@ -1314,6 +1315,10 @@
       "apply": "Actualizar ahora",
       "updating": "Actualizando… reiniciando",
       "started": "Actualización iniciada — la página se recargará al reiniciar el contenedor."
+    },
+    "serverName": {
+      "advanced": "Editar nombre completo del servidor",
+      "save": "Guardar nombre"
     },
     "credits": {
       "valheimDocker": {

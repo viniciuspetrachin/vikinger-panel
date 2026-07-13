@@ -1,0 +1,28 @@
+title: "Show and tell — "
+labels: ["Show and tell"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Show your Valheim server setup powered by Vikinger Panel — screenshots, mod lists, world presets, or tips for other hosts are welcome!
+
+  - type: textarea
+    id: setup
+    attributes:
+      label: Your setup
+      description: Hardware/VPS, vanilla or modded, notable mods, player count
+    validations:
+      required: true
+
+  - type: textarea
+    id: tips
+    attributes:
+      label: Tips for other hosts
+      description: Anything you learned the hard way?
+
+  - type: input
+    id: links
+    attributes:
+      label: Links (optional)
+      description: Screenshots, Thunderstore profiles, etc.
+      placeholder: "https://..."

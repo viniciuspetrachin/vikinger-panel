@@ -4,22 +4,22 @@ META = {
     "pt-BR": {
         "locale": "pt-BR",
         "appTitle": "Vikinger Panel",
-        "appSubtitle": "Gerenciador de Servidor PsyDev",
+        "appSubtitle": "Gerenciador de Servidor Valheim",
     },
     "de-DE": {
         "locale": "de-DE",
         "appTitle": "Vikinger Panel",
-        "appSubtitle": "PsyDev Server-Manager",
+        "appSubtitle": "Valheim Server-Manager",
     },
     "ru-RU": {
         "locale": "ru-RU",
         "appTitle": "Vikinger Panel",
-        "appSubtitle": "Менеджер сервера PsyDev",
+        "appSubtitle": "Менеджер сервера Valheim",
     },
     "es-ES": {
         "locale": "es-ES",
         "appTitle": "Vikinger Panel",
-        "appSubtitle": "Gestor de servidor PsyDev",
+        "appSubtitle": "Gestor de servidor Valheim",
     },
 }
 

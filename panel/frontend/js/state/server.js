@@ -1,7 +1,12 @@
 // Servidor: .env básico + listas de jogadores + capacidade (RAM e jogadores).
 
-const ENV_FIELD_KEYS = ["SERVER_NAME", "SERVER_PUBLIC", "SERVER_ARGS"];
+const ENV_FIELD_KEYS = ["SERVER_ARGS"];
 const LIST_KEYS = ["admin", "banned", "permitted"];
+const DEFAULT_SERVER_NAME_META = {
+  branding_enabled: true,
+  suffix: " - Powered by Vikinger Panel",
+  effective_name: "",
+};
 
 export const server = {
   envValues: {},
@@ -9,6 +14,9 @@ export const server = {
   listEditorDirty: { admin: false, banned: false, permitted: false },
   showServerPass: false,
   selectedWorld: "",
+  serverNameBase: "",
+  showServerNameBranding: false,
+  serverNameMeta: { ...DEFAULT_SERVER_NAME_META },
   capacity: {
     max_players: 10,
     max_players_cap: 10,
@@ -30,6 +38,14 @@ export const server = {
     }));
   },
 
+  serverPublicEnabled() {
+    return String(this.envValues.SERVER_PUBLIC ?? "true").trim().toLowerCase() === "true";
+  },
+
+  setServerPublic(enabled) {
+    this.envValues.SERVER_PUBLIC = enabled ? "true" : "false";
+  },
+
   getServerLists() {
     void this.localeVersion;
     const lists = this.tObj("server.playerLists") || {};
@@ -37,6 +53,82 @@ export const server = {
       key,
       label: lists[key] || key,
     }));
+  },
+
+  serverNameInputValue() {
+    return this.showServerNameBranding ? (this.envValues.SERVER_NAME || "") : this.serverNameBase;
+  },
+
+  onServerNameInput(value) {
+    if (this.showServerNameBranding) {
+      this.envValues.SERVER_NAME = value;
+    } else {
+      this.serverNameBase = value;
+    }
+  },
+
+  onServerNameBrandingToggle() {
+    const suffix = this.serverNameMeta.suffix || DEFAULT_SERVER_NAME_META.suffix;
+    if (this.showServerNameBranding) {
+      const effective = this.serverNameMeta.effective_name
+        || (this.serverNameBase ? `${this.serverNameBase}${suffix}` : "");
+      this.envValues.SERVER_NAME = effective || this.envValues.SERVER_NAME || "";
+      return;
+    }
+    const full = (this.envValues.SERVER_NAME || "").trim();
+    if (full.endsWith(suffix)) {
+      this.serverNameBase = full.slice(0, -suffix.length).trimEnd();
+    } else {
+      this.serverNameBase = full;
+    }
+  },
+
+  buildEnvPayload() {
+    const values = { ...this.envValues };
+    const suffix = this.serverNameMeta.suffix || DEFAULT_SERVER_NAME_META.suffix;
+
+    if (this.showServerNameBranding) {
+      const name = (values.SERVER_NAME || "").trim();
+      if (!name.endsWith(suffix)) {
+        values.SERVER_NAME_BRANDING = "off";
+      } else {
+        delete values.SERVER_NAME_BRANDING;
+      }
+      values.SERVER_NAME = name;
+    } else {
+      values.SERVER_NAME = (this.serverNameBase || "").trim();
+      delete values.SERVER_NAME_BRANDING;
+    }
+
+    return values;
+  },
+
+  syncServerNameFromEnv(data) {
+    this.serverNameMeta = data.server_name_meta || { ...DEFAULT_SERVER_NAME_META };
+    const values = data.values || {};
+    this.serverNameBase = (values.SERVER_NAME || "").trim();
+    Object.assign(this.envValues, values);
+    const suffix = this.serverNameMeta.suffix || DEFAULT_SERVER_NAME_META.suffix;
+    if (this.serverNameMeta.branding_enabled) {
+      this.envValues.SERVER_NAME = this.serverNameMeta.effective_name
+        || (this.serverNameBase ? `${this.serverNameBase}${suffix}` : "");
+    } else {
+      this.envValues.SERVER_NAME = this.serverNameBase;
+    }
+  },
+
+  async saveServerNameAdvanced() {
+    return this.withBusy("saveServerNameAdvanced", async () => {
+      try {
+        this.showServerNameBranding = true;
+        const data = await this.api("PUT", "/api/config/env", { values: this.buildEnvPayload() });
+        this.syncServerNameFromEnv(data);
+        this.showServerNameBranding = false;
+        await this.api("POST", "/api/server/recreate");
+        this.toast(this.t("common.toasts.configSavedRecreated"));
+        setTimeout(() => this.refreshStatus(), 2000);
+      } catch (e) { this.toast(e.message, "error"); }
+    });
   },
 
   async loadServerPage() {
@@ -103,7 +195,7 @@ export const server = {
   async loadEnv() {
     try {
       const data = await this.api("GET", "/api/config/env");
-      this.envValues = data.values || {};
+      this.syncServerNameFromEnv(data);
       const lists = await this.api("GET", "/api/config/serverlists");
       for (const k of ["admin", "banned", "permitted"]) {
         this.listValues[k] = (lists[k] || []).join("\n");
@@ -138,9 +230,15 @@ export const server = {
   async saveEnv(restart = false) {
     return this.withBusy(restart ? "saveEnvRestart" : "saveEnv", async () => {
       try {
-        await this.api("PUT", "/api/config/env", { values: this.envValues });
-        this.toast(this.t("common.toasts.settingsSaved"));
-        if (restart) await this.serverAction("restart");
+        const data = await this.api("PUT", "/api/config/env", { values: this.buildEnvPayload() });
+        this.syncServerNameFromEnv(data);
+        if (restart) {
+          await this.api("POST", "/api/server/recreate");
+          this.toast(this.t("common.toasts.configSavedRecreated"));
+          setTimeout(() => this.refreshStatus(), 2000);
+        } else {
+          this.toast(this.t("common.toasts.settingsSaved"));
+        }
         await this.loadCapacity();
       } catch (e) { this.toast(e.message, "error"); }
     });

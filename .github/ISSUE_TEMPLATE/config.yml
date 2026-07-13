@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation (beginner guides)
+    url: https://github.com/viniciuspetrachin/vikinger-panel/tree/main/docs
+    about: Step-by-step setup, port forwarding, mods, and troubleshooting
+  - name: GitHub Discussions
+    url: https://github.com/viniciuspetrachin/vikinger-panel/discussions
+    about: Ask questions, share ideas, or show your server setup
+  - name: GitHub Sponsors (direct support)
+    url: https://github.com/sponsors/viniciuspetrachin/dashboard
+    about: "$1+/month — install help and configuration questions from the maintainer"
