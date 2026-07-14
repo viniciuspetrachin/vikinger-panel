@@ -8,6 +8,7 @@ import { worlds } from "./state/worlds.js";
 import { mods } from "./state/mods.js";
 import { updates } from "./state/updates.js";
 import { backups } from "./state/backups.js";
+import { messages } from "./state/messages.js";
 import { files } from "./state/files.js";
 import { logs } from "./state/logs.js";
 import { console as consoleState } from "./state/console.js";
@@ -18,6 +19,12 @@ import { donation } from "./state/donation.js";
 import { about } from "./state/about.js";
 import { setup } from "./state/setup.js";
 import { storage } from "./state/storage.js";
+import { theme } from "./state/theme.js";
+import { ws } from "./state/ws.js";
+import { metricsPage } from "./state/metrics.js";
+import { mapPage } from "./state/map.js";
+import { alerts } from "./state/alerts.js";
+import { schedule } from "./state/schedule.js";
 
 function panel() {
   const core = {
@@ -57,16 +64,25 @@ function panel() {
     // ── Lifecycle ──
     async init() {
       this.actionPending = null;
+      this.initTheme();
       this.initNav();
       await this.loadVersion();
       this.initI18nFromApi(this.versionInfo.default_locale || "en-US");
       await this.loadSetupStatus();
       await this.loadDashboardData();
       await this.loadMemoryConfig();
-      if (this.page === "dashboard") this.startMetricsPolling();
-      setInterval(() => { if (this.page === "dashboard") { this.refreshStatus(); this.loadPlayers(); this.loadPlayerLists(); } }, 10000);
-      setInterval(() => { if (this.page === "dashboard") this.loadDashLogs(); }, 5000);
-      setInterval(() => { if (this.page === "logs" && this.logAutoRefresh) this.loadLogs(); }, 5000);
+      this.initLive();
+      if (this.metricsActive()) this.startMetricsPolling();
+      // REST polling as a fallback for when the live socket is unavailable.
+      setInterval(() => {
+        if (this.liveActive()) return;
+        if (this.page === "dashboard" || this.page === "players") {
+          this.refreshStatus();
+          this.loadPlayers();
+          this.loadPlayerLists();
+        }
+      }, 10000);
+      setInterval(() => { if (this.page === "console" && this.logAutoRefresh) this.loadLogs(); }, 5000);
       setInterval(() => { if (this.page === "audit" && this.auditAutoRefresh) this.loadAudit(); }, 5000);
     },
 
@@ -85,6 +101,18 @@ function panel() {
       if (this.page === "mods") await this.loadModsPage();
       if (this.page === "worlds") await this.loadWorldsPage();
       if (this.page === "backups") await this.loadBackups();
+      if (this.page === "messages") await this.loadAutoMessages();
+      if (this.page === "players") {
+        await this.loadPlayers();
+        await this.loadPlayerLists();
+        await this.loadConsoleStatus();
+      }
+      if (this.page === "map") await this.loadMapPage();
+      if (this.page === "metrics") {
+        await this.loadMetricsHistory();
+      }
+      if (this.page === "alerts") await this.loadAlerts();
+      if (this.page === "schedule") await this.loadSchedule();
       if (this.page === "files") {
         await this._fetchFileTree();
         this.$nextTick(() => {
@@ -93,7 +121,7 @@ function panel() {
           }
         });
       }
-      if (this.page === "logs") {
+      if (this.page === "console") {
         await this.loadLogs();
         await this.loadConsoleStatus();
       }
@@ -147,6 +175,7 @@ function panel() {
     mods,
     updates,
     backups,
+    messages,
     files,
     logs,
     consoleState,
@@ -157,6 +186,12 @@ function panel() {
     about,
     setup,
     storage,
+    theme,
+    ws,
+    metricsPage,
+    mapPage,
+    alerts,
+    schedule,
     core,
   );
 }

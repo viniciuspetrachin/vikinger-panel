@@ -30,6 +30,20 @@ def ready_panel(page: Page, base_url: str) -> None:
     )
 
 
+def open_primary(page: Page, tab_id: str) -> None:
+    """Navigate to a primary sidebar destination by data-nav-id."""
+    page.locator(f'aside [data-nav-id="{tab_id}"]').first.click()
+    page.wait_for_timeout(400)
+
+
+def open_config(page: Page, tab_id: str) -> None:
+    """Open the Config hub, then the given sub-section by data-nav-id."""
+    page.locator('aside [data-nav-id="config"]').first.click()
+    page.wait_for_timeout(250)
+    page.locator(f'.subnav [data-nav-id="{tab_id}"]').first.click()
+    page.wait_for_timeout(400)
+
+
 def go_worlds(page: Page) -> None:
-    page.get_by_role("button", name="Worlds", exact=True).click()
+    open_config(page, "worlds")
     expect(page.get_by_text("World Settings")).to_be_visible(timeout=10000)

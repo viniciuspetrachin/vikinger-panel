@@ -11,11 +11,20 @@ export const backups = {
   restoreTarget: null,
   deleteBackupModalOpen: false,
   deleteBackupTarget: null,
+  renameBackupModalOpen: false,
+  renameBackupTarget: null,
+  renameBackupValue: "",
   backupDetailsModalOpen: false,
   backupDetailsTarget: null,
   backupDetails: null,
   backupDetailsLoading: false,
   hideCheckpoints: true,
+  backupsPage: 1,
+  backupsPageSize: 10,
+  backupSearchQuery: "",
+  backupKindFilter: "",
+  backupModsFilter: "",
+  backupModQuery: "",
 
   getBackupTypes() {
     void this.localeVersion;
@@ -44,6 +53,30 @@ export const backups = {
     }));
   },
 
+  getBackupKindFilters() {
+    void this.localeVersion;
+    const labels = this.tObj("backups.filters.kinds") || {};
+    return [
+      { id: "", label: labels.all || this.t("backups.filters.kinds.all") },
+      { id: "auto", label: labels.auto || "Automatic" },
+      { id: "manual-world", label: labels["manual-world"] || "World" },
+      { id: "manual-full", label: labels["manual-full"] || "Full" },
+      { id: "manual-configs", label: labels["manual-configs"] || "Configs" },
+      { id: "checkpoint", label: labels.checkpoint || "Checkpoint" },
+    ];
+  },
+
+  getBackupModsFilters() {
+    void this.localeVersion;
+    const labels = this.tObj("backups.filters.mods") || {};
+    return [
+      { id: "", label: labels.all || this.t("backups.filters.mods.all") },
+      { id: "with-mods", label: labels.withMods || "With mods" },
+      { id: "with-dlls", label: labels.withDlls || "With mod DLLs" },
+      { id: "no-mods", label: labels.noMods || "Without mods" },
+    ];
+  },
+
   cronFromPreset() {
     if (this.backupIntervalPreset === "custom") return this.backupCronCustom;
     const preset = this.getBackupIntervalPresets().find((p) => p.id === this.backupIntervalPreset);
@@ -60,9 +93,99 @@ export const backups = {
     }
   },
 
+  backupDisplayLabel(backup) {
+    if (!backup) return "";
+    return (backup.display_name || "").trim() || backup.name;
+  },
+
   visibleBackups() {
     if (!this.hideCheckpoints) return this.backups;
     return this.backups.filter((b) => !b.is_checkpoint);
+  },
+
+  filteredBackups() {
+    let items = this.visibleBackups();
+    const kind = this.backupKindFilter || "";
+    if (kind) {
+      items = items.filter((b) => b.kind === kind);
+    }
+
+    const modsFilter = this.backupModsFilter || "";
+    if (modsFilter === "with-mods") {
+      items = items.filter((b) => (b.mods_count || 0) > 0);
+    } else if (modsFilter === "with-dlls") {
+      items = items.filter((b) => b.includes_mods_dlls);
+    } else if (modsFilter === "no-mods") {
+      items = items.filter((b) => !(b.mods_count > 0));
+    }
+
+    const modQuery = (this.backupModQuery || "").trim().toLowerCase();
+    if (modQuery) {
+      items = items.filter((b) => {
+        const names = b.mod_names || [];
+        return names.some((n) => String(n).toLowerCase().includes(modQuery));
+      });
+    }
+
+    const q = (this.backupSearchQuery || "").trim().toLowerCase();
+    if (q) {
+      items = items.filter((b) => {
+        const haystack = [
+          b.name,
+          b.display_name,
+          b.label,
+          b.kind,
+          b.world_name,
+          b.modified_display,
+          ...(b.mod_names || []),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(q);
+      });
+    }
+
+    return items;
+  },
+
+  paginatedBackups() {
+    return this.paginateSlice(this.filteredBackups(), this.backupsPage, this.backupsPageSize);
+  },
+
+  backupsTotalPages() {
+    return this.calcTotalPages(this.filteredBackups().length, this.backupsPageSize);
+  },
+
+  backupsPrevPage() {
+    if (this.backupsPage <= 1) return;
+    this.backupsPage -= 1;
+  },
+
+  backupsNextPage() {
+    if (this.backupsPage >= this.backupsTotalPages()) return;
+    this.backupsPage += 1;
+  },
+
+  backupsSetPageSize(size) {
+    this.backupsPageSize = size;
+    this.backupsPage = 1;
+  },
+
+  backupsShowingFrom() {
+    return this.paginationFrom(this.backupsPage, this.backupsPageSize, this.filteredBackups().length);
+  },
+
+  backupsShowingTo() {
+    return this.paginationTo(this.backupsPage, this.backupsPageSize, this.filteredBackups().length);
+  },
+
+  resetBackupsPage() {
+    this.backupsPage = 1;
+  },
+
+  onBackupFiltersChanged() {
+    this.resetBackupsPage();
   },
 
   backupIdleLabel() {
@@ -80,6 +203,7 @@ export const backups = {
       this.backupConfig = data.config || {};
       this.backupState = data.state || { active: null, restored_at: null, undo: null, undo_of: null };
       this.syncBackupPresetFromCron(this.backupConfig.BACKUPS_CRON || "0 * * * *");
+      this.backupsPage = this.clampPage(this.backupsPage, this.backupsTotalPages());
     } catch (e) { this.toast(e.message, "error"); }
   },
 
@@ -130,6 +254,35 @@ export const backups = {
   closeDeleteBackupModal() {
     this.deleteBackupModalOpen = false;
     this.deleteBackupTarget = null;
+  },
+
+  openRenameBackupModal(backup) {
+    this.renameBackupTarget = backup;
+    this.renameBackupValue = backup?.display_name || "";
+    this.renameBackupModalOpen = true;
+  },
+
+  closeRenameBackupModal() {
+    this.renameBackupModalOpen = false;
+    this.renameBackupTarget = null;
+    this.renameBackupValue = "";
+  },
+
+  async confirmRenameBackup() {
+    if (!this.renameBackupTarget) return;
+    const name = this.renameBackupTarget.name;
+    const display_name = (this.renameBackupValue || "").trim();
+    return this.withBusy(`renameBackup:${name}`, async () => {
+      try {
+        const data = await this.api("PUT", `/api/backups/${encodeURIComponent(name)}/rename`, {
+          display_name: display_name || null,
+        });
+        const label = data.display_name || name;
+        this.toast(this.t("common.toasts.backupRenamed", { name: label }));
+        this.closeRenameBackupModal();
+        await this.loadBackups();
+      } catch (e) { this.toast(e.message, "error"); }
+    });
   },
 
   formatModsCount(backup) {

@@ -161,7 +161,7 @@ export const dashboard = {
   },
 
   metricsActive() {
-    return this.page === "dashboard";
+    return this.page === "dashboard" || this.page === "metrics";
   },
 
   startMetricsPolling() {

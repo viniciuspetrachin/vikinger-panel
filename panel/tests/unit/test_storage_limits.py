@@ -6,6 +6,10 @@ import zipfile
 import main
 import storage_limits
 
+_MB = 1024 * 1024
+_MIN_LIMIT_GB = storage_limits.MIN_MAX_GB
+_OVER_LIMIT = 11 * _MB
+
 
 def _write_backup(path, content: bytes = b"x" * 1024) -> None:
     with zipfile.ZipFile(path, "w") as zf:
@@ -66,16 +70,27 @@ def test_storage_put_limits(client, env_dir):
     assert (env_dir["panel_data"] / "storage_limits.json").is_file()
 
 
+def test_storage_put_normalizes_microscopic_max_gb(client):
+    r = client.put(
+        "/api/storage/limits",
+        json={"logs": {"enabled": True, "max_gb": 1e-06}},
+    )
+    assert r.status_code == 200
+    limits = r.json()["limits"]["logs"]
+    assert limits["enabled"] is False
+    assert limits["max_gb"] is None
+
+
 def test_enforce_backups_by_size_deletes_oldest(env_dir, monkeypatch):
     backups = env_dir["backups"]
     old = backups / "worlds-20250101-120000.zip"
     new = backups / "worlds-20250708-120000.zip"
-    _write_backup(old, b"o" * 2048)
+    _write_backup(old, b"o" * (6 * _MB))
     time.sleep(0.02)
-    _write_backup(new, b"n" * 2048)
+    _write_backup(new, b"n" * (6 * _MB))
 
     storage_limits.write_storage_limits({
-        "backups": {"enabled": True, "max_gb": 0.0000025},
+        "backups": {"enabled": True, "max_gb": _MIN_LIMIT_GB},
         "fwl_backups": {"enabled": False, "max_gb": None},
         "logs": {"enabled": False, "max_gb": None},
     })
@@ -90,13 +105,14 @@ def test_enforce_backups_protects_active_and_undo(env_dir, monkeypatch):
     active = backups / "worlds-20250101-120000.zip"
     undo = backups / "checkpoint-20250102-120000.zip"
     extra = backups / "worlds-20250103-120000.zip"
-    for path in (active, undo, extra):
+    for path in (active, undo):
         _write_backup(path)
+    _write_backup(extra, b"x" * _OVER_LIMIT)
 
     main.write_backup_state(active=active.name, undo=undo.name)
 
     storage_limits.write_storage_limits({
-        "backups": {"enabled": True, "max_gb": 0.000001},
+        "backups": {"enabled": True, "max_gb": _MIN_LIMIT_GB},
         "fwl_backups": {"enabled": False, "max_gb": None},
         "logs": {"enabled": False, "max_gb": None},
     })
@@ -104,6 +120,7 @@ def test_enforce_backups_protects_active_and_undo(env_dir, monkeypatch):
     storage_limits.enforce_storage_limit("backups")
     assert active.exists()
     assert undo.exists()
+    assert not extra.exists()
 
 
 def test_purge_backups_by_count(env_dir, monkeypatch):
@@ -125,13 +142,13 @@ def test_enforce_fwl_backups(env_dir):
     fwl_dir = env_dir["fwl_backups"]
     old = fwl_dir / "OldWorld.fwl.bak"
     new = fwl_dir / "NewWorld.fwl.bak"
-    old.write_bytes(b"x" * 2048)
+    old.write_bytes(b"x" * (6 * _MB))
     time.sleep(0.02)
-    new.write_bytes(b"y" * 2048)
+    new.write_bytes(b"y" * (6 * _MB))
 
     storage_limits.write_storage_limits({
         "backups": {"enabled": False, "max_gb": None},
-        "fwl_backups": {"enabled": True, "max_gb": 0.000003},
+        "fwl_backups": {"enabled": True, "max_gb": _MIN_LIMIT_GB},
         "logs": {"enabled": False, "max_gb": None},
     })
 
@@ -145,12 +162,12 @@ def test_enforce_logs_preserves_audit(env_dir):
     audit = logs / "audit.jsonl"
     old = logs / "audit.jsonl.1"
     audit.write_text('{"action":"x"}\n')
-    old.write_bytes(b"z" * 4096)
+    old.write_bytes(b"z" * _OVER_LIMIT)
 
     storage_limits.write_storage_limits({
         "backups": {"enabled": False, "max_gb": None},
         "fwl_backups": {"enabled": False, "max_gb": None},
-        "logs": {"enabled": True, "max_gb": 0.000001},
+        "logs": {"enabled": True, "max_gb": _MIN_LIMIT_GB},
     })
 
     result = storage_limits.enforce_storage_limit("logs")
@@ -159,9 +176,12 @@ def test_enforce_logs_preserves_audit(env_dir):
 
 
 def test_storage_enforce_endpoint(client, env_dir, monkeypatch):
-    client.put("/api/storage/limits", json={"backups": {"enabled": True, "max_gb": 0.000001}})
+    client.put(
+        "/api/storage/limits",
+        json={"backups": {"enabled": True, "max_gb": _MIN_LIMIT_GB}},
+    )
     backups = env_dir["backups"]
-    _write_backup(backups / "worlds-20250101-120000.zip", b"a" * 4096)
+    _write_backup(backups / "worlds-20250101-120000.zip", b"a" * _OVER_LIMIT)
     r = client.post("/api/storage/enforce", json={"category": "backups"})
     assert r.status_code == 200
     assert r.json()["enforced"]["backups"]["deleted"]

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Valheim Server Management Panel - API Backend"""
 
+import asyncio
 import base64
 import io
 import json
@@ -16,12 +17,13 @@ from pathlib import Path
 from typing import Optional
 
 from dotenv import dotenv_values, set_key
-from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+import auto_messages
 from fwl_io import WorldConfig, WorldMeta, config_summary_from_meta, read_fwl, world_config_details, write_fwl
 from log_utils import clean_docker_logs
 from rcon_client import (
@@ -56,6 +58,16 @@ from bepinex_cfg import (
     parse_bepinex_cfg,
     PROTECTED_CFG_NAMES,
 )
+
+# ── Redesign foundation modules ──────────────────────────────────────────────
+import db as panel_db
+import docker_metrics
+import metrics_history
+import world_map
+import alerts as panel_alerts
+import player_tracker
+import scheduler as panel_scheduler
+from ws_live import LiveHub, run_live_loop
 
 logger = logging.getLogger("vikinger-panel")
 logging.basicConfig(level=logging.INFO)
@@ -112,6 +124,8 @@ _SIZE_UNIT = {
 
 LOGS_DIR = PANEL_DATA_DIR / "logs"
 MODS_REGISTRY_FILE = PANEL_DATA_DIR / "mods-registry.json"
+AUTO_MESSAGES_FILE = PANEL_DATA_DIR / "auto-messages.json"
+PLAYERS_SEEN_FILE = PANEL_DATA_DIR / "players-seen.json"
 UNLINKABLE_DLLS = frozenset({"YamlDotNetDetector.dll"})
 SETUP_FILE = PANEL_DATA_DIR / "setup.json"
 APP_MANIFEST_PATH = DATA_DIR / "dl" / "server" / "steamapps" / "appmanifest_896660.acf"
@@ -142,7 +156,17 @@ def ensure_panel_data_dirs() -> None:
 @app.on_event("startup")
 def _on_startup() -> None:
     ensure_panel_data_dirs()
+    try:
+        panel_db.init_db()
+    except Exception as e:
+        logger.warning("Não foi possível inicializar o banco do painel: %s", e)
     configure_storage_limits()
+    configure_auto_messages()
+    try:
+        panel_scheduler_instance.configure(read_schedule_config())
+        panel_scheduler_instance.start()
+    except Exception as e:
+        logger.warning("Não foi possível iniciar o agendador: %s", e)
     try:
         copied = ensure_bundled_mods(
             bundled_dir=BUNDLED_MODS_DIR,
@@ -158,6 +182,7 @@ def _on_startup() -> None:
         maybe_ensure_rcon_password()
     except OSError as e:
         logger.warning("Não foi possível garantir senha RCON: %s", e)
+    auto_messages.start_worker()
 
 
 @app.exception_handler(Exception)
@@ -178,6 +203,44 @@ def configure_storage_limits() -> None:
         get_protected_backups=get_protected_backups,
         write_audit=write_audit,
         dir_size_bytes=dir_size_bytes,
+    )
+
+
+def _auto_messages_context() -> dict:
+    env = read_env()
+    worlds, active, _running, _reconciled = build_worlds_list()
+    configured = env.get("WORLD_NAME", "").strip()
+    mods = list_mods_data()
+    return {
+        "server_name": effective_server_name(env),
+        "world_name": active or configured,
+        "server_port": env.get("SERVER_PORT", "2456"),
+        "max_players": str(read_max_players()["max_players"]),
+        "server_public": env.get("SERVER_PUBLIC", "true"),
+        "mods_count": str(len(mods)),
+        "mods_enabled": str(sum(1 for m in mods if m.get("enabled"))),
+    }
+
+
+def _auto_messages_rcon_available() -> bool:
+    if not container_running():
+        return False
+    if not is_plugin_installed(PLUGINS_DIR, PLUGINS_DISABLED_DIR):
+        return False
+    if not is_mod_enabled(PLUGINS_DIR, PLUGINS_DISABLED_DIR):
+        return False
+    return _rcon_settings() is not None
+
+
+def configure_auto_messages() -> None:
+    auto_messages.configure(
+        messages_file=AUTO_MESSAGES_FILE,
+        players_seen_file=PLAYERS_SEEN_FILE,
+        get_context=_auto_messages_context,
+        get_players=get_players_info,
+        send_rcon=_run_rcon,
+        rcon_available=_auto_messages_rcon_available,
+        container_running=container_running,
     )
 
 
@@ -687,6 +750,39 @@ def compute_rates(current: dict, previous: dict, dt: float) -> dict:
         "disk_read_bps": rate("block_read_bytes", "block_read_bytes"),
         "disk_write_bps": rate("block_write_bytes", "block_write_bytes"),
     }
+
+
+# ── CPU normalization + panel/aggregate metrics ──────────────────────────────
+PANEL_CONTAINER_NAME = "vikinger-panel"
+_cpu_smoother = docker_metrics.SampleSmoother(window=5)
+
+
+def cpu_block(container_key: str, host_percent: float, n_cpus: int) -> dict:
+    """Expose host %, of-limit % (host/n_cpus, capped 100) and a smoothed value.
+
+    ``percent`` (kept for backward-compat with the UI) is the *smoothed
+    of-limit* figure — stable 0-100 that fixes the wild 80%->0% flicker.
+    """
+    norm = docker_metrics.normalize_cpu(host_percent, n_cpus)
+    smoothed = _cpu_smoother.add(container_key, norm["cpu_percent_of_limit"])
+    return {
+        "percent": round(smoothed, 1),
+        "raw_percent": norm["cpu_percent_host"],
+        "percent_host": norm["cpu_percent_host"],
+        "percent_of_limit": norm["cpu_percent_of_limit"],
+        "percent_smoothed": round(smoothed, 1),
+    }
+
+
+def panel_container_metrics() -> dict:
+    """Metrics for the panel's own container (vikinger-panel)."""
+    try:
+        m = docker_metrics.stats_for_container(
+            PANEL_CONTAINER_NAME, docker_fn=docker, n_cpus=get_cpu_count()
+        )
+    except Exception:  # pragma: no cover - defensive
+        m = None
+    return m or docker_metrics._empty_metrics()
 
 
 def read_memory_limit_gb() -> Optional[int]:
@@ -2183,14 +2279,53 @@ def summary_fields_from_manifest(manifest: dict) -> dict:
     mods = manifest.get("mods") or {}
     contents = manifest.get("contents") or {}
     game = manifest.get("game") or {}
+    items = mods.get("items") or []
+    mod_names: list[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        name = (item.get("name") or "").strip()
+        package_id = (item.get("package_id") or "").strip()
+        if name:
+            mod_names.append(name)
+        if package_id and package_id not in mod_names:
+            mod_names.append(package_id)
+    display_name = manifest.get("display_name")
+    if isinstance(display_name, str):
+        display_name = display_name.strip() or None
+    else:
+        display_name = None
     return {
         "mods_count": mods.get("total"),
         "mods_enabled_count": mods.get("enabled"),
+        "mod_names": mod_names,
+        "display_name": display_name,
         "world_name": manifest.get("world_name"),
         "game_buildid": game.get("buildid"),
         "has_manifest": not manifest.get("inferred", False),
         "manifest_inferred": bool(manifest.get("inferred", False)),
         "includes_mods_dlls": bool(contents.get("includes_mods_dlls")),
+    }
+
+
+def set_backup_display_name(name: str, display_name: str | None) -> dict:
+    """Define ou limpa o nome amigável do backup no sidecar (ZIP permanece igual)."""
+    target = validate_backup_name(name)
+    kind = classify_backup(name)
+    manifest = ensure_backup_manifest(target, kind)
+    cleaned = (display_name or "").strip()
+    if cleaned:
+        if len(cleaned) > 120:
+            raise HTTPException(400, "display_name must be at most 120 characters")
+        manifest["display_name"] = cleaned
+    else:
+        manifest.pop("display_name", None)
+    write_backup_sidecar(name, manifest)
+    return {
+        "ok": True,
+        "name": name,
+        "display_name": manifest.get("display_name"),
+        **summary_fields_from_manifest(manifest),
     }
 
 
@@ -2430,6 +2565,8 @@ def list_backups() -> list[dict]:
                 item.update({
                     "mods_count": None,
                     "mods_enabled_count": None,
+                    "mod_names": [],
+                    "display_name": None,
                     "world_name": None,
                     "game_buildid": None,
                     "has_manifest": False,
@@ -3180,6 +3317,40 @@ class ConsoleCommand(BaseModel):
     command: str
 
 
+class AutoMessagesSettings(BaseModel):
+    enabled: bool
+
+
+class AutoMessageCreate(BaseModel):
+    name: str = "Message"
+    text: str
+    enabled: bool = True
+    channel: str = "say"
+    trigger: str = "interval"
+    interval_seconds: Optional[int] = 1800
+    run_at: Optional[str] = None
+    daily_time: Optional[str] = None
+    only_when_players_online: bool = True
+
+
+class AutoMessageUpdate(BaseModel):
+    name: Optional[str] = None
+    text: Optional[str] = None
+    enabled: Optional[bool] = None
+    channel: Optional[str] = None
+    trigger: Optional[str] = None
+    interval_seconds: Optional[int] = None
+    run_at: Optional[str] = None
+    daily_time: Optional[str] = None
+    only_when_players_online: Optional[bool] = None
+
+
+class AutoMessagePreview(BaseModel):
+    text: str
+    player_name: Optional[str] = None
+    player_steam_id: Optional[str] = None
+
+
 class PlayerActionBody(BaseModel):
     action: str
 
@@ -3214,6 +3385,10 @@ class BackupConfigUpdate(BaseModel):
 
 class BackupCreate(BaseModel):
     type: str
+
+
+class BackupRename(BaseModel):
+    display_name: Optional[str] = None
 
 
 class StorageLimitsUpdate(BaseModel):
@@ -3289,6 +3464,35 @@ def api_panel_update(body: PanelUpdateBody | None = None):
 
 # ── Status & Server Control ──────────────────────────────────────────────────
 
+def get_container_uptime() -> tuple[Optional[float], str]:
+    """Return (uptime_seconds, human) for the valheim container, or (None, '')."""
+    r = docker("inspect", "-f", "{{.State.StartedAt}}", CONTAINER_NAME, timeout=5)
+    if r.returncode != 0 or not r.stdout.strip():
+        return None, ""
+    started = r.stdout.strip()
+    try:
+        # Docker emits RFC3339 with nanoseconds; trim to microseconds for fromisoformat.
+        cleaned = re.sub(r"(\.\d{6})\d*Z?$", r"\1", started).replace("Z", "+00:00")
+        dt = datetime.fromisoformat(cleaned)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        secs = (datetime.now(timezone.utc) - dt).total_seconds()
+    except (ValueError, TypeError):
+        return None, ""
+    if secs < 0:
+        secs = 0.0
+    days, rem = divmod(int(secs), 86400)
+    hours, rem = divmod(rem, 3600)
+    minutes, _ = divmod(rem, 60)
+    if days:
+        human = f"{days}d {hours}h"
+    elif hours:
+        human = f"{hours}h {minutes}m"
+    else:
+        human = f"{minutes}m"
+    return secs, human
+
+
 @app.get("/api/status")
 def api_status():
     env = read_env()
@@ -3296,9 +3500,12 @@ def api_status():
     players = get_players_info()
     worlds, active, running, reconciled = build_worlds_list()
     configured = env.get("WORLD_NAME", "").strip()
+    uptime_secs, uptime_display = get_container_uptime()
     return {
         "container": "running" if container_running() else "stopped",
         "server": server_process_status(),
+        "uptime_seconds": uptime_secs,
+        "uptime_display": uptime_display,
         "supervisor": sup,
         "config": {
             "server_name": effective_server_name(env),
@@ -3322,9 +3529,21 @@ def api_status():
     }
 
 
+def players_with_sessions() -> dict:
+    """Players info enriched with session_seconds/ping/biome from player_tracker."""
+    info = get_players_info()
+    try:
+        merged = player_tracker.merge_players(info.get("players", []), [])
+        player_tracker.update_sessions(panel_db.get_db_path(), merged)
+        info["players"] = merged
+    except Exception:  # pragma: no cover - session tracking is best-effort
+        pass
+    return info
+
+
 @app.get("/api/players")
 def api_players():
-    return get_players_info()
+    return players_with_sessions()
 
 
 @app.get("/api/metrics")
@@ -3354,15 +3573,37 @@ def api_metrics(light: bool = Query(False)):
     memory_used = raw["memory_used_bytes"]
     memory_pct = (memory_used / memory_limit_bytes * 100) if memory_limit_bytes else raw["memory_percent"]
 
+    n_cpus = get_cpu_count()
     valheim_raw = raw["cpu_percent"]
-    valheim_pct = normalize_valheim_cpu(valheim_raw)
+    cpu = cpu_block("valheim-server", valheim_raw, n_cpus)
 
-    return {
-        "running": raw["running"],
-        "cpu": {
-            "percent": valheim_pct,
-            "raw_percent": round(valheim_raw, 1),
+    panel_m = panel_container_metrics()
+    panel_cpu = cpu_block("vikinger-panel", panel_m["cpu_percent_host"], n_cpus)
+    server_view = {
+        "cpu_percent_host": cpu["percent_host"],
+        "cpu_percent_of_limit": cpu["percent_of_limit"],
+        "memory_used_bytes": memory_used,
+        "memory_limit_bytes": memory_limit_bytes,
+    }
+    agg = docker_metrics.aggregate([
+        {
+            "running": raw["running"],
+            "cpu_percent_host": cpu["percent_host"],
+            "cpu_percent_of_limit": cpu["percent_of_limit"],
+            "memory_used_bytes": memory_used,
+            "memory_limit_bytes": memory_limit_bytes,
+            "net_rx_bytes": raw["net_rx_bytes"],
+            "net_tx_bytes": raw["net_tx_bytes"],
+            "block_read_bytes": raw["block_read_bytes"],
+            "block_write_bytes": raw["block_write_bytes"],
         },
+        panel_m,
+    ])
+
+    payload = {
+        "running": raw["running"],
+        "cpu": cpu,
+        "cpu_count": n_cpus,
         "memory": {
             "used_bytes": memory_used,
             "limit_bytes": memory_limit_bytes,
@@ -3383,7 +3624,68 @@ def api_metrics(light: bool = Query(False)):
             "read_bps": rates["disk_read_bps"],
             "write_bps": rates["disk_write_bps"],
         },
+        "panel": {
+            "running": panel_m["running"],
+            "cpu": panel_cpu,
+            "memory": {
+                "used_bytes": panel_m["memory_used_bytes"],
+                "limit_bytes": panel_m["memory_limit_bytes"],
+                "percent": round(panel_m["memory_percent"], 1),
+            },
+        },
+        "aggregate": {
+            "cpu_percent_host": agg["cpu_percent_host"],
+            "cpu_percent_of_limit": agg["cpu_percent_of_limit"],
+            "memory_used_bytes": agg["memory_used_bytes"],
+            "memory_limit_bytes": agg["memory_limit_bytes"],
+            "memory_percent": agg["memory_percent"],
+        },
     }
+    _record_metrics_history(payload, rates)
+    return payload
+
+
+def _record_metrics_history(payload: dict, rates: dict) -> None:
+    """Persist a metrics sample per container (best-effort, non-fatal)."""
+    try:
+        now = time.time()
+        players = 0
+        try:
+            players = get_players_info().get("count", 0)
+        except Exception:
+            players = 0
+        metrics_history.record_sample(
+            panel_db.get_db_path(),
+            "valheim-server",
+            {
+                "cpu_percent_host": payload["cpu"]["percent_host"],
+                "cpu_percent_of_limit": payload["cpu"]["percent_of_limit"],
+                "memory_used_bytes": payload["memory"]["used_bytes"],
+                "memory_limit_bytes": payload["memory"]["limit_bytes"],
+                "memory_percent": payload["memory"]["percent"],
+                "net_rx_bps": rates["rx_bps"],
+                "net_tx_bps": rates["tx_bps"],
+            },
+            ts=now,
+            players=players,
+        )
+        metrics_history.record_sample(
+            panel_db.get_db_path(),
+            "vikinger-panel",
+            {
+                "cpu_percent_host": payload["panel"]["cpu"]["percent_host"],
+                "cpu_percent_of_limit": payload["panel"]["cpu"]["percent_of_limit"],
+                "memory_used_bytes": payload["panel"]["memory"]["used_bytes"],
+                "memory_limit_bytes": payload["panel"]["memory"]["limit_bytes"],
+                "memory_percent": payload["panel"]["memory"]["percent"],
+                "net_rx_bps": 0,
+                "net_tx_bps": 0,
+            },
+            ts=now,
+            players=None,
+        )
+    except Exception:  # pragma: no cover - history is best-effort
+        pass
 
 
 @app.get("/api/resources/memory")
@@ -4348,6 +4650,11 @@ def api_backup_details(name: str):
     return get_backup_details(name)
 
 
+@app.put("/api/backups/{name}/rename")
+def api_rename_backup(name: str, body: BackupRename):
+    return set_backup_display_name(name, body.display_name)
+
+
 @app.delete("/api/backups/{name}")
 def api_delete_backup(name: str):
     if ".." in name or "/" in name or "\\" in name:
@@ -4421,6 +4728,90 @@ def api_purge_all_backups(body: PurgeAllBackupsRequest):
     return {"ok": True, **result}
 
 
+# ── Auto messages ────────────────────────────────────────────────────────────
+
+@app.get("/api/auto-messages")
+def api_list_auto_messages():
+    configure_auto_messages()
+    data = auto_messages.list_messages()
+    return {
+        **data,
+        "rcon_available": _auto_messages_rcon_available(),
+    }
+
+
+@app.put("/api/auto-messages/settings")
+def api_auto_messages_settings(body: AutoMessagesSettings):
+    configure_auto_messages()
+    store = auto_messages.update_settings(enabled=body.enabled)
+    return {"ok": True, "enabled": store["enabled"], "messages": store["messages"]}
+
+
+@app.post("/api/auto-messages")
+def api_create_auto_message(body: AutoMessageCreate):
+    configure_auto_messages()
+    try:
+        msg = auto_messages.create_message(body.model_dump())
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    return {"ok": True, "message": msg}
+
+
+@app.put("/api/auto-messages/{msg_id}")
+def api_update_auto_message(msg_id: str, body: AutoMessageUpdate):
+    configure_auto_messages()
+    payload = {k: v for k, v in body.model_dump().items() if v is not None}
+    try:
+        msg = auto_messages.update_message(msg_id, payload)
+    except KeyError:
+        raise HTTPException(404, "Message not found") from None
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    return {"ok": True, "message": msg}
+
+
+@app.delete("/api/auto-messages/{msg_id}")
+def api_delete_auto_message(msg_id: str):
+    configure_auto_messages()
+    try:
+        auto_messages.delete_message(msg_id)
+    except KeyError:
+        raise HTTPException(404, "Message not found") from None
+    return {"ok": True}
+
+
+@app.post("/api/auto-messages/{msg_id}/send")
+def api_send_auto_message(msg_id: str):
+    configure_auto_messages()
+    msg = auto_messages.get_message(msg_id)
+    if not msg:
+        raise HTTPException(404, "Message not found")
+    _require_rcon()
+    try:
+        result = auto_messages.send_message_now(msg, mark=True)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    except RuntimeError as e:
+        raise HTTPException(503, str(e)) from e
+    return result
+
+
+@app.post("/api/auto-messages/preview")
+def api_preview_auto_message(body: AutoMessagePreview):
+    configure_auto_messages()
+    players = get_players_info()
+    base = _auto_messages_context()
+    player = None
+    if body.player_name or body.player_steam_id:
+        player = {
+            "name": body.player_name or "Player",
+            "steam_id": body.player_steam_id or "76561198000000000",
+        }
+    ctx = auto_messages.build_tag_context(base=base, players=players, player=player)
+    rendered = auto_messages.render_template(body.text, ctx)
+    return {"ok": True, "rendered": rendered, "context": ctx}
+
+
 # ── Audit ────────────────────────────────────────────────────────────────────
 
 @app.get("/api/audit")
@@ -4438,6 +4829,346 @@ def api_download_audit():
     if not AUDIT_FILE.exists():
         raise HTTPException(404, "No audit log found")
     return FileResponse(AUDIT_FILE, filename="audit.jsonl", media_type="application/x-ndjson")
+
+
+# ── Metrics history / live / map / alerts / schedule ─────────────────────────
+
+_live_hub = LiveHub()
+
+ALERTS_SETTING_KEY = "alerts_config"
+SCHEDULE_SETTING_KEY = "schedule_config"
+
+DEFAULT_ALERTS_CONFIG = {
+    "events": {"server_down": False, "player_join": False, "backup_fail": False},
+    "discord": {"enabled": False, "webhook_url": ""},
+    "telegram": {"enabled": False, "bot_token": "", "chat_id": ""},
+}
+
+DEFAULT_SCHEDULE_CONFIG = {
+    "restart": {"enabled": False, "cron": "0 5 * * *"},
+    "backup": {"enabled": False, "cron": "0 4 * * *"},
+    "mod_update": {"enabled": False, "cron": "0 3 * * 0"},
+}
+
+
+def read_alerts_config() -> dict:
+    try:
+        cfg = panel_db.get_setting(ALERTS_SETTING_KEY, None)
+    except Exception:
+        cfg = None
+    if not isinstance(cfg, dict):
+        return json.loads(json.dumps(DEFAULT_ALERTS_CONFIG))
+    merged = json.loads(json.dumps(DEFAULT_ALERTS_CONFIG))
+    for section, val in cfg.items():
+        if isinstance(val, dict) and isinstance(merged.get(section), dict):
+            merged[section].update(val)
+        else:
+            merged[section] = val
+    return merged
+
+
+def _alerts_config_public(cfg: dict) -> dict:
+    """Redact secrets before returning config to the client."""
+    pub = json.loads(json.dumps(cfg))
+    if pub.get("discord", {}).get("webhook_url"):
+        pub["discord"]["webhook_url_set"] = True
+        pub["discord"]["webhook_url"] = ""
+    if pub.get("telegram", {}).get("bot_token"):
+        pub["telegram"]["bot_token_set"] = True
+        pub["telegram"]["bot_token"] = ""
+    return pub
+
+
+def read_schedule_config() -> dict:
+    try:
+        cfg = panel_db.get_setting(SCHEDULE_SETTING_KEY, None)
+    except Exception:
+        cfg = None
+    merged = json.loads(json.dumps(DEFAULT_SCHEDULE_CONFIG))
+    if isinstance(cfg, dict):
+        for job, val in cfg.items():
+            if job in merged and isinstance(val, dict):
+                merged[job].update(val)
+    return merged
+
+
+def dispatch_alert(event_type: str, ctx: dict | None = None) -> None:
+    """Fire a configured alert (best-effort, never raises)."""
+    try:
+        cfg = read_alerts_config()
+        panel_alerts.dispatch(cfg, event_type, ctx or {})
+    except Exception:  # pragma: no cover - alerts are best-effort
+        logger.debug("alert dispatch failed for %s", event_type, exc_info=True)
+
+
+# Scheduler wiring (callables reference existing panel operations).
+def _scheduled_restart():
+    return restart_valheim_container()
+
+
+def _scheduled_backup():
+    try:
+        return trigger_backup()
+    except Exception as e:
+        dispatch_alert("backup_fail", {"error": str(e)})
+        raise
+
+
+def _scheduled_mod_update():
+    return update_all_mod_packages()
+
+
+# ── Alert event detection (transition-based, opt-in) ─────────────────────────
+_alert_state: dict = {"container": None, "players": set(), "init": False}
+
+
+def _alerts_active(cfg: dict) -> bool:
+    events = cfg.get("events", {})
+    channels = cfg.get("discord", {}).get("enabled") or cfg.get("telegram", {}).get("enabled")
+    return bool(channels) and any(events.values())
+
+
+def _check_and_dispatch_alerts(cfg: dict) -> None:
+    """Detect state transitions and fire configured alerts (best-effort)."""
+    events = cfg.get("events", {})
+    running = container_running()
+    prev = _alert_state
+    if prev["container"] is not None and events.get("server_down"):
+        if prev["container"] and not running:
+            panel_alerts.dispatch(cfg, "server_down", {})
+        elif not prev["container"] and running:
+            panel_alerts.dispatch(cfg, "server_up", {})
+    prev["container"] = running
+
+    if events.get("player_join") and running:
+        try:
+            info = get_players_info()
+            current = {p["steam_id"] for p in info.get("players", []) if p.get("steam_id")}
+        except Exception:
+            current = set()
+        if prev["init"]:
+            for sid in current - prev["players"]:
+                panel_alerts.dispatch(cfg, "player_join", {"player": sid})
+        prev["players"] = current
+    prev["init"] = True
+
+
+async def _alert_monitor_loop() -> None:
+    """Poll for alert-worthy transitions. Cheap no-op while alerts are disabled."""
+    while True:
+        try:
+            cfg = read_alerts_config()
+            if _alerts_active(cfg):
+                await asyncio.to_thread(_check_and_dispatch_alerts, cfg)
+        except Exception:  # pragma: no cover - defensive
+            pass
+        await asyncio.sleep(15.0)
+
+
+panel_scheduler_instance = panel_scheduler.PanelScheduler(
+    restart_fn=_scheduled_restart,
+    backup_fn=_scheduled_backup,
+    mod_update_fn=_scheduled_mod_update,
+)
+
+
+@app.get("/api/metrics/history")
+def api_metrics_history(
+    range: str = Query("1h"),
+    container: str = Query("valheim-server"),
+):
+    if range not in metrics_history.RANGE_SECONDS:
+        raise HTTPException(400, f"range must be one of {sorted(metrics_history.RANGE_SECONDS)}")
+    if container not in ("valheim-server", "vikinger-panel"):
+        raise HTTPException(400, "invalid container")
+    try:
+        rows = metrics_history.query_history(panel_db.get_db_path(), container, range)
+    except Exception:
+        rows = []
+    return {"range": range, "container": container, "samples": rows}
+
+
+@app.get("/api/map/{world}")
+def api_map(world: str):
+    name = validate_world_name(world)
+    try:
+        return world_map.build_map(name, WORLDS_DIR, DATA_DIR)
+    except Exception:
+        logger.debug("map build failed for %s", name, exc_info=True)
+        return {
+            "world": name,
+            "seed": "",
+            "markers": [],
+            "bounds": {},
+            "explored": {
+                "available": False,
+                "map_size": 0,
+                "cells": 0,
+                "total": 0,
+                "image_url": f"/api/map/{name}/fog.png",
+            },
+            "mod": {"serversidemap": False},
+        }
+
+
+@app.get("/api/map/{world}/fog.png")
+def api_map_fog(world: str, reveal: bool = Query(False)):
+    """PNG background for the Map tab.
+
+    Always available (seed-tinted base disc). ``reveal=true`` shows the full
+    disc; ``reveal=false`` applies ServerSideMap fog when the mod file exists,
+    otherwise the disc stays fully fogged. ServerSideMap is optional.
+    """
+    name = validate_world_name(world)
+    try:
+        png = world_map.build_fog_png(name, WORLDS_DIR, out_size=512, reveal_all=reveal)
+    except Exception:
+        logger.debug("map fog render failed for %s", name, exc_info=True)
+        png = None
+    if not png:
+        raise HTTPException(500, "Failed to render map image")
+    return Response(
+        content=png,
+        media_type="image/png",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+@app.get("/api/alerts")
+def api_get_alerts():
+    return _alerts_config_public(read_alerts_config())
+
+
+class AlertsConfigUpdate(BaseModel):
+    events: Optional[dict] = None
+    discord: Optional[dict] = None
+    telegram: Optional[dict] = None
+
+
+@app.put("/api/alerts")
+def api_put_alerts(body: AlertsConfigUpdate):
+    cfg = read_alerts_config()
+    incoming = body.model_dump(exclude_none=True)
+    for section, val in incoming.items():
+        if not isinstance(val, dict):
+            continue
+        # Preserve stored secrets when the client sends an empty value.
+        if section in ("discord", "telegram"):
+            for secret_key in ("webhook_url", "bot_token"):
+                if secret_key in val and val[secret_key] == "":
+                    val.pop(secret_key)
+        cfg.setdefault(section, {})
+        if isinstance(cfg[section], dict):
+            cfg[section].update(val)
+        else:
+            cfg[section] = val
+    panel_db.set_setting(ALERTS_SETTING_KEY, cfg)
+    return _alerts_config_public(cfg)
+
+
+@app.post("/api/alerts/test")
+def api_test_alerts():
+    cfg = read_alerts_config()
+    try:
+        result = panel_alerts.test_channels(cfg)
+    except Exception as e:
+        raise HTTPException(500, f"Alert test failed: {e}") from e
+    return {"ok": True, "result": result}
+
+
+@app.get("/api/schedule")
+def api_get_schedule():
+    cfg = read_schedule_config()
+    try:
+        status = panel_scheduler_instance.get_status()
+    except Exception:
+        status = {}
+    return {"config": cfg, "status": status}
+
+
+class ScheduleConfigUpdate(BaseModel):
+    restart: Optional[dict] = None
+    backup: Optional[dict] = None
+    mod_update: Optional[dict] = None
+
+
+@app.put("/api/schedule")
+def api_put_schedule(body: ScheduleConfigUpdate):
+    cfg = read_schedule_config()
+    incoming = body.model_dump(exclude_none=True)
+    for job, val in incoming.items():
+        if job in cfg and isinstance(val, dict):
+            cron = val.get("cron")
+            if cron is not None and not panel_scheduler.validate_cron(cron):
+                raise HTTPException(400, f"Invalid cron for {job}: {cron}")
+            cfg[job].update(val)
+    panel_db.set_setting(SCHEDULE_SETTING_KEY, cfg)
+    try:
+        panel_scheduler_instance.configure(cfg)
+    except Exception:
+        logger.debug("scheduler reconfigure failed", exc_info=True)
+    return {"config": cfg, "status": panel_scheduler_instance.get_status()}
+
+
+async def _build_live_payload() -> dict:
+    """Payload pushed over /ws/live: status + metrics + players."""
+    try:
+        status = api_status()
+    except Exception:
+        status = {}
+    try:
+        metrics = api_metrics(light=True)
+    except Exception:
+        metrics = {}
+    try:
+        players = players_with_sessions()
+    except Exception:
+        players = {"count": 0, "players": [], "online": False}
+    return {
+        "ts": time.time(),
+        "status": status,
+        "metrics": metrics,
+        "players": players,
+    }
+
+
+async def _live_broadcast_loop() -> None:
+    """Single shared loop: builds the payload once and fans it out to clients.
+
+    Only does work while at least one client is connected, so it adds no docker
+    overhead on an idle panel.
+    """
+    while True:
+        try:
+            if _live_hub.count() > 0:
+                payload = await _build_live_payload()
+                await _live_hub.broadcast(payload)
+        except Exception:  # pragma: no cover - defensive
+            pass
+        await asyncio.sleep(2.0)
+
+
+@app.on_event("startup")
+async def _on_async_startup() -> None:
+    asyncio.ensure_future(_live_broadcast_loop())
+    asyncio.ensure_future(_alert_monitor_loop())
+
+
+@app.websocket("/ws/live")
+async def ws_live(websocket: WebSocket):
+    await websocket.accept()
+    await _live_hub.register(websocket)
+    try:
+        await websocket.send_json(await _build_live_payload())
+        while True:
+            # Keep the socket open; we don't expect client messages.
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        pass
+    finally:
+        await _live_hub.unregister(websocket)
 
 
 # ── Static Frontend ──────────────────────────────────────────────────────────

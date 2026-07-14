@@ -1530,6 +1530,38 @@ def test_backups_list_includes_mods_count(client, env_dir):
     assert full["mods_count"] >= 2
     assert full["world_name"] == "TestWorld"
     assert full["has_manifest"] is True
+    assert "AlphaMod.dll" in full["mod_names"]
+    assert full["display_name"] is None
+
+
+def test_backup_rename_display_name(client, env_dir):
+    _write_mods_fixture(env_dir)
+    created = client.post("/api/backups/create", json={"type": "world"}).json()
+    name = created["name"]
+
+    r = client.put(f"/api/backups/{name}/rename", json={"display_name": "Pre-update snapshot"})
+    assert r.status_code == 200
+    assert r.json()["display_name"] == "Pre-update snapshot"
+
+    listed = client.get("/api/backups").json()["backups"]
+    item = next(b for b in listed if b["name"] == name)
+    assert item["display_name"] == "Pre-update snapshot"
+
+    sidecar = __import__("json").loads(
+        (env_dir["backups"] / f"{name}.manifest.json").read_text(encoding="utf-8")
+    )
+    assert sidecar["display_name"] == "Pre-update snapshot"
+
+    cleared = client.put(f"/api/backups/{name}/rename", json={"display_name": ""})
+    assert cleared.status_code == 200
+    assert cleared.json()["display_name"] is None
+
+
+def test_backup_rename_rejects_too_long(client, env_dir):
+    created = client.post("/api/backups/create", json={"type": "configs"}).json()
+    name = created["name"]
+    r = client.put(f"/api/backups/{name}/rename", json={"display_name": "x" * 121})
+    assert r.status_code == 400
 
 
 def test_backup_details_endpoint(client, env_dir):
@@ -1716,17 +1748,24 @@ def test_metrics(client, monkeypatch):
         "total_bytes": 6000,
     })
     monkeypatch.setattr(main, "read_memory_limit_gb", lambda: None)
+    monkeypatch.setattr(main, "get_cpu_count", lambda: 4)
+    main._cpu_smoother.reset()
 
     r = client.get("/api/metrics")
     assert r.status_code == 200
     body = r.json()
     assert body["running"] is True
+    # host % is exposed raw; of-limit = host / n_cpus (capped 100); smoothed = of-limit on first sample
+    assert body["cpu"]["percent_host"] == 25.5
     assert body["cpu"]["raw_percent"] == 25.5
-    assert body["cpu"]["percent"] == 25.5
+    assert body["cpu"]["percent_of_limit"] == 6.4
+    assert body["cpu"]["percent"] == 6.4
+    assert body["cpu_count"] == 4
     assert body["memory"]["used_bytes"] == 512 * 1024 * 1024
     assert body["disk"]["total_bytes"] == 6000
     assert "rx_bps" in body["network"]
     assert "read_bps" in body["block_io"]
+    assert "panel" in body and "aggregate" in body
 
 
 def test_metrics_legacy_cpu(client, monkeypatch):
@@ -1747,11 +1786,127 @@ def test_metrics_legacy_cpu(client, monkeypatch):
     })
     monkeypatch.setattr(main, "read_memory_limit_gb", lambda: None)
     monkeypatch.setattr(main, "get_cpu_count", lambda: 4)
+    main._cpu_smoother.reset()
 
     r = client.get("/api/metrics")
     body = r.json()
+    # host 115% on a 4-CPU box -> 28.8% of the container's limit
+    assert body["cpu"]["percent_of_limit"] == 28.8
     assert body["cpu"]["percent"] == 28.8
     assert body["cpu"]["raw_percent"] == 115.0
+    assert body["cpu"]["percent_host"] == 115.0
+
+
+# ── Redesign endpoints: history / alerts / schedule / map ────────────────────
+
+def test_metrics_history_endpoint(client, monkeypatch, tmp_path):
+    import db as panel_db
+    import metrics_history
+
+    db_file = tmp_path / "panel.db"
+    monkeypatch.setenv("PANEL_DB_PATH", str(db_file))
+    metrics_history.record_sample(
+        str(db_file), "valheim-server",
+        {"cpu_percent_host": 40.0, "cpu_percent_of_limit": 10.0,
+         "memory_used_bytes": 100, "memory_limit_bytes": 1000, "memory_percent": 10.0},
+    )
+    r = client.get("/api/metrics/history?range=1h")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["range"] == "1h"
+    assert body["container"] == "valheim-server"
+    assert len(body["samples"]) >= 1
+
+    assert client.get("/api/metrics/history?range=bogus").status_code == 400
+
+
+def test_alerts_config_roundtrip(client, monkeypatch, tmp_path):
+    monkeypatch.setenv("PANEL_DB_PATH", str(tmp_path / "panel.db"))
+    r = client.get("/api/alerts")
+    assert r.status_code == 200
+    assert r.json()["events"]["server_down"] is False
+
+    r = client.put("/api/alerts", json={
+        "events": {"server_down": True},
+        "discord": {"enabled": True, "webhook_url": "https://discord.test/hook"},
+    })
+    assert r.status_code == 200
+    pub = r.json()
+    assert pub["events"]["server_down"] is True
+    # secret redacted but flagged as set
+    assert pub["discord"]["webhook_url"] == ""
+    assert pub["discord"].get("webhook_url_set") is True
+
+    # empty secret on update preserves the stored one
+    r = client.put("/api/alerts", json={"discord": {"webhook_url": ""}})
+    assert r.status_code == 200
+    assert main.read_alerts_config()["discord"]["webhook_url"] == "https://discord.test/hook"
+
+
+def test_schedule_config_roundtrip(client, monkeypatch, tmp_path):
+    monkeypatch.setenv("PANEL_DB_PATH", str(tmp_path / "panel.db"))
+    r = client.get("/api/schedule")
+    assert r.status_code == 200
+    assert "restart" in r.json()["config"]
+
+    r = client.put("/api/schedule", json={"restart": {"enabled": True, "cron": "0 6 * * *"}})
+    assert r.status_code == 200
+    assert r.json()["config"]["restart"]["cron"] == "0 6 * * *"
+
+    # invalid cron rejected
+    assert client.put("/api/schedule", json={"restart": {"cron": "not a cron"}}).status_code == 400
+
+
+def test_map_endpoint(client):
+    r = client.get("/api/map/TestWorld")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["world"] == "TestWorld"
+    assert "markers" in body and "bounds" in body
+    assert "explored" in body and "mod" in body
+    assert body["mod"]["serversidemap"] is False
+    assert body["explored"]["image_url"] == "/api/map/TestWorld/fog.png"
+    fog = client.get("/api/map/TestWorld/fog.png")
+    assert fog.status_code == 200
+    assert fog.headers["content-type"].startswith("image/png")
+    assert fog.content.startswith(b"\x89PNG")
+    revealed = client.get("/api/map/TestWorld/fog.png?reveal=true")
+    assert revealed.status_code == 200
+    assert revealed.content.startswith(b"\x89PNG")
+    assert revealed.content != fog.content
+
+
+def test_alert_transition_detection(env_dir, monkeypatch):
+    fired = []
+    monkeypatch.setattr(main.panel_alerts, "dispatch", lambda cfg, ev, ctx=None: fired.append((ev, ctx)))
+    main._alert_state.clear()
+    main._alert_state.update({"container": None, "players": set(), "init": False})
+    cfg = {"events": {"server_down": True, "player_join": True, "backup_fail": False}}
+
+    # First pass primes state (no alert), container running with TestPlayer online.
+    monkeypatch.setattr(main, "container_running", lambda: True)
+    main._check_and_dispatch_alerts(cfg)
+    assert fired == []
+
+    # Server goes down -> server_down fires.
+    monkeypatch.setattr(main, "container_running", lambda: False)
+    main._check_and_dispatch_alerts(cfg)
+    assert any(ev == "server_down" for ev, _ in fired)
+
+    # Back up + a new player -> server_up + player_join fire.
+    fired.clear()
+    monkeypatch.setattr(main, "container_running", lambda: True)
+    monkeypatch.setattr(main, "get_players_info", lambda: {"count": 1, "players": [{"steam_id": "99999999999999999", "name": "New"}], "online": True})
+    main._check_and_dispatch_alerts(cfg)
+    events = {ev for ev, _ in fired}
+    assert "server_up" in events
+    assert "player_join" in events
+
+
+def test_alerts_active_gate():
+    assert main._alerts_active({"events": {"server_down": True}, "discord": {"enabled": True}}) is True
+    assert main._alerts_active({"events": {"server_down": True}, "discord": {"enabled": False}, "telegram": {"enabled": False}}) is False
+    assert main._alerts_active({"events": {"server_down": False}, "discord": {"enabled": True}}) is False
 
 
 def test_metrics_rates(client, monkeypatch):

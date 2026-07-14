@@ -17,18 +17,33 @@
       "worlds": "Mundos",
       "mods": "Mods e Config",
       "backups": "Backups",
+      "messages": "Mensagens",
       "files": "Arquivos",
       "logs": "Console",
       "audit": "Auditoria",
       "help": "Ajuda",
       "donation": "Apoie o projeto",
-      "about": "Sobre"
+      "about": "Sobre",
+      "overview": "Visão geral",
+      "players": "Jogadores",
+      "map": "Mapa",
+      "console": "Console",
+      "metrics": "Métricas",
+      "config": "Configurações",
+      "alerts": "Alertas",
+      "schedule": "Agendamento"
     },
     "sidebar": {
       "containerRunning": "Container em execução",
-      "containerStopped": "Container parado"
+      "containerStopped": "Container parado",
+      "live": "AO VIVO"
     },
-    "refresh": "Atualizar"
+    "badges": {
+      "beta": "Beta"
+    },
+    "refresh": "Atualizar",
+    "menu": "Menu",
+    "close": "Fechar"
   },
   "common": {
     "actions": {
@@ -54,7 +69,12 @@
       "copyResponse": "Copiar resposta",
       "copyAll": "Copiar tudo",
       "restoreDraft": "Restaurar rascunho",
-      "discard": "Descartar"
+      "discard": "Descartar",
+      "start": "Iniciar",
+      "stop": "Parar",
+      "restart": "Reiniciar",
+      "refresh": "Atualizar",
+      "clear": "Limpar"
     },
     "loading": {
       "loading": "Carregando...",
@@ -150,6 +170,7 @@
       "backupRestoredLatest": "Backup \"{name}\" restaurado — servidor reiniciando.",
       "restoreUndone": "Restauração desfeita — \"{name}\" está ativo.",
       "backupDeleted": "Backup \"{name}\" excluído",
+      "backupRenamed": "Backup renomeado para \"{name}\"",
       "purgeDeleted": "{count} backup(s) excluído(s)",
       "purgeNone": "Nenhum backup para excluir",
       "worldActivated": "Mundo \"{name}\" ativado",
@@ -883,7 +904,11 @@
       "activeWorld": "Mundo Ativo",
       "playersOnline": "Jogadores on-line",
       "mods": "Mods",
-      "port": "Porta"
+      "port": "Porta",
+      "uptime": "Tempo no ar",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "worldPort": "Mundo · Porta"
     },
     "configCorrected": "Configuração corrigida: {from} → {to}",
     "performance": "Desempenho",
@@ -923,14 +948,20 @@
       "restart": "Reiniciar",
       "pause": "Pausa",
       "resume": "Retomar",
-      "backup": "💾 Backup"
+      "backup": "💾 Backup",
+      "save": "Salvar",
+      "saved": "Salvamento do mundo solicitado"
     },
     "console": {
       "title": "Console do servidor (ao vivo)"
     },
     "supervisor": {
       "title": "Supervisor"
-    }
+    },
+    "viewPlayers": "Ver jogadores →",
+    "cpuHost": "{host}% do host",
+    "cpuTrend": "Tendência de CPU",
+    "openMetrics": "Abrir Métricas →"
   },
   "server": {
     "settings": {
@@ -1146,7 +1177,31 @@
       },
       "activeMods": "{count} ativo",
       "restoreToHere": "Restaurar aqui",
-      "details": "Detalhes"
+      "details": "Detalhes",
+      "rename": "Renomear"
+    },
+    "filters": {
+      "search": "Busca",
+      "searchPlaceholder": "Nome, mundo, tipo...",
+      "kind": "Tipo",
+      "modsLabel": "Filtro de mods",
+      "modQuery": "Buscar por mod",
+      "modQueryPlaceholder": "ex.: Jotunn ou Author/Mod",
+      "noMatches": "Nenhum backup corresponde aos filtros atuais.",
+      "kinds": {
+        "all": "Todos os tipos",
+        "auto": "Automático",
+        "manual-world": "Manual — mundo",
+        "manual-full": "Manual — completo",
+        "manual-configs": "Manual — configs",
+        "checkpoint": "Ponto de verificação"
+      },
+      "mods": {
+        "all": "Qualquer mods",
+        "withMods": "Com mods",
+        "withDlls": "Com DLLs de mods",
+        "noMods": "Sem mods"
+      }
     },
     "types": {
       "world": {
@@ -1184,6 +1239,13 @@
       "delete": {
         "title": "Excluir backup",
         "confirm": "Excluir permanentemente {name}?"
+      },
+      "rename": {
+        "title": "Renomear backup",
+        "hint": "Defina um nome amigável. O nome do arquivo ZIP permanece o mesmo.",
+        "label": "Nome de exibição",
+        "placeholder": "ex.: Antes da atualização Ashlands",
+        "save": "Salvar nome"
       },
       "details": {
         "title": "Detalhes do backup",
@@ -1338,5 +1400,172 @@
   "resources": {
     "noLimit": "Sem limite",
     "hostSuffix": "(hospedar)"
+  },
+  "messages": {
+    "settings": {
+      "title": "Mensagens automáticas",
+      "desc": "Agende anúncios no jogo via RCON (say / showMessage). Usa o mod ValheimRcon já embutido.",
+      "enabled": "Recurso ativo",
+      "rconHint": "RCON indisponível — as mensagens não serão enviadas até o ValheimRcon estar pronto e o servidor rodando."
+    },
+    "list": {
+      "title": "Mensagens",
+      "create": "Nova mensagem",
+      "empty": "Nenhuma mensagem automática ainda.",
+      "active": "Ativa",
+      "inactive": "Desligada",
+      "sendNow": "Enviar agora",
+      "enable": "Ativar",
+      "disable": "Desativar"
+    },
+    "form": {
+      "createTitle": "Nova mensagem",
+      "editTitle": "Editar mensagem",
+      "defaultName": "Anúncio",
+      "name": "Nome",
+      "channel": "Canal",
+      "trigger": "Disparo",
+      "interval": "Intervalo",
+      "intervalSeconds": "Segundos (mín. 30)",
+      "runAt": "Executar em",
+      "dailyTime": "Horário diário",
+      "onlyWhenOnline": "Enviar apenas com jogadores online",
+      "text": "Texto da mensagem",
+      "textPlaceholder": "Bem-vindo a %server_name%! Online: %players_online%",
+      "tagsHint": "Clique em uma tag para inserir:",
+      "preview": "Prévia",
+      "previewBtn": "Prévia"
+    },
+    "channels": {
+      "say": "Chat (say)",
+      "showMessage": "Na tela (showMessage)"
+    },
+    "triggers": {
+      "interval": "A cada X segundos",
+      "once": "Uma vez em data/hora",
+      "daily": "Todo dia no horário",
+      "on_first_join": "Boas-vindas (primeiro join)",
+      "on_join": "Toda entrada de jogador"
+    },
+    "intervalPresets": {
+      "60": "A cada 1 minuto",
+      "300": "A cada 5 minutos",
+      "900": "A cada 15 minutos",
+      "1800": "A cada 30 minutos",
+      "3600": "A cada hora",
+      "custom": "Personalizado"
+    },
+    "summary": {
+      "interval": "A cada {seconds}s",
+      "once": "Uma vez em {at}",
+      "daily": "Diário às {time}",
+      "on_first_join": "No primeiro join",
+      "on_join": "Em toda entrada"
+    },
+    "confirmDelete": "Excluir a mensagem \"{name}\"?",
+    "toasts": {
+      "settingsSaved": "Configurações de mensagens salvas",
+      "created": "Mensagem criada",
+      "updated": "Mensagem atualizada",
+      "deleted": "Mensagem excluída",
+      "sent": "Enviado: {text}",
+      "textRequired": "O texto da mensagem é obrigatório"
+    }
+  },
+  "theme": {
+    "dark": "Tema escuro",
+    "light": "Tema claro"
+  },
+  "playersPage": {
+    "title": "Jogadores",
+    "online": "online",
+    "name": "Nome",
+    "steamId": "Steam ID",
+    "session": "Sessão",
+    "ping": "Ping",
+    "biome": "Bioma",
+    "role": "Função",
+    "actionsCol": "Ações",
+    "player": "Jogador"
+  },
+  "mapPage": {
+    "title": "Mapa do mundo",
+    "noWorld": "Nenhum mundo ativo",
+    "world": "Mundo",
+    "activeWorld": "ativo",
+    "seed": "Seed",
+    "empty": "Nenhum marcador encontrado para este mundo.",
+    "emptyPins": "Nenhum pin compartilhado ainda.",
+    "hintNoMod": "Opcional: instale o ServerSideMap com compartilhamento de marcadores para sincronizar pins e fog reais. O mapa base funciona sem o mod.",
+    "markers": "Marcadores",
+    "explored": "Explorado",
+    "revealAll": "Mostrar totalmente explorado",
+    "revealAllHint": "Revela o disco inteiro do mapa. Desligado mantém o fog of war do ServerSideMap.",
+    "revealAllHintNoMod": "Revela o mapa base tintado pela seed. Desligado mantém o disco com névoa (ServerSideMap não é obrigatório).",
+    "serverSideMap": "· ServerSideMap",
+    "zoomIn": "Aumentar zoom",
+    "zoomOut": "Diminuir zoom",
+    "zoomReset": "Resetar visão",
+    "zoomResetShort": "Reset",
+    "zoomHint": "Scroll para zoom · arraste para mover · duplo clique para resetar"
+  },
+  "metricsPage": {
+    "ranges": {
+      "1h": "1h",
+      "24h": "24h",
+      "7d": "7d"
+    },
+    "containers": {
+      "server": "Servidor",
+      "panel": "Painel"
+    },
+    "cpu": "CPU %",
+    "memory": "Memória %",
+    "history": "Histórico",
+    "noData": "Ainda sem dados — as amostras acumulam enquanto o painel roda.",
+    "cpuOfLimit": "CPU (do limite)",
+    "aggregate": "Agregado (painel+servidor)"
+  },
+  "consolePage": {
+    "title": "Console",
+    "logs": "Logs",
+    "history": "Histórico de comandos",
+    "quick": {
+      "save": "Salvar",
+      "saveShutdown": "Salvar e desligar",
+      "kick": "Expulsar",
+      "ban": "Banir",
+      "broadcast": "Anunciar"
+    }
+  },
+  "alerts": {
+    "title": "Alertas",
+    "subtitle": "Seja notificado sobre eventos importantes do servidor.",
+    "events": "Eventos",
+    "serverDown": "Servidor cai",
+    "playerJoin": "Jogador entra",
+    "backupFail": "Backup falha",
+    "discord": "Discord",
+    "telegram": "Telegram",
+    "webhookPlaceholder": "URL do webhook do Discord",
+    "botTokenPlaceholder": "Token do bot do Telegram",
+    "chatIdPlaceholder": "Chat ID do Telegram",
+    "secretSet": "•••••• (salvo)",
+    "test": "Enviar teste",
+    "saved": "Alertas salvos",
+    "tested": "Notificação de teste enviada"
+  },
+  "schedule": {
+    "title": "Agendamento",
+    "subtitle": "Tarefas automáticas no estilo cron.",
+    "jobs": {
+      "restart": "Reinício noturno",
+      "backup": "Backup automático",
+      "modUpdate": "Atualização de mods"
+    },
+    "saved": "Agendamento salvo",
+    "lastRun": "Última execução: {when} ({status})",
+    "neverRun": "Nunca executado",
+    "cronHint": "Formato cron: minuto hora dia mês dia-da-semana (ex.: 0 5 * * * = diário às 05:00)."
   }
 }

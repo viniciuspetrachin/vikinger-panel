@@ -17,18 +17,33 @@
       "worlds": "Worlds",
       "mods": "Mods & Config",
       "backups": "Backups",
+      "messages": "Messages",
       "files": "Files",
       "logs": "Console",
       "audit": "Audit",
       "help": "Help",
       "donation": "Support the Project",
-      "about": "About"
+      "about": "About",
+      "overview": "Overview",
+      "players": "Players",
+      "map": "Map",
+      "console": "Console",
+      "metrics": "Metrics",
+      "config": "Config",
+      "alerts": "Alerts",
+      "schedule": "Schedule"
     },
     "sidebar": {
       "containerRunning": "Container running",
-      "containerStopped": "Container stopped"
+      "containerStopped": "Container stopped",
+      "live": "LIVE"
     },
-    "refresh": "Refresh"
+    "badges": {
+      "beta": "Beta"
+    },
+    "refresh": "Refresh",
+    "menu": "Menu",
+    "close": "Close"
   },
   "common": {
     "actions": {
@@ -54,7 +69,12 @@
       "copyResponse": "Copy response",
       "copyAll": "Copy all",
       "restoreDraft": "Restore draft",
-      "discard": "Discard"
+      "discard": "Discard",
+      "start": "Start",
+      "stop": "Stop",
+      "restart": "Restart",
+      "refresh": "Refresh",
+      "clear": "Clear"
     },
     "loading": {
       "loading": "Loading...",
@@ -150,6 +170,7 @@
       "backupRestoredLatest": "Backup \"{name}\" restored — server restarting.",
       "restoreUndone": "Restore undone — \"{name}\" is active.",
       "backupDeleted": "Backup \"{name}\" deleted",
+      "backupRenamed": "Backup renamed to \"{name}\"",
       "purgeDeleted": "Deleted {count} backup(s)",
       "purgeNone": "No backups to delete",
       "worldActivated": "World \"{name}\" activated",
@@ -883,7 +904,11 @@
       "activeWorld": "Active World",
       "playersOnline": "Players Online",
       "mods": "Mods",
-      "port": "Port"
+      "port": "Port",
+      "uptime": "Uptime",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "worldPort": "World · Port"
     },
     "configCorrected": "Config corrected: {from} → {to}",
     "performance": "Performance",
@@ -923,14 +948,20 @@
       "restart": "Restart",
       "pause": "Pause",
       "resume": "Resume",
-      "backup": "💾 Backup"
+      "backup": "💾 Backup",
+      "save": "Save",
+      "saved": "World save requested"
     },
     "console": {
       "title": "Server Console (live)"
     },
     "supervisor": {
       "title": "Supervisor"
-    }
+    },
+    "viewPlayers": "View players →",
+    "cpuHost": "{host}% of host",
+    "cpuTrend": "CPU trend",
+    "openMetrics": "Open Metrics →"
   },
   "server": {
     "settings": {
@@ -1146,7 +1177,31 @@
       },
       "activeMods": "{count} active",
       "restoreToHere": "Restore to here",
-      "details": "Details"
+      "details": "Details",
+      "rename": "Rename"
+    },
+    "filters": {
+      "search": "Search",
+      "searchPlaceholder": "Name, world, type...",
+      "kind": "Type",
+      "modsLabel": "Mods filter",
+      "modQuery": "Find by mod",
+      "modQueryPlaceholder": "e.g. Jotunn or Author/Mod",
+      "noMatches": "No backups match the current filters.",
+      "kinds": {
+        "all": "All types",
+        "auto": "Automatic",
+        "manual-world": "Manual — world",
+        "manual-full": "Manual — full",
+        "manual-configs": "Manual — configs",
+        "checkpoint": "Checkpoint"
+      },
+      "mods": {
+        "all": "Any mods",
+        "withMods": "With mods",
+        "withDlls": "With mod DLLs",
+        "noMods": "Without mods"
+      }
     },
     "types": {
       "world": {
@@ -1184,6 +1239,13 @@
       "delete": {
         "title": "Delete backup",
         "confirm": "Permanently delete {name}?"
+      },
+      "rename": {
+        "title": "Rename backup",
+        "hint": "Set a friendly name. The ZIP file name stays the same.",
+        "label": "Display name",
+        "placeholder": "e.g. Pre-Ashlands update",
+        "save": "Save name"
       },
       "details": {
         "title": "Backup details",
@@ -1338,5 +1400,172 @@
   "resources": {
     "noLimit": "No limit",
     "hostSuffix": "(host)"
+  },
+  "messages": {
+    "settings": {
+      "title": "Automatic messages",
+      "desc": "Schedule in-game announcements via RCON (say / showMessage). Uses the bundled ValheimRcon mod.",
+      "enabled": "Feature enabled",
+      "rconHint": "RCON unavailable — messages will not send until ValheimRcon is ready and the server is running."
+    },
+    "list": {
+      "title": "Messages",
+      "create": "New message",
+      "empty": "No automatic messages yet.",
+      "active": "Active",
+      "inactive": "Off",
+      "sendNow": "Send now",
+      "enable": "Enable",
+      "disable": "Disable"
+    },
+    "form": {
+      "createTitle": "New message",
+      "editTitle": "Edit message",
+      "defaultName": "Announcement",
+      "name": "Name",
+      "channel": "Channel",
+      "trigger": "Trigger",
+      "interval": "Interval",
+      "intervalSeconds": "Seconds (min. 30)",
+      "runAt": "Run at",
+      "dailyTime": "Daily time",
+      "onlyWhenOnline": "Only send when players are online",
+      "text": "Message text",
+      "textPlaceholder": "Welcome to %server_name%! Online: %players_online%",
+      "tagsHint": "Click a tag to insert:",
+      "preview": "Preview",
+      "previewBtn": "Preview"
+    },
+    "channels": {
+      "say": "Chat (say)",
+      "showMessage": "On-screen (showMessage)"
+    },
+    "triggers": {
+      "interval": "Every X seconds",
+      "once": "Once at date/time",
+      "daily": "Daily at time",
+      "on_first_join": "New player welcome",
+      "on_join": "Every player join"
+    },
+    "intervalPresets": {
+      "60": "Every 1 minute",
+      "300": "Every 5 minutes",
+      "900": "Every 15 minutes",
+      "1800": "Every 30 minutes",
+      "3600": "Every hour",
+      "custom": "Custom"
+    },
+    "summary": {
+      "interval": "Every {seconds}s",
+      "once": "Once at {at}",
+      "daily": "Daily at {time}",
+      "on_first_join": "On first join",
+      "on_join": "On every join"
+    },
+    "confirmDelete": "Delete message \"{name}\"?",
+    "toasts": {
+      "settingsSaved": "Message settings saved",
+      "created": "Message created",
+      "updated": "Message updated",
+      "deleted": "Message deleted",
+      "sent": "Sent: {text}",
+      "textRequired": "Message text is required"
+    }
+  },
+  "theme": {
+    "dark": "Dark theme",
+    "light": "Light theme"
+  },
+  "playersPage": {
+    "title": "Players",
+    "online": "online",
+    "name": "Name",
+    "steamId": "Steam ID",
+    "session": "Session",
+    "ping": "Ping",
+    "biome": "Biome",
+    "role": "Role",
+    "actionsCol": "Actions",
+    "player": "Player"
+  },
+  "mapPage": {
+    "title": "World map",
+    "noWorld": "No active world",
+    "world": "World",
+    "activeWorld": "active",
+    "seed": "Seed",
+    "empty": "No markers found for this world.",
+    "emptyPins": "No shared pins yet.",
+    "hintNoMod": "Optional: install ServerSideMap with marker share to sync shared pins and real fog of war. The base map works without it.",
+    "markers": "Markers",
+    "explored": "Explored",
+    "revealAll": "Show fully explored",
+    "revealAllHint": "Reveals the whole map disc. Leave off to keep fog of war from ServerSideMap.",
+    "revealAllHintNoMod": "Reveals the seed-tinted base map. Leave off for a fogged disc (ServerSideMap not required).",
+    "serverSideMap": "· ServerSideMap",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomReset": "Reset view",
+    "zoomResetShort": "Reset",
+    "zoomHint": "Scroll to zoom · drag to pan · double-click to reset"
+  },
+  "metricsPage": {
+    "ranges": {
+      "1h": "1h",
+      "24h": "24h",
+      "7d": "7d"
+    },
+    "containers": {
+      "server": "Server",
+      "panel": "Panel"
+    },
+    "cpu": "CPU %",
+    "memory": "Memory %",
+    "history": "History",
+    "noData": "No data yet — samples accumulate while the panel runs.",
+    "cpuOfLimit": "CPU (of limit)",
+    "aggregate": "Aggregate (panel+server)"
+  },
+  "consolePage": {
+    "title": "Console",
+    "logs": "Logs",
+    "history": "Command history",
+    "quick": {
+      "save": "Save",
+      "saveShutdown": "Save & shutdown",
+      "kick": "Kick",
+      "ban": "Ban",
+      "broadcast": "Broadcast"
+    }
+  },
+  "alerts": {
+    "title": "Alerts",
+    "subtitle": "Get notified about important server events.",
+    "events": "Events",
+    "serverDown": "Server goes down",
+    "playerJoin": "Player joins",
+    "backupFail": "Backup fails",
+    "discord": "Discord",
+    "telegram": "Telegram",
+    "webhookPlaceholder": "Discord webhook URL",
+    "botTokenPlaceholder": "Telegram bot token",
+    "chatIdPlaceholder": "Telegram chat ID",
+    "secretSet": "•••••• (saved)",
+    "test": "Send test",
+    "saved": "Alerts saved",
+    "tested": "Test notification sent"
+  },
+  "schedule": {
+    "title": "Schedule",
+    "subtitle": "Cron-like automatic tasks.",
+    "jobs": {
+      "restart": "Nightly restart",
+      "backup": "Automatic backup",
+      "modUpdate": "Mod updates"
+    },
+    "saved": "Schedule saved",
+    "lastRun": "Last run: {when} ({status})",
+    "neverRun": "Never run yet",
+    "cronHint": "Cron format: minute hour day month weekday (e.g. 0 5 * * * = daily at 05:00)."
   }
 }
