@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Valheim Server Management Panel - API Backend"""
 
+import asyncio
 import base64
 import io
 import json
@@ -16,7 +17,7 @@ from pathlib import Path
 from typing import Optional
 
 from dotenv import dotenv_values, set_key
-from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -57,6 +58,16 @@ from bepinex_cfg import (
     parse_bepinex_cfg,
     PROTECTED_CFG_NAMES,
 )
+
+# ── Redesign foundation modules ──────────────────────────────────────────────
+import db as panel_db
+import docker_metrics
+import metrics_history
+import world_map
+import alerts as panel_alerts
+import player_tracker
+import scheduler as panel_scheduler
+from ws_live import LiveHub, run_live_loop
 
 logger = logging.getLogger("vikinger-panel")
 logging.basicConfig(level=logging.INFO)
@@ -145,8 +156,17 @@ def ensure_panel_data_dirs() -> None:
 @app.on_event("startup")
 def _on_startup() -> None:
     ensure_panel_data_dirs()
+    try:
+        panel_db.init_db()
+    except Exception as e:
+        logger.warning("Não foi possível inicializar o banco do painel: %s", e)
     configure_storage_limits()
     configure_auto_messages()
+    try:
+        panel_scheduler_instance.configure(read_schedule_config())
+        panel_scheduler_instance.start()
+    except Exception as e:
+        logger.warning("Não foi possível iniciar o agendador: %s", e)
     try:
         copied = ensure_bundled_mods(
             bundled_dir=BUNDLED_MODS_DIR,
@@ -730,6 +750,39 @@ def compute_rates(current: dict, previous: dict, dt: float) -> dict:
         "disk_read_bps": rate("block_read_bytes", "block_read_bytes"),
         "disk_write_bps": rate("block_write_bytes", "block_write_bytes"),
     }
+
+
+# ── CPU normalization + panel/aggregate metrics ──────────────────────────────
+PANEL_CONTAINER_NAME = "vikinger-panel"
+_cpu_smoother = docker_metrics.SampleSmoother(window=5)
+
+
+def cpu_block(container_key: str, host_percent: float, n_cpus: int) -> dict:
+    """Expose host %, of-limit % (host/n_cpus, capped 100) and a smoothed value.
+
+    ``percent`` (kept for backward-compat with the UI) is the *smoothed
+    of-limit* figure — stable 0-100 that fixes the wild 80%->0% flicker.
+    """
+    norm = docker_metrics.normalize_cpu(host_percent, n_cpus)
+    smoothed = _cpu_smoother.add(container_key, norm["cpu_percent_of_limit"])
+    return {
+        "percent": round(smoothed, 1),
+        "raw_percent": norm["cpu_percent_host"],
+        "percent_host": norm["cpu_percent_host"],
+        "percent_of_limit": norm["cpu_percent_of_limit"],
+        "percent_smoothed": round(smoothed, 1),
+    }
+
+
+def panel_container_metrics() -> dict:
+    """Metrics for the panel's own container (vikinger-panel)."""
+    try:
+        m = docker_metrics.stats_for_container(
+            PANEL_CONTAINER_NAME, docker_fn=docker, n_cpus=get_cpu_count()
+        )
+    except Exception:  # pragma: no cover - defensive
+        m = None
+    return m or docker_metrics._empty_metrics()
 
 
 def read_memory_limit_gb() -> Optional[int]:
@@ -3431,15 +3484,37 @@ def api_metrics(light: bool = Query(False)):
     memory_used = raw["memory_used_bytes"]
     memory_pct = (memory_used / memory_limit_bytes * 100) if memory_limit_bytes else raw["memory_percent"]
 
+    n_cpus = get_cpu_count()
     valheim_raw = raw["cpu_percent"]
-    valheim_pct = normalize_valheim_cpu(valheim_raw)
+    cpu = cpu_block("valheim-server", valheim_raw, n_cpus)
 
-    return {
-        "running": raw["running"],
-        "cpu": {
-            "percent": valheim_pct,
-            "raw_percent": round(valheim_raw, 1),
+    panel_m = panel_container_metrics()
+    panel_cpu = cpu_block("vikinger-panel", panel_m["cpu_percent_host"], n_cpus)
+    server_view = {
+        "cpu_percent_host": cpu["percent_host"],
+        "cpu_percent_of_limit": cpu["percent_of_limit"],
+        "memory_used_bytes": memory_used,
+        "memory_limit_bytes": memory_limit_bytes,
+    }
+    agg = docker_metrics.aggregate([
+        {
+            "running": raw["running"],
+            "cpu_percent_host": cpu["percent_host"],
+            "cpu_percent_of_limit": cpu["percent_of_limit"],
+            "memory_used_bytes": memory_used,
+            "memory_limit_bytes": memory_limit_bytes,
+            "net_rx_bytes": raw["net_rx_bytes"],
+            "net_tx_bytes": raw["net_tx_bytes"],
+            "block_read_bytes": raw["block_read_bytes"],
+            "block_write_bytes": raw["block_write_bytes"],
         },
+        panel_m,
+    ])
+
+    payload = {
+        "running": raw["running"],
+        "cpu": cpu,
+        "cpu_count": n_cpus,
         "memory": {
             "used_bytes": memory_used,
             "limit_bytes": memory_limit_bytes,
@@ -3460,7 +3535,68 @@ def api_metrics(light: bool = Query(False)):
             "read_bps": rates["disk_read_bps"],
             "write_bps": rates["disk_write_bps"],
         },
+        "panel": {
+            "running": panel_m["running"],
+            "cpu": panel_cpu,
+            "memory": {
+                "used_bytes": panel_m["memory_used_bytes"],
+                "limit_bytes": panel_m["memory_limit_bytes"],
+                "percent": round(panel_m["memory_percent"], 1),
+            },
+        },
+        "aggregate": {
+            "cpu_percent_host": agg["cpu_percent_host"],
+            "cpu_percent_of_limit": agg["cpu_percent_of_limit"],
+            "memory_used_bytes": agg["memory_used_bytes"],
+            "memory_limit_bytes": agg["memory_limit_bytes"],
+            "memory_percent": agg["memory_percent"],
+        },
     }
+    _record_metrics_history(payload, rates)
+    return payload
+
+
+def _record_metrics_history(payload: dict, rates: dict) -> None:
+    """Persist a metrics sample per container (best-effort, non-fatal)."""
+    try:
+        now = time.time()
+        players = 0
+        try:
+            players = get_players_info().get("count", 0)
+        except Exception:
+            players = 0
+        metrics_history.record_sample(
+            panel_db.get_db_path(),
+            "valheim-server",
+            {
+                "cpu_percent_host": payload["cpu"]["percent_host"],
+                "cpu_percent_of_limit": payload["cpu"]["percent_of_limit"],
+                "memory_used_bytes": payload["memory"]["used_bytes"],
+                "memory_limit_bytes": payload["memory"]["limit_bytes"],
+                "memory_percent": payload["memory"]["percent"],
+                "net_rx_bps": rates["rx_bps"],
+                "net_tx_bps": rates["tx_bps"],
+            },
+            ts=now,
+            players=players,
+        )
+        metrics_history.record_sample(
+            panel_db.get_db_path(),
+            "vikinger-panel",
+            {
+                "cpu_percent_host": payload["panel"]["cpu"]["percent_host"],
+                "cpu_percent_of_limit": payload["panel"]["cpu"]["percent_of_limit"],
+                "memory_used_bytes": payload["panel"]["memory"]["used_bytes"],
+                "memory_limit_bytes": payload["panel"]["memory"]["limit_bytes"],
+                "memory_percent": payload["panel"]["memory"]["percent"],
+                "net_rx_bps": 0,
+                "net_tx_bps": 0,
+            },
+            ts=now,
+            players=None,
+        )
+    except Exception:  # pragma: no cover - history is best-effort
+        pass
 
 
 @app.get("/api/resources/memory")
@@ -4599,6 +4735,258 @@ def api_download_audit():
     if not AUDIT_FILE.exists():
         raise HTTPException(404, "No audit log found")
     return FileResponse(AUDIT_FILE, filename="audit.jsonl", media_type="application/x-ndjson")
+
+
+# ── Metrics history / live / map / alerts / schedule ─────────────────────────
+
+_live_hub = LiveHub()
+
+ALERTS_SETTING_KEY = "alerts_config"
+SCHEDULE_SETTING_KEY = "schedule_config"
+
+DEFAULT_ALERTS_CONFIG = {
+    "events": {"server_down": False, "player_join": False, "backup_fail": False},
+    "discord": {"enabled": False, "webhook_url": ""},
+    "telegram": {"enabled": False, "bot_token": "", "chat_id": ""},
+}
+
+DEFAULT_SCHEDULE_CONFIG = {
+    "restart": {"enabled": False, "cron": "0 5 * * *"},
+    "backup": {"enabled": False, "cron": "0 4 * * *"},
+    "mod_update": {"enabled": False, "cron": "0 3 * * 0"},
+}
+
+
+def read_alerts_config() -> dict:
+    try:
+        cfg = panel_db.get_setting(ALERTS_SETTING_KEY, None)
+    except Exception:
+        cfg = None
+    if not isinstance(cfg, dict):
+        return json.loads(json.dumps(DEFAULT_ALERTS_CONFIG))
+    merged = json.loads(json.dumps(DEFAULT_ALERTS_CONFIG))
+    for section, val in cfg.items():
+        if isinstance(val, dict) and isinstance(merged.get(section), dict):
+            merged[section].update(val)
+        else:
+            merged[section] = val
+    return merged
+
+
+def _alerts_config_public(cfg: dict) -> dict:
+    """Redact secrets before returning config to the client."""
+    pub = json.loads(json.dumps(cfg))
+    if pub.get("discord", {}).get("webhook_url"):
+        pub["discord"]["webhook_url_set"] = True
+        pub["discord"]["webhook_url"] = ""
+    if pub.get("telegram", {}).get("bot_token"):
+        pub["telegram"]["bot_token_set"] = True
+        pub["telegram"]["bot_token"] = ""
+    return pub
+
+
+def read_schedule_config() -> dict:
+    try:
+        cfg = panel_db.get_setting(SCHEDULE_SETTING_KEY, None)
+    except Exception:
+        cfg = None
+    merged = json.loads(json.dumps(DEFAULT_SCHEDULE_CONFIG))
+    if isinstance(cfg, dict):
+        for job, val in cfg.items():
+            if job in merged and isinstance(val, dict):
+                merged[job].update(val)
+    return merged
+
+
+def dispatch_alert(event_type: str, ctx: dict | None = None) -> None:
+    """Fire a configured alert (best-effort, never raises)."""
+    try:
+        cfg = read_alerts_config()
+        panel_alerts.dispatch(cfg, event_type, ctx or {})
+    except Exception:  # pragma: no cover - alerts are best-effort
+        logger.debug("alert dispatch failed for %s", event_type, exc_info=True)
+
+
+# Scheduler wiring (callables reference existing panel operations).
+def _scheduled_restart():
+    return restart_valheim_container()
+
+
+def _scheduled_backup():
+    return trigger_backup()
+
+
+def _scheduled_mod_update():
+    return update_all_mod_packages()
+
+
+panel_scheduler_instance = panel_scheduler.PanelScheduler(
+    restart_fn=_scheduled_restart,
+    backup_fn=_scheduled_backup,
+    mod_update_fn=_scheduled_mod_update,
+)
+
+
+@app.get("/api/metrics/history")
+def api_metrics_history(
+    range: str = Query("1h"),
+    container: str = Query("valheim-server"),
+):
+    if range not in metrics_history.RANGE_SECONDS:
+        raise HTTPException(400, f"range must be one of {sorted(metrics_history.RANGE_SECONDS)}")
+    if container not in ("valheim-server", "vikinger-panel"):
+        raise HTTPException(400, "invalid container")
+    try:
+        rows = metrics_history.query_history(panel_db.get_db_path(), container, range)
+    except Exception:
+        rows = []
+    return {"range": range, "container": container, "samples": rows}
+
+
+@app.get("/api/map/{world}")
+def api_map(world: str):
+    name = validate_world_name(world)
+    try:
+        data = world_map.build_map(name, WORLDS_DIR, DATA_DIR)
+    except Exception as e:
+        raise HTTPException(500, f"Failed to build map: {e}") from e
+    return data
+
+
+@app.get("/api/alerts")
+def api_get_alerts():
+    return _alerts_config_public(read_alerts_config())
+
+
+class AlertsConfigUpdate(BaseModel):
+    events: Optional[dict] = None
+    discord: Optional[dict] = None
+    telegram: Optional[dict] = None
+
+
+@app.put("/api/alerts")
+def api_put_alerts(body: AlertsConfigUpdate):
+    cfg = read_alerts_config()
+    incoming = body.model_dump(exclude_none=True)
+    for section, val in incoming.items():
+        if not isinstance(val, dict):
+            continue
+        # Preserve stored secrets when the client sends an empty value.
+        if section in ("discord", "telegram"):
+            for secret_key in ("webhook_url", "bot_token"):
+                if secret_key in val and val[secret_key] == "":
+                    val.pop(secret_key)
+        cfg.setdefault(section, {})
+        if isinstance(cfg[section], dict):
+            cfg[section].update(val)
+        else:
+            cfg[section] = val
+    panel_db.set_setting(ALERTS_SETTING_KEY, cfg)
+    return _alerts_config_public(cfg)
+
+
+@app.post("/api/alerts/test")
+def api_test_alerts():
+    cfg = read_alerts_config()
+    try:
+        result = panel_alerts.test_channels(cfg)
+    except Exception as e:
+        raise HTTPException(500, f"Alert test failed: {e}") from e
+    return {"ok": True, "result": result}
+
+
+@app.get("/api/schedule")
+def api_get_schedule():
+    cfg = read_schedule_config()
+    try:
+        status = panel_scheduler_instance.get_status()
+    except Exception:
+        status = {}
+    return {"config": cfg, "status": status}
+
+
+class ScheduleConfigUpdate(BaseModel):
+    restart: Optional[dict] = None
+    backup: Optional[dict] = None
+    mod_update: Optional[dict] = None
+
+
+@app.put("/api/schedule")
+def api_put_schedule(body: ScheduleConfigUpdate):
+    cfg = read_schedule_config()
+    incoming = body.model_dump(exclude_none=True)
+    for job, val in incoming.items():
+        if job in cfg and isinstance(val, dict):
+            cron = val.get("cron")
+            if cron is not None and not panel_scheduler.validate_cron(cron):
+                raise HTTPException(400, f"Invalid cron for {job}: {cron}")
+            cfg[job].update(val)
+    panel_db.set_setting(SCHEDULE_SETTING_KEY, cfg)
+    try:
+        panel_scheduler_instance.configure(cfg)
+    except Exception:
+        logger.debug("scheduler reconfigure failed", exc_info=True)
+    return {"config": cfg, "status": panel_scheduler_instance.get_status()}
+
+
+async def _build_live_payload() -> dict:
+    """Payload pushed over /ws/live: status + metrics + players."""
+    try:
+        status = api_status()
+    except Exception:
+        status = {}
+    try:
+        metrics = api_metrics(light=True)
+    except Exception:
+        metrics = {}
+    try:
+        players = get_players_info()
+    except Exception:
+        players = {"count": 0, "players": [], "online": False}
+    return {
+        "ts": time.time(),
+        "status": status,
+        "metrics": metrics,
+        "players": players,
+    }
+
+
+async def _live_broadcast_loop() -> None:
+    """Single shared loop: builds the payload once and fans it out to clients.
+
+    Only does work while at least one client is connected, so it adds no docker
+    overhead on an idle panel.
+    """
+    while True:
+        try:
+            if _live_hub.count() > 0:
+                payload = await _build_live_payload()
+                await _live_hub.broadcast(payload)
+        except Exception:  # pragma: no cover - defensive
+            pass
+        await asyncio.sleep(2.0)
+
+
+@app.on_event("startup")
+async def _on_async_startup() -> None:
+    asyncio.ensure_future(_live_broadcast_loop())
+
+
+@app.websocket("/ws/live")
+async def ws_live(websocket: WebSocket):
+    await websocket.accept()
+    await _live_hub.register(websocket)
+    try:
+        await websocket.send_json(await _build_live_payload())
+        while True:
+            # Keep the socket open; we don't expect client messages.
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        pass
+    finally:
+        await _live_hub.unregister(websocket)
 
 
 # ── Static Frontend ──────────────────────────────────────────────────────────

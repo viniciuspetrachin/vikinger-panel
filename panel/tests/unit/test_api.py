@@ -1716,17 +1716,24 @@ def test_metrics(client, monkeypatch):
         "total_bytes": 6000,
     })
     monkeypatch.setattr(main, "read_memory_limit_gb", lambda: None)
+    monkeypatch.setattr(main, "get_cpu_count", lambda: 4)
+    main._cpu_smoother.reset()
 
     r = client.get("/api/metrics")
     assert r.status_code == 200
     body = r.json()
     assert body["running"] is True
+    # host % is exposed raw; of-limit = host / n_cpus (capped 100); smoothed = of-limit on first sample
+    assert body["cpu"]["percent_host"] == 25.5
     assert body["cpu"]["raw_percent"] == 25.5
-    assert body["cpu"]["percent"] == 25.5
+    assert body["cpu"]["percent_of_limit"] == 6.4
+    assert body["cpu"]["percent"] == 6.4
+    assert body["cpu_count"] == 4
     assert body["memory"]["used_bytes"] == 512 * 1024 * 1024
     assert body["disk"]["total_bytes"] == 6000
     assert "rx_bps" in body["network"]
     assert "read_bps" in body["block_io"]
+    assert "panel" in body and "aggregate" in body
 
 
 def test_metrics_legacy_cpu(client, monkeypatch):
@@ -1747,11 +1754,83 @@ def test_metrics_legacy_cpu(client, monkeypatch):
     })
     monkeypatch.setattr(main, "read_memory_limit_gb", lambda: None)
     monkeypatch.setattr(main, "get_cpu_count", lambda: 4)
+    main._cpu_smoother.reset()
 
     r = client.get("/api/metrics")
     body = r.json()
+    # host 115% on a 4-CPU box -> 28.8% of the container's limit
+    assert body["cpu"]["percent_of_limit"] == 28.8
     assert body["cpu"]["percent"] == 28.8
     assert body["cpu"]["raw_percent"] == 115.0
+    assert body["cpu"]["percent_host"] == 115.0
+
+
+# ── Redesign endpoints: history / alerts / schedule / map ────────────────────
+
+def test_metrics_history_endpoint(client, monkeypatch, tmp_path):
+    import db as panel_db
+    import metrics_history
+
+    db_file = tmp_path / "panel.db"
+    monkeypatch.setenv("PANEL_DB_PATH", str(db_file))
+    metrics_history.record_sample(
+        str(db_file), "valheim-server",
+        {"cpu_percent_host": 40.0, "cpu_percent_of_limit": 10.0,
+         "memory_used_bytes": 100, "memory_limit_bytes": 1000, "memory_percent": 10.0},
+    )
+    r = client.get("/api/metrics/history?range=1h")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["range"] == "1h"
+    assert body["container"] == "valheim-server"
+    assert len(body["samples"]) >= 1
+
+    assert client.get("/api/metrics/history?range=bogus").status_code == 400
+
+
+def test_alerts_config_roundtrip(client, monkeypatch, tmp_path):
+    monkeypatch.setenv("PANEL_DB_PATH", str(tmp_path / "panel.db"))
+    r = client.get("/api/alerts")
+    assert r.status_code == 200
+    assert r.json()["events"]["server_down"] is False
+
+    r = client.put("/api/alerts", json={
+        "events": {"server_down": True},
+        "discord": {"enabled": True, "webhook_url": "https://discord.test/hook"},
+    })
+    assert r.status_code == 200
+    pub = r.json()
+    assert pub["events"]["server_down"] is True
+    # secret redacted but flagged as set
+    assert pub["discord"]["webhook_url"] == ""
+    assert pub["discord"].get("webhook_url_set") is True
+
+    # empty secret on update preserves the stored one
+    r = client.put("/api/alerts", json={"discord": {"webhook_url": ""}})
+    assert r.status_code == 200
+    assert main.read_alerts_config()["discord"]["webhook_url"] == "https://discord.test/hook"
+
+
+def test_schedule_config_roundtrip(client, monkeypatch, tmp_path):
+    monkeypatch.setenv("PANEL_DB_PATH", str(tmp_path / "panel.db"))
+    r = client.get("/api/schedule")
+    assert r.status_code == 200
+    assert "restart" in r.json()["config"]
+
+    r = client.put("/api/schedule", json={"restart": {"enabled": True, "cron": "0 6 * * *"}})
+    assert r.status_code == 200
+    assert r.json()["config"]["restart"]["cron"] == "0 6 * * *"
+
+    # invalid cron rejected
+    assert client.put("/api/schedule", json={"restart": {"cron": "not a cron"}}).status_code == 400
+
+
+def test_map_endpoint(client):
+    r = client.get("/api/map/TestWorld")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["world"] == "TestWorld"
+    assert "markers" in body and "bounds" in body
 
 
 def test_metrics_rates(client, monkeypatch):
