@@ -23,13 +23,24 @@
       "audit": "Audit",
       "help": "Help",
       "donation": "Support the Project",
-      "about": "About"
+      "about": "About",
+      "overview": "Overview",
+      "players": "Players",
+      "map": "Map",
+      "console": "Console",
+      "metrics": "Metrics",
+      "config": "Config",
+      "alerts": "Alerts",
+      "schedule": "Schedule"
     },
     "sidebar": {
       "containerRunning": "Container running",
-      "containerStopped": "Container stopped"
+      "containerStopped": "Container stopped",
+      "live": "LIVE"
     },
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "menu": "Menu",
+    "close": "Close"
   },
   "common": {
     "actions": {
@@ -55,7 +66,12 @@
       "copyResponse": "Copy response",
       "copyAll": "Copy all",
       "restoreDraft": "Restore draft",
-      "discard": "Discard"
+      "discard": "Discard",
+      "start": "Start",
+      "stop": "Stop",
+      "restart": "Restart",
+      "refresh": "Refresh",
+      "clear": "Clear"
     },
     "loading": {
       "loading": "Loading...",
@@ -884,7 +900,11 @@
       "activeWorld": "Active World",
       "playersOnline": "Players Online",
       "mods": "Mods",
-      "port": "Port"
+      "port": "Port",
+      "uptime": "Uptime",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "worldPort": "World · Port"
     },
     "configCorrected": "Config corrected: {from} → {to}",
     "performance": "Performance",
@@ -924,14 +944,20 @@
       "restart": "Restart",
       "pause": "Pause",
       "resume": "Resume",
-      "backup": "💾 Backup"
+      "backup": "💾 Backup",
+      "save": "Save",
+      "saved": "World save requested"
     },
     "console": {
       "title": "Server Console (live)"
     },
     "supervisor": {
       "title": "Supervisor"
-    }
+    },
+    "viewPlayers": "View players →",
+    "cpuHost": "{host}% of host",
+    "cpuTrend": "CPU trend",
+    "openMetrics": "Open Metrics →"
   },
   "server": {
     "settings": {
@@ -1410,5 +1436,87 @@
       "sent": "Sent: {text}",
       "textRequired": "Message text is required"
     }
+  },
+  "theme": {
+    "dark": "Dark theme",
+    "light": "Light theme"
+  },
+  "playersPage": {
+    "title": "Players",
+    "online": "online",
+    "name": "Name",
+    "steamId": "Steam ID",
+    "session": "Session",
+    "ping": "Ping",
+    "biome": "Biome",
+    "role": "Role",
+    "actionsCol": "Actions",
+    "player": "Player"
+  },
+  "mapPage": {
+    "title": "World map",
+    "noWorld": "No active world",
+    "seed": "Seed",
+    "empty": "No markers found for this world.",
+    "markers": "Markers"
+  },
+  "metricsPage": {
+    "ranges": {
+      "1h": "1h",
+      "24h": "24h",
+      "7d": "7d"
+    },
+    "containers": {
+      "server": "Server",
+      "panel": "Panel"
+    },
+    "cpu": "CPU %",
+    "memory": "Memory %",
+    "history": "History",
+    "noData": "No data yet — samples accumulate while the panel runs.",
+    "cpuOfLimit": "CPU (of limit)",
+    "aggregate": "Aggregate (panel+server)"
+  },
+  "consolePage": {
+    "title": "Console",
+    "logs": "Logs",
+    "history": "Command history",
+    "quick": {
+      "save": "Save",
+      "saveShutdown": "Save & shutdown",
+      "kick": "Kick",
+      "ban": "Ban",
+      "broadcast": "Broadcast"
+    }
+  },
+  "alerts": {
+    "title": "Alerts",
+    "subtitle": "Get notified about important server events.",
+    "events": "Events",
+    "serverDown": "Server goes down",
+    "playerJoin": "Player joins",
+    "backupFail": "Backup fails",
+    "discord": "Discord",
+    "telegram": "Telegram",
+    "webhookPlaceholder": "Discord webhook URL",
+    "botTokenPlaceholder": "Telegram bot token",
+    "chatIdPlaceholder": "Telegram chat ID",
+    "secretSet": "•••••• (saved)",
+    "test": "Send test",
+    "saved": "Alerts saved",
+    "tested": "Test notification sent"
+  },
+  "schedule": {
+    "title": "Schedule",
+    "subtitle": "Cron-like automatic tasks.",
+    "jobs": {
+      "restart": "Nightly restart",
+      "backup": "Automatic backup",
+      "modUpdate": "Mod updates"
+    },
+    "saved": "Schedule saved",
+    "lastRun": "Last run: {when} ({status})",
+    "neverRun": "Never run yet",
+    "cronHint": "Cron format: minute hour day month weekday (e.g. 0 5 * * * = daily at 05:00)."
   }
 }

@@ -3419,6 +3419,35 @@ def api_panel_update(body: PanelUpdateBody | None = None):
 
 # ── Status & Server Control ──────────────────────────────────────────────────
 
+def get_container_uptime() -> tuple[Optional[float], str]:
+    """Return (uptime_seconds, human) for the valheim container, or (None, '')."""
+    r = docker("inspect", "-f", "{{.State.StartedAt}}", CONTAINER_NAME, timeout=5)
+    if r.returncode != 0 or not r.stdout.strip():
+        return None, ""
+    started = r.stdout.strip()
+    try:
+        # Docker emits RFC3339 with nanoseconds; trim to microseconds for fromisoformat.
+        cleaned = re.sub(r"(\.\d{6})\d*Z?$", r"\1", started).replace("Z", "+00:00")
+        dt = datetime.fromisoformat(cleaned)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        secs = (datetime.now(timezone.utc) - dt).total_seconds()
+    except (ValueError, TypeError):
+        return None, ""
+    if secs < 0:
+        secs = 0.0
+    days, rem = divmod(int(secs), 86400)
+    hours, rem = divmod(rem, 3600)
+    minutes, _ = divmod(rem, 60)
+    if days:
+        human = f"{days}d {hours}h"
+    elif hours:
+        human = f"{hours}h {minutes}m"
+    else:
+        human = f"{minutes}m"
+    return secs, human
+
+
 @app.get("/api/status")
 def api_status():
     env = read_env()
@@ -3426,9 +3455,12 @@ def api_status():
     players = get_players_info()
     worlds, active, running, reconciled = build_worlds_list()
     configured = env.get("WORLD_NAME", "").strip()
+    uptime_secs, uptime_display = get_container_uptime()
     return {
         "container": "running" if container_running() else "stopped",
         "server": server_process_status(),
+        "uptime_seconds": uptime_secs,
+        "uptime_display": uptime_display,
         "supervisor": sup,
         "config": {
             "server_name": effective_server_name(env),
@@ -3452,9 +3484,21 @@ def api_status():
     }
 
 
+def players_with_sessions() -> dict:
+    """Players info enriched with session_seconds/ping/biome from player_tracker."""
+    info = get_players_info()
+    try:
+        merged = player_tracker.merge_players(info.get("players", []), [])
+        player_tracker.update_sessions(panel_db.get_db_path(), merged)
+        info["players"] = merged
+    except Exception:  # pragma: no cover - session tracking is best-effort
+        pass
+    return info
+
+
 @app.get("/api/players")
 def api_players():
-    return get_players_info()
+    return players_with_sessions()
 
 
 @app.get("/api/metrics")
@@ -4940,7 +4984,7 @@ async def _build_live_payload() -> dict:
     except Exception:
         metrics = {}
     try:
-        players = get_players_info()
+        players = players_with_sessions()
     except Exception:
         players = {"count": 0, "players": [], "online": False}
     return {

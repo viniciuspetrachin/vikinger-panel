@@ -46,6 +46,21 @@ export const console = {
     this.consoleHistory = [];
   },
 
+  async sendQuickSave() {
+    if (!this.rconStatus.available) {
+      this.toast(this.consoleStatusHint() || this.t("common.errors.rconUnavailable"), "error");
+      return;
+    }
+    return this.withBusy("quickSave", async () => {
+      try {
+        await this.api("POST", "/api/console/command", { command: "save" });
+        this.toast(this.t("dashboard.quickControls.saved"));
+      } catch (e) {
+        this.toast(e.message, "error");
+      }
+    });
+  },
+
   async loadConsoleStatus() {
     try {
       this.rconStatus = await this.api("GET", "/api/console/status");

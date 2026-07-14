@@ -93,43 +93,52 @@
     </div>
   </div>
 
-  <div class="flex h-full">
+  <div class="app-shell">
+    <!-- Mobile drawer backdrop -->
+    <div class="sidebar-backdrop md:hidden" x-show="sidebarOpen" @click="sidebarOpen = false" x-transition.opacity></div>
+
     <!-- Sidebar -->
-    <aside class="w-64 bg-valheim-900 border-r border-valheim-700 flex flex-col shrink-0">
-      <div class="p-6 border-b border-valheim-700">
-        <h1 class="font-display text-xl font-bold text-valheim-gold tracking-wide" x-text="t('meta.appTitle')">Vikinger Panel</h1>
-        <p class="text-xs text-gray-500 mt-1" x-text="t('meta.appSubtitle')">Valheim Server Manager</p>
+    <aside class="sidebar" :class="sidebarOpen && 'is-open'">
+      <div class="p-6 border-b border-valheim-700 flex items-start justify-between">
+        <div>
+          <h1 class="font-display text-xl font-bold text-valheim-gold tracking-wide" x-text="t('meta.appTitle')">Vikinger Panel</h1>
+          <p class="text-xs text-gray-500 mt-1" x-text="t('meta.appSubtitle')">Valheim Server Manager</p>
+        </div>
+        <button class="md:hidden nav-hamburger" @click="sidebarOpen = false" :aria-label="t('nav.close')">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
       </div>
-      <nav class="flex-1 p-3 space-y-4 overflow-y-auto">
-        <template x-for="section in visibleSections()" :key="section.id">
-          <div>
-            <p class="px-4 text-[10px] uppercase tracking-wider text-gray-600 mb-1" x-text="section.label"></p>
-            <div class="space-y-1">
-              <template x-for="item in section.items" :key="item.id">
-                <button @click="goToPage(item.id)" :data-nav-id="item.id"
-                        class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all"
-                        :class="page === item.id ? 'bg-valheim-700 text-valheim-gold-light glow-gold' : 'text-gray-400 hover:bg-valheim-800 hover:text-gray-200'">
-                  <span x-html="item.icon" class="w-5 h-5 shrink-0"></span>
-                  <span x-text="item.label"></span>
-                </button>
-              </template>
-            </div>
-          </div>
+      <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+        <template x-for="item in visiblePrimary()" :key="item.id">
+          <button @click="goToPage(item.id)" :data-nav-id="item.id"
+                  class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all"
+                  :class="isPrimaryActive(item.id) ? 'bg-valheim-700 text-valheim-gold-light glow-gold' : 'text-gray-400 hover:bg-valheim-800 hover:text-gray-200'">
+            <span x-html="item.icon" class="w-5 h-5 shrink-0"></span>
+            <span x-text="item.label"></span>
+          </button>
         </template>
       </nav>
       <div class="p-4 border-t border-valheim-700 space-y-3 shrink-0">
-        <label class="block text-[10px] text-gray-600 mb-1" x-text="t('common.language')">Language</label>
-        <select x-model="locale" @change="setLocale($event.target.value)"
-                class="w-full bg-valheim-950 border border-valheim-600 rounded-lg px-2 py-1.5 text-xs text-gray-300">
-          <template x-for="loc in locales" :key="loc.code">
-            <option :value="loc.code" x-text="loc.nativeName"></option>
-          </template>
-        </select>
+        <button type="button" class="theme-toggle" @click="toggleTheme()">
+          <svg x-show="theme === 'dark'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          <svg x-show="theme === 'light'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+          <span x-text="themeLabel()"></span>
+        </button>
+        <div>
+          <label class="block text-[10px] text-gray-600 mb-1" x-text="t('common.language')">Language</label>
+          <select x-model="locale" @change="setLocale($event.target.value)"
+                  class="w-full bg-valheim-950 border border-valheim-600 rounded-lg px-2 py-1.5 text-xs text-gray-300">
+            <template x-for="loc in locales" :key="loc.code">
+              <option :value="loc.code" x-text="loc.nativeName"></option>
+            </template>
+          </select>
+        </div>
 
         <div class="flex items-center gap-2 text-xs">
           <span class="w-2 h-2 rounded-full status-dot"
                 :class="status.container === 'running' ? 'bg-green-400' : 'bg-red-400'"></span>
           <span class="text-gray-500" x-text="status.container === 'running' ? t('nav.sidebar.containerRunning') : t('nav.sidebar.containerStopped')"></span>
+          <span x-show="wsConnected" class="ml-auto text-[10px] text-green-500" x-text="t('nav.sidebar.live')">LIVE</span>
         </div>
         <p class="text-[10px] text-gray-600" x-show="versionInfo.version">
           v<span x-text="versionInfo.version"></span>
@@ -139,232 +148,116 @@
 
     <!-- Main -->
     <main class="flex-1 overflow-y-auto">
-      <header class="sticky top-0 z-10 bg-valheim-950/80 backdrop-blur border-b border-valheim-700 px-8 py-4 flex items-center justify-between">
-        <h2 class="font-display text-lg font-semibold text-gray-100" x-text="pageTitle()"></h2>
-        <button @click="refreshStatus()" :disabled="actionPending === 'refreshStatus'" class="btn btn-sm btn-ghost">
+      <header class="sticky top-0 z-10 bg-valheim-950/80 backdrop-blur border-b border-valheim-700 px-4 md:px-8 py-4 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <button class="md:hidden nav-hamburger" @click="toggleSidebar()" :aria-label="t('nav.menu')">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <h2 class="font-display text-lg font-semibold text-gray-100 truncate" x-text="pageTitle()"></h2>
+        </div>
+        <button @click="refreshStatus()" :disabled="actionPending === 'refreshStatus'" class="btn btn-sm btn-ghost shrink-0">
           <svg class="w-4 h-4" :class="actionPending === 'refreshStatus' && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-          <span x-text="t('nav.refresh')">Refresh</span>
+          <span class="hidden sm:inline" x-text="t('nav.refresh')">Refresh</span>
         </button>
       </header>
 
-      <div class="p-8 max-w-6xl">
+      <!-- Config subnav (internal tabs) -->
+      <div x-show="isConfigPage()" class="px-4 md:px-8 pt-5">
+        <div class="content-wrap">
+          <div class="subnav overflow-x-auto">
+            <template x-for="tab in visibleConfigTabs()" :key="tab.id">
+              <button class="subnav-tab" :data-nav-id="tab.id" :class="page === tab.id && 'is-active'" @click="goToPage(tab.id)">
+                <span x-text="tab.label"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+      </div>
 
-        <!-- DASHBOARD -->
+      <div class="p-4 md:p-8 content-wrap">
+
+        <!-- OVERVIEW (cockpit) -->
         <section x-show="page === 'dashboard'" class="space-y-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div class="bg-valheim-800 rounded-xl p-5 border border-valheim-700">
-              <p class="text-xs text-gray-500 uppercase tracking-wider" x-text="t('dashboard.stats.server')">Server</p>
-              <p class="text-2xl font-bold mt-1 capitalize"
-                 :class="status.server === 'running' ? 'text-green-400' : status.server === 'stopped' ? 'text-yellow-400' : 'text-red-400'"
-                 x-text="statusLabel(status.server)"></p>
+          <!-- Above-the-fold cockpit -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div class="stat-card">
+              <span class="stat-label" x-text="t('dashboard.stats.server')">Server</span>
+              <span class="stat-value capitalize"
+                    :class="status.server === 'running' ? 'text-green-400' : status.server === 'stopped' ? 'text-yellow-400' : 'text-red-400'"
+                    x-text="statusLabel(status.server)"></span>
+              <span class="stat-sub" x-text="status.container === 'running' ? t('nav.sidebar.containerRunning') : t('nav.sidebar.containerStopped')"></span>
             </div>
-            <div class="bg-valheim-800 rounded-xl p-5 border border-valheim-700">
-              <p class="text-xs text-gray-500 uppercase tracking-wider" x-text="t('dashboard.stats.activeWorld')">Active World</p>
-              <p class="text-2xl font-bold mt-1 text-valheim-gold"
-                 x-text="status.running_world_name || status.config?.world_name || '—'"></p>
-              <p x-show="status.world_reconciled?.reconciled" class="text-xs text-yellow-400 mt-1"
-                 x-text="t('dashboard.configCorrected', { from: status.world_reconciled?.from, to: status.world_reconciled?.to })"></p>
+            <div class="stat-card">
+              <span class="stat-label" x-text="t('dashboard.stats.uptime')">Uptime</span>
+              <span class="stat-value" x-text="status.uptime_display || '—'"></span>
             </div>
-            <div class="bg-valheim-800 rounded-xl p-5 border border-valheim-700">
-              <p class="text-xs text-gray-500 uppercase tracking-wider" x-text="t('dashboard.stats.playersOnline')">Players Online</p>
-              <p class="text-2xl font-bold mt-1 text-green-400" x-text="status.players_count ?? players.count ?? 0"></p>
+            <div class="stat-card">
+              <span class="stat-label" x-text="t('dashboard.stats.playersOnline')">Players</span>
+              <span class="stat-value text-green-400" x-text="status.players_count ?? players.count ?? 0"></span>
+              <button class="stat-sub text-left hover:text-valheim-gold-light" @click="goToPage('players')" x-text="t('dashboard.viewPlayers')">View players →</button>
             </div>
-            <div class="bg-valheim-800 rounded-xl p-5 border border-valheim-700">
-              <p class="text-xs text-gray-500 uppercase tracking-wider" x-text="t('dashboard.stats.mods')">Mods</p>
-              <p class="text-2xl font-bold mt-1" x-text="status.mods_count"></p>
+            <div class="stat-card">
+              <span class="stat-label" x-text="t('dashboard.stats.cpu')">CPU</span>
+              <span class="stat-value" x-text="metrics.cpu ? cpuPercent().toFixed(1) + '%' : '—'"></span>
+              <span class="stat-sub" x-show="metrics.cpu" x-text="t('dashboard.cpuHost', { host: (metrics.cpu?.percent_host ?? 0).toFixed(0) })"></span>
             </div>
-            <div class="bg-valheim-800 rounded-xl p-5 border border-valheim-700">
-              <p class="text-xs text-gray-500 uppercase tracking-wider" x-text="t('dashboard.stats.port')">Port</p>
-              <p class="text-2xl font-bold mt-1" x-text="status.config?.server_port || '2456'"></p>
+            <div class="stat-card">
+              <span class="stat-label" x-text="t('dashboard.stats.ram')">RAM</span>
+              <span class="stat-value" x-text="metrics.memory ? (metrics.memory?.percent ?? 0).toFixed(0) + '%' : '—'"></span>
+              <span class="stat-sub" x-text="formatBytes(metrics.memory?.used_bytes) + ' / ' + memoryLimitLabel()"></span>
             </div>
-          </div>
-
-          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-5">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="font-display text-sm font-semibold text-valheim-gold" x-text="t('dashboard.performance')">Performance</h3>
-              <span class="flex items-center gap-2 text-xs text-gray-500">
-                <span class="w-2 h-2 rounded-full bg-green-400 status-dot" x-show="!metricsLoading"></span>
-                <span class="w-2 h-2 rounded-full bg-gray-500 animate-pulse" x-show="metricsLoading"></span>
-                <span x-text="metricsLoading ? t('common.loading.loading') : t('common.status.realTime')"></span>
-              </span>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div class="bg-valheim-900 rounded-lg p-4 border border-valheim-700">
-                <p class="text-xs text-gray-500 uppercase tracking-wider mb-1" x-text="t('dashboard.metrics.cpu')">CPU</p>
-                <p class="text-lg font-bold" x-text="metricsLoading && !metrics.cpu ? '—' : cpuPercent().toFixed(1) + '%'"></p>
-                <div class="metric-bar mt-2">
-                  <div class="metric-bar-fill" :class="pctBarClass(cpuPercent())"
-                       :style="'width:' + Math.min(cpuPercent(), 100) + '%'"></div>
-                </div>
-              </div>
-              <div class="bg-valheim-900 rounded-lg p-4 border border-valheim-700">
-                <p class="text-xs text-gray-500 uppercase tracking-wider mb-1" x-text="t('dashboard.metrics.ram')">RAM</p>
-                <p class="text-lg font-bold">
-                  <span x-text="metricsLoading && !metrics.memory ? '—' : formatBytes(metrics.memory?.used_bytes)"></span>
-                  <span class="text-sm text-gray-500 font-normal"> / </span>
-                  <span class="text-sm text-gray-400" x-text="memoryLimitLabel()"></span>
-                </p>
-                <div class="metric-bar mt-2">
-                  <div class="metric-bar-fill" :class="pctBarClass(metrics.memory?.percent)"
-                       :style="'width:' + Math.min(metrics.memory?.percent ?? 0, 100) + '%'"></div>
-                </div>
-              </div>
-              <div class="bg-valheim-900 rounded-lg p-4 border border-valheim-700">
-                <p class="text-xs text-gray-500 uppercase tracking-wider mb-1" x-text="t('dashboard.metrics.disk')">Disk (Valheim)</p>
-                <p class="text-lg font-bold" x-text="metrics.disk?.total_bytes != null ? formatBytes(metrics.disk?.total_bytes) : '—'"></p>
-                <p class="text-xs text-gray-500 mt-1" x-show="metrics.disk?.total_bytes != null">
-                  game: <span x-text="formatBytes(metrics.disk?.game_bytes)"></span>
-                  · mods: <span x-text="formatBytes(metrics.disk?.mods_bytes)"></span>
-                  · worlds: <span x-text="formatBytes(metrics.disk?.worlds_bytes)"></span>
-                  · backups: <span x-text="formatBytes(metrics.disk?.backups_bytes)"></span>
-                </p>
-              </div>
-              <div class="bg-valheim-900 rounded-lg p-4 border border-valheim-700">
-                <p class="text-xs text-gray-500 uppercase tracking-wider mb-1" x-text="t('dashboard.metrics.network')">Network</p>
-                <p class="text-sm">
-                  <span class="text-green-400">↓</span>
-                  <span class="font-bold" x-text="formatRate(metrics.network?.rx_bps)"></span>
-                  <span class="text-gray-500 mx-1">·</span>
-                  <span class="text-amber-400">↑</span>
-                  <span class="font-bold" x-text="formatRate(metrics.network?.tx_bps)"></span>
-                </p>
-              </div>
-            </div>
-
-            <button @click="onMetricsChartToggle()" class="w-full flex items-center justify-between text-left mt-4 pt-3 border-t border-valheim-700">
-              <span class="text-xs text-gray-500 uppercase tracking-wider" x-text="t('console.chart.networkTraffic')">Network traffic (chart)</span>
-              <span class="text-xs text-gray-500" x-text="metricsChartExpanded ? '▲' : '▼'"></span>
-            </button>
-            <div x-show="metricsChartExpanded" class="mt-3">
-              <div class="relative h-48 w-full bg-valheim-900 rounded-lg border border-valheim-700 p-3">
-                <canvas x-ref="netChartCanvas" class="w-full h-full"></canvas>
-              </div>
+            <div class="stat-card">
+              <span class="stat-label" x-text="t('dashboard.stats.worldPort')">World · Port</span>
+              <span class="stat-value text-valheim-gold text-base truncate" x-text="status.running_world_name || status.config?.world_name || '—'"></span>
+              <span class="stat-sub" x-text="':' + (status.config?.server_port || '2456')"></span>
             </div>
           </div>
 
-          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6">
-            <h3 class="font-display text-sm font-semibold text-valheim-gold mb-4" x-text="t('dashboard.connect.title')">How to connect</h3>
-            <p class="text-sm text-gray-400 mb-3" x-html="tHtml('dashboard.connect.intro')">In Valheim, use <strong class="text-gray-200">Join IP</strong> and enter:</p>
-            <div class="flex flex-wrap items-center gap-3">
-              <code class="bg-valheim-950 border border-valheim-700 rounded-lg px-4 py-2 font-mono text-valheim-gold-light text-sm" x-text="connectAddress()"></code>
-              <button @click="copyText(connectAddress())" class="btn btn-sm btn-ghost" x-text="t('common.actions.copyAddress')">Copy address</button>
-            </div>
-            <p class="text-xs text-gray-500 mt-3" x-html="tHtml('dashboard.connect.hint')">Password is set on the Server tab. Open UDP <strong>2456–2458</strong> on your router for external access.</p>
-          </div>
-
-          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-5">
-            <button @click="playersExpanded = !playersExpanded" class="w-full flex items-center justify-between text-left">
-              <h3 class="font-display text-sm font-semibold text-valheim-gold" x-text="t('dashboard.players.title')">Connected Players</h3>
-              <span class="text-xs text-gray-500">
-                <span x-text="(players.players || []).length || players.count || 0"></span>
-                <span class="ml-2" x-text="playersExpanded ? '▲' : '▼'"></span>
-              </span>
-            </button>
-            <div x-show="playersExpanded" class="mt-4">
-              <p x-show="!(players.players || []).length" class="text-sm text-gray-500" x-text="t('dashboard.players.empty')">No players connected right now.</p>
-              <ul x-show="(players.players || []).length" class="space-y-2">
-                <template x-for="p in players.players" :key="p.steam_id">
-                  <li class="flex flex-wrap items-center gap-2 sm:gap-3 bg-valheim-900 rounded-lg px-4 py-2 text-sm relative">
-                    <span class="w-2 h-2 rounded-full bg-green-400 shrink-0"></span>
-                    <span class="font-medium" x-text="p.name"></span>
-                    <span x-show="isPlayerAdmin(p.steam_id)" class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-valheim-gold/20 text-valheim-gold" x-text="t('dashboard.players.admin')">Admin</span>
-                    <span x-show="isPlayerBanned(p.steam_id)" class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-900/40 text-red-400" x-text="t('dashboard.players.banned')">Banned</span>
-                    <span class="text-xs text-gray-500 font-mono truncate max-w-[140px] sm:max-w-none" x-text="p.steam_id" :title="p.steam_id"></span>
-                    <div class="ml-auto relative player-actions-wrap">
-                      <button type="button"
-                        @click.stop="togglePlayerMenu(p.steam_id)"
-                        :disabled="!rconStatus.available || isBusyPrefix('playerAction:' + p.steam_id + ':')"
-                        class="btn btn-sm btn-ghost"
-                        :title="rconStatus.available ? t('console.moderationActions') : consoleStatusHint()" x-text="t('dashboard.players.actions')">Actions ▾</button>
-                      <div x-show="playerMenuOpen === String(p.steam_id)"
-                        @click.outside="closePlayerMenu()"
-                        x-transition
-                        class="player-actions-menu">
-                        <button type="button" class="player-actions-item"
-                          @click.stop="playerAction(p.steam_id, p.name, 'promote')"
-                          :disabled="isBusy('playerAction:' + p.steam_id + ':demote') || isBusy('playerAction:' + p.steam_id + ':promote')"
-                          x-text="playerActionLabel('promote', p.steam_id)"></button>
-                        <button type="button" class="player-actions-item"
-                          @click.stop="playerAction(p.steam_id, p.name, 'kick')"
-                          :disabled="isBusy('playerAction:' + p.steam_id + ':kick')" x-text="t('dashboard.players.kick')">Kick</button>
-                        <button type="button" class="player-actions-item"
-                          :class="isPlayerBanned(p.steam_id) ? '' : 'player-actions-danger'"
-                          @click.stop="playerAction(p.steam_id, p.name, 'ban')"
-                          :disabled="isBusy('playerAction:' + p.steam_id + ':ban') || isBusy('playerAction:' + p.steam_id + ':unban')"
-                          x-text="playerActionLabel('ban', p.steam_id)"></button>
-                      </div>
-                    </div>
-                  </li>
-                </template>
-              </ul>
-            </div>
-          </div>
-
-
-          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6">
-            <h3 class="font-display text-sm font-semibold text-valheim-gold mb-4" x-text="t('dashboard.quickControls.title')">Quick Controls</h3>
-            <div class="flex flex-wrap gap-3">
-              <button type="button" @click="serverAction('start')" :disabled="actionPending === 'server:start'" class="btn btn-success">
-                <span x-show="actionPending === 'server:start'" class="spinner"></span><span x-show="actionPending !== 'server:start'">▶</span> Start
-              </button>
-              <button type="button" @click="serverAction('stop')" :disabled="actionPending === 'server:stop'" class="btn btn-danger">
-                <span x-show="actionPending === 'server:stop'" class="spinner"></span><span x-show="actionPending !== 'server:stop'">■</span> Stop
-              </button>
-              <button type="button" @click="serverAction('restart')" :disabled="actionPending === 'server:restart'" class="btn btn-warning">
-                <span x-show="actionPending === 'server:restart'" class="spinner"></span><span x-show="actionPending !== 'server:restart'">↻</span> Restart
-              </button>
-              <button type="button" @click="serverAction('pause')" :disabled="actionPending === 'server:pause'" class="btn btn-warning">
-                <span x-show="actionPending === 'server:pause'" class="spinner"></span><span x-show="actionPending !== 'server:pause'">⏸</span> Pause
-              </button>
-              <button type="button" @click="serverAction('resume')" :disabled="actionPending === 'server:resume'" class="btn btn-info">
-                <span x-show="actionPending === 'server:resume'" class="spinner"></span><span x-show="actionPending !== 'server:resume'">▶</span> Resume
-              </button>
-              <button @click="openBackupModal()" class="btn btn-primary" x-text="t('dashboard.quickControls.backup')">💾 Backup</button>
-            </div>
-          </div>
-
-          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6">
-            <div class="flex items-center justify-between mb-3">
-              <h3 class="font-display text-sm font-semibold text-valheim-gold" x-text="t('dashboard.console.title')">Server Console (live)</h3>
-              <span class="flex items-center gap-2 text-xs text-gray-500">
-                <span class="w-2 h-2 rounded-full bg-green-400 status-dot"></span> Real-time
-              </span>
-            </div>
-            <div x-ref="dashConsole" class="log-viewer log-viewer-dash bg-valheim-950 border border-valheim-700 rounded-lg p-4 h-64 overflow-y-auto" x-html="formatLogHtml(dashLogs)"></div>
-            <div class="mt-3 space-y-2">
-              <p x-show="!rconStatus.available && consoleStatusHint()" class="text-xs text-amber-400/90" x-text="consoleStatusHint()"></p>
-              <div class="flex gap-2">
-                <div class="console-input-wrap relative flex-1 bg-valheim-950 border border-valheim-700 rounded-lg">
-                  <div class="console-input-ghost pointer-events-none absolute inset-0 px-3 py-2 text-sm font-mono whitespace-pre" aria-hidden="true">
-                    <span class="invisible" x-text="consoleInput"></span><span x-text="consoleGhostSuffix()"></span>
-                  </div>
-                  <input type="text"
-                    x-model="consoleInput"
-                    @keydown="onConsoleKeydown($event)"
-                    @input="consoleCompleteCycle = null"
-                    @keydown.enter.prevent="sendConsoleCommand()"
-                    :disabled="!rconStatus.available || consoleSending"
-                    :placeholder="t('console.placeholder')"
-                    class="console-input w-full bg-transparent relative z-10 border-0 rounded-lg px-3 py-2 text-sm font-mono text-gray-200 placeholder-gray-600" />
-                </div>
-                <button type="button"
-                  @click="sendConsoleCommand()"
-                  :disabled="!rconStatus.available || consoleSending || !(consoleInput || '').trim()"
-                  class="btn btn-sm btn-primary shrink-0">
-                  <span x-show="consoleSending" class="spinner"></span>
-                  <span x-show="!consoleSending" x-text="t('common.actions.send')">Send</span>
+          <!-- Quick actions + live sparkline -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="stat-card lg:col-span-2">
+              <h3 class="section-title mb-3" x-text="t('dashboard.quickControls.title')">Quick Controls</h3>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" @click="serverAction('start')" :disabled="actionPending === 'server:start'" class="btn btn-sm btn-success">
+                  <span x-show="actionPending === 'server:start'" class="spinner"></span><span x-show="actionPending !== 'server:start'">▶</span> <span x-text="t('common.actions.start')">Start</span>
                 </button>
+                <button type="button" @click="serverAction('stop')" :disabled="actionPending === 'server:stop'" class="btn btn-sm btn-danger">
+                  <span x-show="actionPending === 'server:stop'" class="spinner"></span><span x-show="actionPending !== 'server:stop'">■</span> <span x-text="t('common.actions.stop')">Stop</span>
+                </button>
+                <button type="button" @click="serverAction('restart')" :disabled="actionPending === 'server:restart'" class="btn btn-sm btn-warning">
+                  <span x-show="actionPending === 'server:restart'" class="spinner"></span><span x-show="actionPending !== 'server:restart'">↻</span> <span x-text="t('common.actions.restart')">Restart</span>
+                </button>
+                <button type="button" @click="sendQuickSave()" :disabled="!rconStatus.available || isBusy('quickSave')" class="btn btn-sm btn-info" :title="rconStatus.available ? '' : consoleStatusHint()">
+                  <span x-show="isBusy('quickSave')" class="spinner"></span><span x-show="!isBusy('quickSave')">💾</span> <span x-text="t('dashboard.quickControls.save')">Save</span>
+                </button>
+                <button @click="openBackupModal()" class="btn btn-sm btn-primary" x-text="t('dashboard.quickControls.backup')">💾 Backup</button>
               </div>
-              <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <button type="button" @click="openConsoleHelpModal()" class="btn btn-sm btn-ghost text-xs" x-text="t('console.viewCommands')">View available commands</button>
-                <span class="text-xs text-gray-600" x-text="t('console.inputHints')">Tab autocompletes · Enter sends · output appears in the logs above</span>
+              <div class="mt-4 pt-3 border-t border-valheim-700">
+                <div class="flex items-center justify-between">
+                  <span class="stat-label" x-text="t('dashboard.cpuTrend')">CPU trend</span>
+                  <button class="text-xs text-gray-500 hover:text-valheim-gold-light" @click="goToPage('metrics')" x-text="t('dashboard.openMetrics')">Open Metrics →</button>
+                </div>
+                <svg class="w-full h-8 mt-2" viewBox="0 0 100 28" preserveAspectRatio="none">
+                  <polyline :points="sparklinePoints()" fill="none" stroke="currentColor" stroke-width="1.5" class="text-valheim-gold-light" />
+                </svg>
               </div>
+            </div>
+
+            <!-- Connect block (kept above the fold) -->
+            <div class="stat-card">
+              <h3 class="section-title mb-3" x-text="t('dashboard.connect.title')">How to connect</h3>
+              <p class="text-sm text-gray-400 mb-3" x-html="tHtml('dashboard.connect.intro')">In Valheim, use <strong class="text-gray-200">Join IP</strong> and enter:</p>
+              <div class="flex flex-wrap items-center gap-2">
+                <code class="bg-valheim-950 border border-valheim-700 rounded-lg px-3 py-2 font-mono text-valheim-gold-light text-sm break-all" x-text="connectAddress()"></code>
+                <button @click="copyText(connectAddress())" class="btn btn-sm btn-ghost" x-text="t('common.actions.copyAddress')">Copy address</button>
+              </div>
+              <p class="text-xs text-gray-500 mt-3" x-html="tHtml('dashboard.connect.hint')">Password is set on the Server tab. Open UDP <strong>2456–2458</strong> on your router.</p>
             </div>
           </div>
 
-          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6">
-            <h3 class="font-display text-sm font-semibold text-valheim-gold mb-3" x-text="t('dashboard.supervisor.title')">Supervisor</h3>
+          <!-- Supervisor -->
+          <div class="stat-card">
+            <h3 class="section-title mb-3" x-text="t('dashboard.supervisor.title')">Supervisor</h3>
             <div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
               <template x-for="(state, proc) in status.supervisor" :key="proc">
                 <div class="flex items-center gap-2 bg-valheim-900 rounded-lg px-3 py-2">
@@ -374,6 +267,297 @@
                 </div>
               </template>
             </div>
+          </div>
+        </section>
+
+        <!-- PLAYERS -->
+        <section x-show="page === 'players'" class="space-y-6">
+          <div class="stat-card">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="section-title" x-text="t('playersPage.title')">Players</h3>
+              <span class="text-xs text-gray-500">
+                <span x-text="(players.players || []).length || players.count || 0"></span>
+                <span x-text="t('playersPage.online')">online</span>
+              </span>
+            </div>
+            <p x-show="!(players.players || []).length" class="text-sm text-gray-500" x-text="t('dashboard.players.empty')">No players connected right now.</p>
+            <div x-show="(players.players || []).length" class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-valheim-700">
+                    <th class="py-2 pr-3" x-text="t('playersPage.name')">Name</th>
+                    <th class="py-2 pr-3" x-text="t('playersPage.steamId')">Steam ID</th>
+                    <th class="py-2 pr-3" x-text="t('playersPage.session')">Session</th>
+                    <th class="py-2 pr-3" x-text="t('playersPage.ping')">Ping</th>
+                    <th class="py-2 pr-3" x-text="t('playersPage.biome')">Biome</th>
+                    <th class="py-2 pr-3" x-text="t('playersPage.role')">Role</th>
+                    <th class="py-2 text-right" x-text="t('playersPage.actionsCol')">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="p in players.players" :key="p.steam_id">
+                    <tr class="border-b border-valheim-700/50">
+                      <td class="py-2 pr-3 font-medium">
+                        <span class="inline-flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span><span x-text="p.name"></span></span>
+                      </td>
+                      <td class="py-2 pr-3 font-mono text-xs text-gray-500" x-text="p.steam_id" :title="p.steam_id"></td>
+                      <td class="py-2 pr-3 text-gray-400" x-text="formatSession(p.session_seconds)"></td>
+                      <td class="py-2 pr-3 text-gray-400" x-text="p.ping != null ? p.ping + ' ms' : '—'"></td>
+                      <td class="py-2 pr-3 text-gray-400" x-text="p.biome || '—'"></td>
+                      <td class="py-2 pr-3">
+                        <span x-show="isPlayerAdmin(p.steam_id)" class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-valheim-gold/20 text-valheim-gold" x-text="t('dashboard.players.admin')">Admin</span>
+                        <span x-show="isPlayerBanned(p.steam_id)" class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-900/40 text-red-400" x-text="t('dashboard.players.banned')">Banned</span>
+                        <span x-show="!isPlayerAdmin(p.steam_id) && !isPlayerBanned(p.steam_id)" class="text-xs text-gray-600" x-text="t('playersPage.player')">Player</span>
+                      </td>
+                      <td class="py-2 text-right">
+                        <div class="inline-block relative player-actions-wrap">
+                          <button type="button" @click.stop="togglePlayerMenu(p.steam_id)"
+                            :disabled="!rconStatus.available || isBusyPrefix('playerAction:' + p.steam_id + ':')"
+                            class="btn btn-sm btn-ghost"
+                            :title="rconStatus.available ? t('console.moderationActions') : consoleStatusHint()" x-text="t('dashboard.players.actions')">Actions ▾</button>
+                          <div x-show="playerMenuOpen === String(p.steam_id)" @click.outside="closePlayerMenu()" x-transition class="player-actions-menu">
+                            <button type="button" class="player-actions-item" @click.stop="playerAction(p.steam_id, p.name, 'promote')"
+                              :disabled="isBusy('playerAction:' + p.steam_id + ':demote') || isBusy('playerAction:' + p.steam_id + ':promote')"
+                              x-text="playerActionLabel('promote', p.steam_id)"></button>
+                            <button type="button" class="player-actions-item" @click.stop="playerAction(p.steam_id, p.name, 'kick')"
+                              :disabled="isBusy('playerAction:' + p.steam_id + ':kick')" x-text="t('dashboard.players.kick')">Kick</button>
+                            <button type="button" class="player-actions-item" :class="isPlayerBanned(p.steam_id) ? '' : 'player-actions-danger'"
+                              @click.stop="playerAction(p.steam_id, p.name, 'ban')"
+                              :disabled="isBusy('playerAction:' + p.steam_id + ':ban') || isBusy('playerAction:' + p.steam_id + ':unban')"
+                              x-text="playerActionLabel('ban', p.steam_id)"></button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- MAP -->
+        <section x-show="page === 'map'" class="space-y-6">
+          <div class="stat-card">
+            <div class="flex items-center justify-between mb-4 gap-3 flex-wrap">
+              <div>
+                <h3 class="section-title" x-text="t('mapPage.title')">World map</h3>
+                <p class="text-xs text-gray-500 mt-1">
+                  <span x-text="mapData.world || t('mapPage.noWorld')"></span>
+                  <span x-show="mapData.seed" class="ml-2">· <span x-text="t('mapPage.seed')">Seed</span>: <span class="font-mono text-gray-400" x-text="mapData.seed"></span></span>
+                </p>
+              </div>
+              <button class="btn btn-sm btn-ghost" @click="loadMapPage()" :disabled="mapLoading" x-text="t('common.actions.refresh')">Refresh</button>
+            </div>
+            <div class="flex flex-col lg:flex-row gap-5">
+              <div class="map-canvas-wrap shrink-0">
+                <template x-for="(mk, i) in mapMarkers()" :key="i">
+                  <div class="map-marker" :class="mk.type" :style="markerStyle(mk)" :title="(mk.tag || mk.type) + ' (' + Math.round(mk.x) + ', ' + Math.round(mk.z) + ')'"></div>
+                </template>
+                <p x-show="!mapLoading && !mapMarkers().length" class="absolute inset-0 flex items-center justify-center text-xs text-gray-500 text-center px-4" x-text="t('mapPage.empty')">No markers found for this world.</p>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="stat-label mb-2"><span x-text="t('mapPage.markers')">Markers</span> (<span x-text="mapMarkers().length"></span>)</p>
+                <div class="space-y-1 max-h-96 overflow-y-auto">
+                  <template x-for="(mk, i) in mapMarkers()" :key="i">
+                    <div class="flex items-center gap-2 bg-valheim-900 rounded px-3 py-1.5 text-xs">
+                      <span class="w-2 h-2 rounded-full" :class="mk.type === 'portal' ? 'bg-blue-400' : 'bg-valheim-gold-light'"></span>
+                      <span class="text-gray-300" x-text="mk.tag || mk.type"></span>
+                      <span class="ml-auto font-mono text-gray-500" x-text="Math.round(mk.x) + ', ' + Math.round(mk.z)"></span>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- METRICS -->
+        <section x-show="page === 'metrics'" class="space-y-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="stat-card">
+              <span class="stat-label" x-text="t('metricsPage.cpuOfLimit')">CPU (of limit)</span>
+              <span class="stat-value" x-text="metrics.cpu ? cpuPercent().toFixed(1) + '%' : '—'"></span>
+              <span class="stat-sub" x-text="t('dashboard.cpuHost', { host: (metrics.cpu?.percent_host ?? 0).toFixed(0) })"></span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label" x-text="t('dashboard.stats.ram')">RAM</span>
+              <span class="stat-value" x-text="metrics.memory ? (metrics.memory?.percent ?? 0).toFixed(0) + '%' : '—'"></span>
+              <span class="stat-sub" x-text="formatBytes(metrics.memory?.used_bytes) + ' / ' + memoryLimitLabel()"></span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label" x-text="t('metricsPage.aggregate')">Aggregate (panel+server)</span>
+              <span class="stat-value" x-text="metrics.aggregate ? (metrics.aggregate?.cpu_percent_of_limit ?? 0).toFixed(1) + '%' : '—'"></span>
+              <span class="stat-sub" x-text="'RAM ' + formatBytes(metrics.aggregate?.memory_used_bytes)"></span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label" x-text="t('dashboard.metrics.network')">Network</span>
+              <span class="stat-value text-base">↓ <span x-text="formatRate(metrics.network?.rx_bps)"></span></span>
+              <span class="stat-sub">↑ <span x-text="formatRate(metrics.network?.tx_bps)"></span></span>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <h3 class="section-title" x-text="t('metricsPage.history')">History</h3>
+              <div class="flex flex-wrap items-center gap-2">
+                <div class="flex gap-1">
+                  <template x-for="r in metricsRanges()" :key="r.id">
+                    <button class="btn-tab" :class="metricsRange === r.id && 'btn-tab-active'" @click="setMetricsRange(r.id)" x-text="r.label"></button>
+                  </template>
+                </div>
+                <select class="input text-xs !w-auto" x-model="metricsContainer" @change="setMetricsContainer($event.target.value)">
+                  <template x-for="c in metricsContainers()" :key="c.id">
+                    <option :value="c.id" x-text="c.label"></option>
+                  </template>
+                </select>
+              </div>
+            </div>
+            <div class="relative h-72 w-full bg-valheim-900 rounded-lg border border-valheim-700 p-3">
+              <canvas x-ref="histChartCanvas" class="w-full h-full"></canvas>
+              <p x-show="!metricsHistLoading && !metricsHistory.length" class="absolute inset-0 flex items-center justify-center text-xs text-gray-500" x-text="t('metricsPage.noData')">No data yet — samples accumulate while the panel runs.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- CONSOLE -->
+        <section x-show="page === 'console'" class="space-y-4">
+          <div class="stat-card">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="section-title" x-text="t('consolePage.title')">Console</h3>
+              <p x-show="!rconStatus.available && consoleStatusHint()" class="text-xs text-amber-400/90" x-text="consoleStatusHint()"></p>
+            </div>
+            <div class="flex flex-wrap gap-2 mb-3">
+              <template x-for="qc in quickCommands()" :key="qc.cmd">
+                <button type="button" class="cmd-chip" @click="useQuickCommand(qc.cmd)" :disabled="!rconStatus.available" x-text="qc.label"></button>
+              </template>
+            </div>
+            <div class="flex gap-2">
+              <div class="console-input-wrap relative flex-1 bg-valheim-950 border border-valheim-700 rounded-lg">
+                <div class="console-input-ghost pointer-events-none absolute inset-0 px-3 py-2 text-sm font-mono whitespace-pre" aria-hidden="true">
+                  <span class="invisible" x-text="consoleInput"></span><span x-text="consoleGhostSuffix()"></span>
+                </div>
+                <input type="text" x-model="consoleInput"
+                  @keydown="onConsoleKeydown($event)" @input="consoleCompleteCycle = null" @keydown.enter.prevent="sendConsoleCommand()"
+                  :disabled="!rconStatus.available || consoleSending" :placeholder="t('console.placeholder')"
+                  class="console-input w-full bg-transparent relative z-10 border-0 rounded-lg px-3 py-2 text-sm font-mono text-gray-200 placeholder-gray-600" />
+              </div>
+              <button type="button" @click="sendConsoleCommand()"
+                :disabled="!rconStatus.available || consoleSending || !(consoleInput || '').trim()" class="btn btn-sm btn-primary shrink-0">
+                <span x-show="consoleSending" class="spinner"></span>
+                <span x-show="!consoleSending" x-text="t('common.actions.send')">Send</span>
+              </button>
+              <button type="button" @click="openConsoleHelpModal()" class="btn btn-sm btn-ghost shrink-0" x-text="t('console.viewCommands')">Commands</button>
+            </div>
+            <div x-show="consoleHistory.length" class="mt-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="stat-label" x-text="t('consolePage.history')">Command history</span>
+                <button class="text-xs text-gray-500 hover:text-red-400" @click="clearConsoleHistory()" x-text="t('common.actions.clear')">Clear</button>
+              </div>
+              <div class="space-y-1 max-h-52 overflow-y-auto">
+                <template x-for="(h, i) in consoleHistory" :key="i">
+                  <div class="console-history-entry text-xs font-mono">
+                    <span class="text-valheim-gold-light">$ </span><span class="text-gray-300" x-text="h.command"></span>
+                    <div x-show="h.output" class="text-gray-500 whitespace-pre-wrap pl-3" :class="h.error && 'text-red-400'" x-text="h.output"></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="section-title" x-text="t('consolePage.logs')">Logs</h3>
+              <div class="flex items-center gap-2">
+                <button class="btn btn-sm" :class="logSource === 'docker' ? 'btn-primary' : 'btn-ghost'" @click="logSource = 'docker'; loadLogs()" x-text="t('logs.docker')">Docker</button>
+                <button class="btn btn-sm" :class="logSource === 'bepinex' ? 'btn-primary' : 'btn-ghost'" @click="logSource = 'bepinex'; loadLogs()" x-text="t('logs.bepinex')">BepInEx</button>
+                <button class="btn btn-sm btn-ghost" @click="loadLogs()" :disabled="actionPending === 'loadLogs'" x-text="t('common.actions.refresh')">Refresh</button>
+              </div>
+            </div>
+            <div x-ref="logConsole" class="log-viewer bg-valheim-950 border border-valheim-700 rounded-lg p-4 h-80 overflow-y-auto" x-html="formatLogHtml(logs)"></div>
+            <label class="flex items-center gap-2 text-xs text-gray-500 mt-3 cursor-pointer">
+              <span class="switch"><input type="checkbox" x-model="logAutoRefresh" /><span class="switch-track"></span></span>
+              <span x-text="t('logs.autoRefresh')">Auto-refresh</span>
+            </label>
+          </div>
+        </section>
+
+        <!-- ALERTS -->
+        <section x-show="page === 'alerts'" class="space-y-6">
+          <div class="stat-card">
+            <h3 class="section-title mb-4" x-text="t('alerts.title')">Alerts</h3>
+            <p class="text-sm text-gray-400 mb-4" x-text="t('alerts.subtitle')">Get notified about important server events.</p>
+
+            <div class="space-y-2 mb-6">
+              <p class="stat-label" x-text="t('alerts.events')">Events</p>
+              <label class="flex items-center gap-3 text-sm">
+                <span class="switch"><input type="checkbox" x-model="alertsConfig.events.server_down" /><span class="switch-track"></span></span>
+                <span x-text="t('alerts.serverDown')">Server goes down</span>
+              </label>
+              <label class="flex items-center gap-3 text-sm">
+                <span class="switch"><input type="checkbox" x-model="alertsConfig.events.player_join" /><span class="switch-track"></span></span>
+                <span x-text="t('alerts.playerJoin')">Player joins</span>
+              </label>
+              <label class="flex items-center gap-3 text-sm">
+                <span class="switch"><input type="checkbox" x-model="alertsConfig.events.backup_fail" /><span class="switch-track"></span></span>
+                <span x-text="t('alerts.backupFail')">Backup fails</span>
+              </label>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="surface p-4 space-y-3">
+                <label class="flex items-center gap-3 text-sm font-medium">
+                  <span class="switch"><input type="checkbox" x-model="alertsConfig.discord.enabled" /><span class="switch-track"></span></span>
+                  <span x-text="t('alerts.discord')">Discord</span>
+                </label>
+                <input type="text" class="input" x-model="alertsConfig.discord.webhook_url" :placeholder="alertsConfig.discord.webhook_url_set ? t('alerts.secretSet') : t('alerts.webhookPlaceholder')" />
+              </div>
+              <div class="surface p-4 space-y-3">
+                <label class="flex items-center gap-3 text-sm font-medium">
+                  <span class="switch"><input type="checkbox" x-model="alertsConfig.telegram.enabled" /><span class="switch-track"></span></span>
+                  <span x-text="t('alerts.telegram')">Telegram</span>
+                </label>
+                <input type="text" class="input" x-model="alertsConfig.telegram.bot_token" :placeholder="alertsConfig.telegram.bot_token_set ? t('alerts.secretSet') : t('alerts.botTokenPlaceholder')" />
+                <input type="text" class="input" x-model="alertsConfig.telegram.chat_id" :placeholder="t('alerts.chatIdPlaceholder')" />
+              </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2 mt-5">
+              <button class="btn btn-primary" @click="saveAlerts()" :disabled="isBusy('saveAlerts')">
+                <span x-show="isBusy('saveAlerts')" class="spinner"></span><span x-text="t('common.actions.save')">Save</span>
+              </button>
+              <button class="btn btn-ghost" @click="testAlerts()" :disabled="isBusy('testAlerts')">
+                <span x-show="isBusy('testAlerts')" class="spinner"></span><span x-text="t('alerts.test')">Send test</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- SCHEDULE -->
+        <section x-show="page === 'schedule'" class="space-y-6">
+          <div class="stat-card">
+            <h3 class="section-title mb-4" x-text="t('schedule.title')">Schedule</h3>
+            <p class="text-sm text-gray-400 mb-4" x-text="t('schedule.subtitle')">Cron-like automatic tasks.</p>
+            <div class="space-y-3">
+              <template x-for="job in scheduleJobs()" :key="job.id">
+                <div class="surface p-4">
+                  <div class="flex flex-wrap items-center gap-3">
+                    <label class="flex items-center gap-3 text-sm font-medium min-w-[10rem]">
+                      <span class="switch"><input type="checkbox" x-model="scheduleConfig[job.id].enabled" /><span class="switch-track"></span></span>
+                      <span x-text="job.label"></span>
+                    </label>
+                    <input type="text" class="input font-mono !w-auto flex-1 min-w-[8rem]" x-model="scheduleConfig[job.id].cron" placeholder="0 5 * * *" />
+                    <span class="text-xs text-gray-500" x-text="jobStatusLabel(job.id)"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+            <div class="flex gap-2 mt-5">
+              <button class="btn btn-primary" @click="saveSchedule()" :disabled="isBusy('saveSchedule')">
+                <span x-show="isBusy('saveSchedule')" class="spinner"></span><span x-text="t('common.actions.save')">Save</span>
+              </button>
+            </div>
+            <p class="text-xs text-gray-600 mt-3" x-text="t('schedule.cronHint')">Cron format: minute hour day month weekday (e.g. 0 5 * * * = daily at 05:00).</p>
           </div>
         </section>
 
@@ -1686,58 +1870,6 @@
             </div>
           </div>
         </section>
-
-        <!-- LOGS -->
-        <section x-show="page === 'logs'" class="space-y-4">
-          <div class="flex gap-3">
-            <button @click="logSource = 'docker'; loadLogs()" class="btn-tab"
-                    :class="logSource === 'docker' && 'btn-tab-active'" x-text="t('logs.docker')">Docker</button>
-            <button @click="logSource = 'bepinex'; loadLogs()" class="btn-tab"
-                    :class="logSource === 'bepinex' && 'btn-tab-active'" x-text="t('logs.bepinex')">BepInEx</button>
-            <button @click="loadLogs()" :disabled="isBusy('loadLogs')" class="btn btn-sm btn-neutral ml-auto">
-              <span x-show="actionPending === 'loadLogs'" class="spinner"></span>
-              <span x-show="actionPending !== 'loadLogs'">↻ Refresh</span>
-                <span x-show="actionPending === 'loadLogs'" x-text="t('common.loading.loading')">Loading...</span>
-            </button>
-            <label class="flex items-center gap-2 text-xs text-gray-500">
-              <input type="checkbox" x-model="logAutoRefresh" class="rounded" />
-              <span x-text="t('logs.autoRefresh')">Auto (5s)</span>
-            </label>
-          </div>
-          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-4 space-y-3">
-            <div x-ref="logConsole" class="log-viewer bg-valheim-900 border border-valheim-700 rounded-xl p-4 max-h-[600px] overflow-y-auto" x-html="formatLogHtml(logs, t('common.logEmpty.noLogsAvailable'))"></div>
-            <div class="border-t border-valheim-700 pt-3 space-y-2">
-              <p x-show="!rconStatus.available && consoleStatusHint()" class="text-xs text-amber-400/90" x-text="consoleStatusHint()"></p>
-              <div class="flex gap-2">
-                <div class="console-input-wrap relative flex-1 bg-valheim-950 border border-valheim-700 rounded-lg">
-                  <div class="console-input-ghost pointer-events-none absolute inset-0 px-3 py-2 text-sm font-mono whitespace-pre" aria-hidden="true">
-                    <span class="invisible" x-text="consoleInput"></span><span x-text="consoleGhostSuffix()"></span>
-                  </div>
-                  <input type="text"
-                    x-model="consoleInput"
-                    @keydown="onConsoleKeydown($event)"
-                    @input="consoleCompleteCycle = null"
-                    @keydown.enter.prevent="sendConsoleCommand()"
-                    :disabled="!rconStatus.available || consoleSending"
-                    placeholder="RCON command (e.g. save, list, kick Name...)"
-                    class="console-input w-full bg-transparent relative z-10 border-0 rounded-lg px-3 py-2 text-sm font-mono text-gray-200 placeholder-gray-600" />
-                </div>
-                <button type="button"
-                  @click="sendConsoleCommand()"
-                  :disabled="!rconStatus.available || consoleSending || !(consoleInput || '').trim()"
-                  class="btn btn-sm btn-primary shrink-0">
-                  <span x-show="consoleSending" class="spinner"></span>
-                  <span x-show="!consoleSending">Send</span>
-                </button>
-              </div>
-              <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <button type="button" @click="openConsoleHelpModal()" class="btn btn-sm btn-ghost text-xs">View available commands</button>
-                <span class="text-xs text-gray-600">Tab autocompletes · Enter sends · output appears in the logs above</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
 
         <!-- HELP -->
         <section x-show="page === 'help'" class="space-y-6">

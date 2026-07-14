@@ -23,13 +23,24 @@
       "audit": "Аудит",
       "help": "Справка",
       "donation": "Поддержать проект",
-      "about": "О программе"
+      "about": "О программе",
+      "overview": "Обзор",
+      "players": "Игроки",
+      "map": "Карта",
+      "console": "Консоль",
+      "metrics": "Метрики",
+      "config": "Настройки",
+      "alerts": "Оповещения",
+      "schedule": "Расписание"
     },
     "sidebar": {
       "containerRunning": "Контейнер запущен",
-      "containerStopped": "Контейнер остановлен"
+      "containerStopped": "Контейнер остановлен",
+      "live": "ОНЛАЙН"
     },
-    "refresh": "Обновить"
+    "refresh": "Обновить",
+    "menu": "Меню",
+    "close": "Закрыть"
   },
   "common": {
     "actions": {
@@ -55,7 +66,12 @@
       "copyResponse": "Копировать ответ",
       "copyAll": "Скопировать все",
       "restoreDraft": "Восстановить черновик",
-      "discard": "Отказаться"
+      "discard": "Отказаться",
+      "start": "Запустить",
+      "stop": "Остановить",
+      "restart": "Перезапустить",
+      "refresh": "Обновить",
+      "clear": "Очистить"
     },
     "loading": {
       "loading": "Загрузка...",
@@ -884,7 +900,11 @@
       "activeWorld": "Активный мир",
       "playersOnline": "Игроки онлайн",
       "mods": "Моды",
-      "port": "Порт"
+      "port": "Порт",
+      "uptime": "Время работы",
+      "cpu": "ЦП",
+      "ram": "ОЗУ",
+      "worldPort": "Мир · Порт"
     },
     "configCorrected": "Конфиг исправлен: {from} → {to}",
     "performance": "Производительность",
@@ -924,14 +944,20 @@
       "restart": "Перезапуск",
       "pause": "Пауза",
       "resume": "Резюме",
-      "backup": "💾 Резервное копирование"
+      "backup": "💾 Резервное копирование",
+      "save": "Сохранить",
+      "saved": "Запрошено сохранение мира"
     },
     "console": {
       "title": "Консоль сервера (живая)"
     },
     "supervisor": {
       "title": "супервайзер"
-    }
+    },
+    "viewPlayers": "Показать игроков →",
+    "cpuHost": "{host}% хоста",
+    "cpuTrend": "Динамика ЦП",
+    "openMetrics": "Открыть метрики →"
   },
   "server": {
     "settings": {
@@ -1410,5 +1436,87 @@
       "sent": "Отправлено: {text}",
       "textRequired": "Текст сообщения обязателен"
     }
+  },
+  "theme": {
+    "dark": "Тёмная тема",
+    "light": "Светлая тема"
+  },
+  "playersPage": {
+    "title": "Игроки",
+    "online": "онлайн",
+    "name": "Имя",
+    "steamId": "Steam ID",
+    "session": "Сессия",
+    "ping": "Пинг",
+    "biome": "Биом",
+    "role": "Роль",
+    "actionsCol": "Действия",
+    "player": "Игрок"
+  },
+  "mapPage": {
+    "title": "Карта мира",
+    "noWorld": "Нет активного мира",
+    "seed": "Сид",
+    "empty": "Маркеры для этого мира не найдены.",
+    "markers": "Маркеры"
+  },
+  "metricsPage": {
+    "ranges": {
+      "1h": "1ч",
+      "24h": "24ч",
+      "7d": "7д"
+    },
+    "containers": {
+      "server": "Сервер",
+      "panel": "Панель"
+    },
+    "cpu": "ЦП %",
+    "memory": "Память %",
+    "history": "История",
+    "noData": "Пока нет данных — образцы накапливаются во время работы панели.",
+    "cpuOfLimit": "ЦП (от лимита)",
+    "aggregate": "Суммарно (панель+сервер)"
+  },
+  "consolePage": {
+    "title": "Консоль",
+    "logs": "Логи",
+    "history": "История команд",
+    "quick": {
+      "save": "Сохранить",
+      "saveShutdown": "Сохранить и выключить",
+      "kick": "Выгнать",
+      "ban": "Забанить",
+      "broadcast": "Объявление"
+    }
+  },
+  "alerts": {
+    "title": "Оповещения",
+    "subtitle": "Получайте уведомления о важных событиях сервера.",
+    "events": "События",
+    "serverDown": "Сервер упал",
+    "playerJoin": "Игрок подключился",
+    "backupFail": "Ошибка бэкапа",
+    "discord": "Discord",
+    "telegram": "Telegram",
+    "webhookPlaceholder": "URL вебхука Discord",
+    "botTokenPlaceholder": "Токен бота Telegram",
+    "chatIdPlaceholder": "Chat ID Telegram",
+    "secretSet": "•••••• (сохранено)",
+    "test": "Отправить тест",
+    "saved": "Оповещения сохранены",
+    "tested": "Тестовое уведомление отправлено"
+  },
+  "schedule": {
+    "title": "Расписание",
+    "subtitle": "Автоматические задачи в стиле cron.",
+    "jobs": {
+      "restart": "Ночной перезапуск",
+      "backup": "Автоматический бэкап",
+      "modUpdate": "Обновление модов"
+    },
+    "saved": "Расписание сохранено",
+    "lastRun": "Последний запуск: {when} ({status})",
+    "neverRun": "Ещё не запускалось",
+    "cronHint": "Формат cron: минута час день месяц день-недели (напр. 0 5 * * * = ежедневно в 05:00)."
   }
 }

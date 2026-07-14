@@ -23,13 +23,24 @@
       "audit": "Audit",
       "help": "Hilfe",
       "donation": "Projekt unterstützen",
-      "about": "Über"
+      "about": "Über",
+      "overview": "Übersicht",
+      "players": "Spieler",
+      "map": "Karte",
+      "console": "Konsole",
+      "metrics": "Metriken",
+      "config": "Konfiguration",
+      "alerts": "Benachrichtigungen",
+      "schedule": "Zeitplan"
     },
     "sidebar": {
       "containerRunning": "Container läuft",
-      "containerStopped": "Container gestoppt"
+      "containerStopped": "Container gestoppt",
+      "live": "LIVE"
     },
-    "refresh": "Aktualisieren"
+    "refresh": "Aktualisieren",
+    "menu": "Menü",
+    "close": "Schließen"
   },
   "common": {
     "actions": {
@@ -55,7 +66,12 @@
       "copyResponse": "Antwort kopieren",
       "copyAll": "Alles kopieren",
       "restoreDraft": "Entwurf wiederherstellen",
-      "discard": "Verwerfen"
+      "discard": "Verwerfen",
+      "start": "Starten",
+      "stop": "Stoppen",
+      "restart": "Neustarten",
+      "refresh": "Aktualisieren",
+      "clear": "Leeren"
     },
     "loading": {
       "loading": "Laden...",
@@ -884,7 +900,11 @@
       "activeWorld": "Aktive Welt",
       "playersOnline": "Spieler online",
       "mods": "Mods",
-      "port": "Hafen"
+      "port": "Hafen",
+      "uptime": "Laufzeit",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "worldPort": "Welt · Port"
     },
     "configCorrected": "Konfiguration korrigiert: {from} → {to}",
     "performance": "Leistung",
@@ -924,14 +944,20 @@
       "restart": "Neustart",
       "pause": "Pause",
       "resume": "Wieder aufnehmen",
-      "backup": "💾 Sicherung"
+      "backup": "💾 Sicherung",
+      "save": "Speichern",
+      "saved": "Welt-Speicherung angefordert"
     },
     "console": {
       "title": "Serverkonsole (live)"
     },
     "supervisor": {
       "title": "Aufsicht"
-    }
+    },
+    "viewPlayers": "Spieler anzeigen →",
+    "cpuHost": "{host}% des Hosts",
+    "cpuTrend": "CPU-Verlauf",
+    "openMetrics": "Metriken öffnen →"
   },
   "server": {
     "settings": {
@@ -1410,5 +1436,87 @@
       "sent": "Gesendet: {text}",
       "textRequired": "Nachrichtentext ist erforderlich"
     }
+  },
+  "theme": {
+    "dark": "Dunkles Design",
+    "light": "Helles Design"
+  },
+  "playersPage": {
+    "title": "Spieler",
+    "online": "online",
+    "name": "Name",
+    "steamId": "Steam-ID",
+    "session": "Sitzung",
+    "ping": "Ping",
+    "biome": "Biom",
+    "role": "Rolle",
+    "actionsCol": "Aktionen",
+    "player": "Spieler"
+  },
+  "mapPage": {
+    "title": "Weltkarte",
+    "noWorld": "Keine aktive Welt",
+    "seed": "Seed",
+    "empty": "Keine Marker für diese Welt gefunden.",
+    "markers": "Marker"
+  },
+  "metricsPage": {
+    "ranges": {
+      "1h": "1 Std",
+      "24h": "24 Std",
+      "7d": "7 T"
+    },
+    "containers": {
+      "server": "Server",
+      "panel": "Panel"
+    },
+    "cpu": "CPU %",
+    "memory": "Speicher %",
+    "history": "Verlauf",
+    "noData": "Noch keine Daten — Proben sammeln sich, während das Panel läuft.",
+    "cpuOfLimit": "CPU (vom Limit)",
+    "aggregate": "Gesamt (Panel+Server)"
+  },
+  "consolePage": {
+    "title": "Konsole",
+    "logs": "Logs",
+    "history": "Befehlsverlauf",
+    "quick": {
+      "save": "Speichern",
+      "saveShutdown": "Speichern & herunterfahren",
+      "kick": "Kicken",
+      "ban": "Bannen",
+      "broadcast": "Ansage"
+    }
+  },
+  "alerts": {
+    "title": "Benachrichtigungen",
+    "subtitle": "Werde über wichtige Serverereignisse informiert.",
+    "events": "Ereignisse",
+    "serverDown": "Server fällt aus",
+    "playerJoin": "Spieler tritt bei",
+    "backupFail": "Backup schlägt fehl",
+    "discord": "Discord",
+    "telegram": "Telegram",
+    "webhookPlaceholder": "Discord-Webhook-URL",
+    "botTokenPlaceholder": "Telegram-Bot-Token",
+    "chatIdPlaceholder": "Telegram-Chat-ID",
+    "secretSet": "•••••• (gespeichert)",
+    "test": "Test senden",
+    "saved": "Benachrichtigungen gespeichert",
+    "tested": "Testbenachrichtigung gesendet"
+  },
+  "schedule": {
+    "title": "Zeitplan",
+    "subtitle": "Cron-ähnliche automatische Aufgaben.",
+    "jobs": {
+      "restart": "Nächtlicher Neustart",
+      "backup": "Automatisches Backup",
+      "modUpdate": "Mod-Updates"
+    },
+    "saved": "Zeitplan gespeichert",
+    "lastRun": "Letzte Ausführung: {when} ({status})",
+    "neverRun": "Noch nie ausgeführt",
+    "cronHint": "Cron-Format: Minute Stunde Tag Monat Wochentag (z. B. 0 5 * * * = täglich um 05:00)."
   }
 }

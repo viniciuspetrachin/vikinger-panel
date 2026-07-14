@@ -23,13 +23,24 @@
       "audit": "Auditoría",
       "help": "Ayuda",
       "donation": "Apoya el proyecto",
-      "about": "Acerca de"
+      "about": "Acerca de",
+      "overview": "Resumen",
+      "players": "Jugadores",
+      "map": "Mapa",
+      "console": "Consola",
+      "metrics": "Métricas",
+      "config": "Configuración",
+      "alerts": "Alertas",
+      "schedule": "Programación"
     },
     "sidebar": {
       "containerRunning": "Contenedor en ejecución",
-      "containerStopped": "Contenedor detenido"
+      "containerStopped": "Contenedor detenido",
+      "live": "EN VIVO"
     },
-    "refresh": "Actualizar"
+    "refresh": "Actualizar",
+    "menu": "Menú",
+    "close": "Cerrar"
   },
   "common": {
     "actions": {
@@ -55,7 +66,12 @@
       "copyResponse": "Copiar respuesta",
       "copyAll": "Copiar todo",
       "restoreDraft": "Restaurar borrador",
-      "discard": "Desechar"
+      "discard": "Desechar",
+      "start": "Iniciar",
+      "stop": "Detener",
+      "restart": "Reiniciar",
+      "refresh": "Actualizar",
+      "clear": "Limpiar"
     },
     "loading": {
       "loading": "Cargando...",
@@ -884,7 +900,11 @@
       "activeWorld": "Mundo Activo",
       "playersOnline": "Jugadores en línea",
       "mods": "Mods",
-      "port": "Puerto"
+      "port": "Puerto",
+      "uptime": "Tiempo activo",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "worldPort": "Mundo · Puerto"
     },
     "configCorrected": "Configuración corregida: {from} → {to}",
     "performance": "Actuación",
@@ -924,14 +944,20 @@
       "restart": "Reanudar",
       "pause": "Pausa",
       "resume": "Reanudar",
-      "backup": "💾 Copia de seguridad"
+      "backup": "💾 Copia de seguridad",
+      "save": "Guardar",
+      "saved": "Guardado de mundo solicitado"
     },
     "console": {
       "title": "Consola del servidor (en vivo)"
     },
     "supervisor": {
       "title": "Supervisor"
-    }
+    },
+    "viewPlayers": "Ver jugadores →",
+    "cpuHost": "{host}% del host",
+    "cpuTrend": "Tendencia de CPU",
+    "openMetrics": "Abrir Métricas →"
   },
   "server": {
     "settings": {
@@ -1410,5 +1436,87 @@
       "sent": "Enviado: {text}",
       "textRequired": "El texto del mensaje es obligatorio"
     }
+  },
+  "theme": {
+    "dark": "Tema oscuro",
+    "light": "Tema claro"
+  },
+  "playersPage": {
+    "title": "Jugadores",
+    "online": "en línea",
+    "name": "Nombre",
+    "steamId": "Steam ID",
+    "session": "Sesión",
+    "ping": "Ping",
+    "biome": "Bioma",
+    "role": "Rol",
+    "actionsCol": "Acciones",
+    "player": "Jugador"
+  },
+  "mapPage": {
+    "title": "Mapa del mundo",
+    "noWorld": "Sin mundo activo",
+    "seed": "Semilla",
+    "empty": "No se encontraron marcadores para este mundo.",
+    "markers": "Marcadores"
+  },
+  "metricsPage": {
+    "ranges": {
+      "1h": "1h",
+      "24h": "24h",
+      "7d": "7d"
+    },
+    "containers": {
+      "server": "Servidor",
+      "panel": "Panel"
+    },
+    "cpu": "CPU %",
+    "memory": "Memoria %",
+    "history": "Historial",
+    "noData": "Aún sin datos — las muestras se acumulan mientras el panel funciona.",
+    "cpuOfLimit": "CPU (del límite)",
+    "aggregate": "Agregado (panel+servidor)"
+  },
+  "consolePage": {
+    "title": "Consola",
+    "logs": "Registros",
+    "history": "Historial de comandos",
+    "quick": {
+      "save": "Guardar",
+      "saveShutdown": "Guardar y apagar",
+      "kick": "Expulsar",
+      "ban": "Banear",
+      "broadcast": "Anuncio"
+    }
+  },
+  "alerts": {
+    "title": "Alertas",
+    "subtitle": "Recibe notificaciones de eventos importantes del servidor.",
+    "events": "Eventos",
+    "serverDown": "El servidor cae",
+    "playerJoin": "Un jugador entra",
+    "backupFail": "Falla la copia",
+    "discord": "Discord",
+    "telegram": "Telegram",
+    "webhookPlaceholder": "URL del webhook de Discord",
+    "botTokenPlaceholder": "Token del bot de Telegram",
+    "chatIdPlaceholder": "Chat ID de Telegram",
+    "secretSet": "•••••• (guardado)",
+    "test": "Enviar prueba",
+    "saved": "Alertas guardadas",
+    "tested": "Notificación de prueba enviada"
+  },
+  "schedule": {
+    "title": "Programación",
+    "subtitle": "Tareas automáticas tipo cron.",
+    "jobs": {
+      "restart": "Reinicio nocturno",
+      "backup": "Copia automática",
+      "modUpdate": "Actualización de mods"
+    },
+    "saved": "Programación guardada",
+    "lastRun": "Última ejecución: {when} ({status})",
+    "neverRun": "Nunca ejecutado",
+    "cronHint": "Formato cron: minuto hora día mes día-semana (p. ej. 0 5 * * * = diario a las 05:00)."
   }
 }
