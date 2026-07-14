@@ -19,6 +19,32 @@ export const console = {
   consoleHelpModalOpen: false,
   consoleHelpSearch: "",
   consoleCompleteCycle: null,
+  consoleHistory: [],
+
+  quickCommands() {
+    void this.localeVersion;
+    return [
+      { label: this.t("consolePage.quick.save"), cmd: "save" },
+      { label: this.t("consolePage.quick.saveShutdown"), cmd: "save_shutdown" },
+      { label: this.t("consolePage.quick.kick"), cmd: "kick " },
+      { label: this.t("consolePage.quick.ban"), cmd: "ban " },
+      { label: this.t("consolePage.quick.broadcast"), cmd: "broadcast " },
+    ];
+  },
+
+  useQuickCommand(cmd) {
+    this.consoleInput = cmd;
+    if (cmd.endsWith(" ")) {
+      // Command expects an argument — focus the input instead of sending.
+      this.$nextTick(() => document.querySelector(".console-input:not(:disabled)")?.focus());
+      return;
+    }
+    this.sendConsoleCommand();
+  },
+
+  clearConsoleHistory() {
+    this.consoleHistory = [];
+  },
 
   async loadConsoleStatus() {
     try {
@@ -45,9 +71,17 @@ export const console = {
     this.consoleCompleteCycle = null;
     this.consoleSending = true;
     try {
-      await this.api("POST", "/api/console/command", { command });
+      const res = await this.api("POST", "/api/console/command", { command });
+      this.consoleHistory.unshift({
+        command,
+        output: (res && res.output) || "",
+        ts: Date.now(),
+      });
+      if (this.consoleHistory.length > 50) this.consoleHistory.pop();
       await this.refreshConsoleLogs();
     } catch (e) {
+      this.consoleHistory.unshift({ command, output: e.message, error: true, ts: Date.now() });
+      if (this.consoleHistory.length > 50) this.consoleHistory.pop();
       this.toast(e.message, "error");
     } finally {
       this.consoleSending = false;

@@ -1,4 +1,12 @@
 /** @type {import('tailwindcss').Config} */
+
+// Palettes are driven by CSS variables (RGB triplets) so the whole UI can be
+// re-themed (dark/light) by swapping the variables in input.css — see the
+// [data-theme] blocks. `<alpha-value>` keeps Tailwind opacity modifiers working
+// (e.g. bg-valheim-900/80).
+const v = (name) => `rgb(var(--v-${name}) / <alpha-value>)`;
+const g = (name) => `rgb(var(--g-${name}) / <alpha-value>)`;
+
 export default {
   content: [
     "./static/index.html",
@@ -12,16 +20,30 @@ export default {
       },
       colors: {
         valheim: {
-          950: "#0a0e0d",
-          900: "#0f1614",
-          800: "#16201c",
-          700: "#1e2b26",
-          600: "#2a3d35",
-          gold: "#c9a227",
-          "gold-light": "#e8c547",
-          moss: "#3d6b4f",
-          ember: "#c45c26",
+          950: v("950"),
+          900: v("900"),
+          800: v("800"),
+          700: v("700"),
+          600: v("600"),
+          gold: v("gold"),
+          "gold-light": v("gold-light"),
+          moss: v("moss"),
+          ember: v("ember"),
         },
+        gray: {
+          100: g("100"),
+          200: g("200"),
+          300: g("300"),
+          400: g("400"),
+          500: g("500"),
+          600: g("600"),
+          700: g("700"),
+          800: g("800"),
+          900: g("900"),
+        },
+      },
+      maxWidth: {
+        content: "90rem",
       },
     },
   },
