@@ -90,7 +90,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-## [Unreleased]
+## [2.1.10]
 
 ### Added
 
@@ -108,3 +108,11 @@ All notable changes to this project will be documented in this file.
 - **Tema claro:** paleta parchment/forest alinhada (contraste de texto, borders, botões sólidos, badges, toasts e estados success/danger/warning).
 - **Aba Mapa:** deixava de mostrar conteúdo em saves reais (scan heurístico de portais no `.db` não encontra prefabs); agora usa pins/fog do ServerSideMap quando o mod está presente.
 - **Aba Mapa:** “mostrar totalmente explorado” não atualizava / ficava oculto sem o mod; agora o toggle sempre aparece com mundo selecionado e força reload da imagem.
+
+## [Unreleased]
+
+### Added
+
+### Changed
+
+### Fixed
