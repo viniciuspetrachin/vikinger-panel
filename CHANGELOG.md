@@ -94,6 +94,17 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Aba Mapa:** leitura do arquivo ServerSideMap (`.mod.serversidemap.explored`) com pins compartilhados e fog de exploração renderizado como PNG (`GET /api/map/{world}` + `/api/map/{world}/fog.png`).
+- **Aba Mapa:** seletor de mundo (padrão = mundo ativo) e opção “mostrar totalmente explorado” (fog of war vs disco completo).
+- **Aba Mapa:** zoom/pan (scroll, arrastar, botões +/−/reset) no canvas do mapa.
+- **Aba Mapa:** marcada como **Beta** na sidebar e no título da página.
+
 ### Changed
 
+- **Aba Mapa:** o ServerSideMap deixou de ser obrigatório — o PNG do mapa (disco tintado pela seed) é sempre gerado; o mod só acrescenta fog real e pins compartilhados.
+
 ### Fixed
+
+- **Tema claro:** paleta parchment/forest alinhada (contraste de texto, borders, botões sólidos, badges, toasts e estados success/danger/warning).
+- **Aba Mapa:** deixava de mostrar conteúdo em saves reais (scan heurístico de portais no `.db` não encontra prefabs); agora usa pins/fog do ServerSideMap quando o mod está presente.
+- **Aba Mapa:** “mostrar totalmente explorado” não atualizava / ficava oculto sem o mod; agora o toggle sempre aparece com mundo selecionado e força reload da imagem.

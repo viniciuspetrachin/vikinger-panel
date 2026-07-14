@@ -21,7 +21,7 @@
   <div class="fixed top-4 right-4 z-50 space-y-2" x-show="toasts.length" x-transition>
     <template x-for="(toast, i) in toasts" :key="i">
       <div class="px-4 py-3 rounded-lg shadow-xl text-sm font-medium max-w-sm"
-           :class="toast.type === 'error' ? 'bg-red-900/90 border border-red-700 text-red-100' : 'bg-valheim-700 border border-valheim-moss text-green-100'"
+           :class="toast.type === 'error' ? 'bg-valheim-danger text-valheim-on-solid border border-valheim-danger' : 'bg-valheim-moss text-valheim-on-solid border border-valheim-moss'"
            x-text="toast.msg"></div>
     </template>
   </div>
@@ -112,9 +112,10 @@
         <template x-for="item in visiblePrimary()" :key="item.id">
           <button @click="goToPage(item.id)" :data-nav-id="item.id"
                   class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all"
-                  :class="isPrimaryActive(item.id) ? 'bg-valheim-700 text-valheim-gold-light glow-gold' : 'text-gray-400 hover:bg-valheim-800 hover:text-gray-200'">
+                  :class="isPrimaryActive(item.id) ? 'bg-valheim-accent-bg text-valheim-gold-light glow-gold' : 'text-gray-400 hover:bg-valheim-800 hover:text-gray-200'">
             <span x-html="item.icon" class="w-5 h-5 shrink-0"></span>
-            <span x-text="item.label"></span>
+            <span class="truncate" x-text="item.label"></span>
+            <span x-show="item.badge" class="nav-badge ml-auto" x-text="item.badge"></span>
           </button>
         </template>
       </nav>
@@ -136,9 +137,9 @@
 
         <div class="flex items-center gap-2 text-xs">
           <span class="w-2 h-2 rounded-full status-dot"
-                :class="status.container === 'running' ? 'bg-green-400' : 'bg-red-400'"></span>
+                :class="status.container === 'running' ? 'bg-valheim-success' : 'bg-valheim-danger'"></span>
           <span class="text-gray-500" x-text="status.container === 'running' ? t('nav.sidebar.containerRunning') : t('nav.sidebar.containerStopped')"></span>
-          <span x-show="wsConnected" class="ml-auto text-[10px] text-green-500" x-text="t('nav.sidebar.live')">LIVE</span>
+          <span x-show="wsConnected" class="ml-auto text-[10px] text-valheim-success" x-text="t('nav.sidebar.live')">LIVE</span>
         </div>
         <p class="text-[10px] text-gray-600" x-show="versionInfo.version">
           v<span x-text="versionInfo.version"></span>
@@ -183,7 +184,7 @@
             <div class="stat-card">
               <span class="stat-label" x-text="t('dashboard.stats.server')">Server</span>
               <span class="stat-value capitalize"
-                    :class="status.server === 'running' ? 'text-green-400' : status.server === 'stopped' ? 'text-yellow-400' : 'text-red-400'"
+                    :class="status.server === 'running' ? 'text-valheim-success' : status.server === 'stopped' ? 'text-valheim-warning' : 'text-valheim-danger'"
                     x-text="statusLabel(status.server)"></span>
               <span class="stat-sub" x-text="status.container === 'running' ? t('nav.sidebar.containerRunning') : t('nav.sidebar.containerStopped')"></span>
             </div>
@@ -193,7 +194,7 @@
             </div>
             <div class="stat-card">
               <span class="stat-label" x-text="t('dashboard.stats.playersOnline')">Players</span>
-              <span class="stat-value text-green-400" x-text="status.players_count ?? players.count ?? 0"></span>
+              <span class="stat-value text-valheim-success" x-text="status.players_count ?? players.count ?? 0"></span>
               <button class="stat-sub text-left hover:text-valheim-gold-light" @click="goToPage('players')" x-text="t('dashboard.viewPlayers')">View players →</button>
             </div>
             <div class="stat-card">
@@ -261,7 +262,7 @@
             <div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
               <template x-for="(state, proc) in status.supervisor" :key="proc">
                 <div class="flex items-center gap-2 bg-valheim-900 rounded-lg px-3 py-2">
-                  <span class="w-2 h-2 rounded-full" :class="state === 'RUNNING' ? 'bg-green-400' : 'bg-gray-500'"></span>
+                  <span class="w-2 h-2 rounded-full" :class="state === 'RUNNING' ? 'bg-valheim-success' : 'bg-gray-500'"></span>
                   <span class="text-gray-400" x-text="proc"></span>
                   <span class="ml-auto text-xs" x-text="state"></span>
                 </div>
@@ -298,7 +299,7 @@
                   <template x-for="p in players.players" :key="p.steam_id">
                     <tr class="border-b border-valheim-700/50">
                       <td class="py-2 pr-3 font-medium">
-                        <span class="inline-flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span><span x-text="p.name"></span></span>
+                        <span class="inline-flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-valheim-success"></span><span x-text="p.name"></span></span>
                       </td>
                       <td class="py-2 pr-3 font-mono text-xs text-gray-500" x-text="p.steam_id" :title="p.steam_id"></td>
                       <td class="py-2 pr-3 text-gray-400" x-text="formatSession(p.session_seconds)"></td>
@@ -306,7 +307,7 @@
                       <td class="py-2 pr-3 text-gray-400" x-text="p.biome || '—'"></td>
                       <td class="py-2 pr-3">
                         <span x-show="isPlayerAdmin(p.steam_id)" class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-valheim-gold/20 text-valheim-gold" x-text="t('dashboard.players.admin')">Admin</span>
-                        <span x-show="isPlayerBanned(p.steam_id)" class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-900/40 text-red-400" x-text="t('dashboard.players.banned')">Banned</span>
+                        <span x-show="isPlayerBanned(p.steam_id)" class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-valheim-danger/15 text-valheim-danger" x-text="t('dashboard.players.banned')">Banned</span>
                         <span x-show="!isPlayerAdmin(p.steam_id) && !isPlayerBanned(p.steam_id)" class="text-xs text-gray-600" x-text="t('playersPage.player')">Player</span>
                       </td>
                       <td class="py-2 text-right">
@@ -340,30 +341,87 @@
         <section x-show="page === 'map'" class="space-y-6">
           <div class="stat-card">
             <div class="flex items-center justify-between mb-4 gap-3 flex-wrap">
-              <div>
-                <h3 class="section-title" x-text="t('mapPage.title')">World map</h3>
+              <div class="min-w-0">
+                <h3 class="section-title flex items-center gap-2 flex-wrap">
+                  <span x-text="t('mapPage.title')">World map</span>
+                  <span class="nav-badge" x-text="t('nav.badges.beta')">Beta</span>
+                </h3>
                 <p class="text-xs text-gray-500 mt-1">
-                  <span x-text="mapData.world || t('mapPage.noWorld')"></span>
+                  <span x-text="mapDisplayWorld() || t('mapPage.noWorld')"></span>
+                  <span x-show="mapWorld && mapActiveWorld && mapWorld === mapActiveWorld" class="ml-1 text-valheim-gold-light/70" x-text="'(' + t('mapPage.activeWorld') + ')'"></span>
                   <span x-show="mapData.seed" class="ml-2">· <span x-text="t('mapPage.seed')">Seed</span>: <span class="font-mono text-gray-400" x-text="mapData.seed"></span></span>
+                  <span x-show="mapData.mod?.serversidemap" class="ml-2 text-valheim-gold-light/80" x-text="t('mapPage.serverSideMap')">· ServerSideMap</span>
+                </p>
+                <p x-show="mapHasFog() && !mapRevealAll" class="text-xs text-gray-500 mt-1">
+                  <span x-text="t('mapPage.explored')"></span>:
+                  <span class="font-mono text-gray-400" x-text="(mapData.explored?.cells || 0).toLocaleString()"></span>
+                  /
+                  <span class="font-mono text-gray-500" x-text="(mapData.explored?.total || 0).toLocaleString()"></span>
                 </p>
               </div>
-              <button class="btn btn-sm btn-ghost" @click="loadMapPage()" :disabled="mapLoading" x-text="t('common.actions.refresh')">Refresh</button>
+              <div class="flex items-center gap-2 flex-wrap">
+                <label class="flex items-center gap-2 text-xs text-gray-400">
+                  <span x-text="t('mapPage.world')">World</span>
+                  <select class="input text-xs !w-auto min-w-[10rem]"
+                          :value="mapWorld"
+                          @change="selectMapWorld($event.target.value)"
+                          :disabled="mapLoading || !mapWorldOptions.length">
+                    <template x-for="name in mapWorldOptions" :key="name">
+                      <option :value="name" x-text="name + (name === mapActiveWorld ? ' ★' : '')"></option>
+                    </template>
+                  </select>
+                </label>
+                <button class="btn btn-sm btn-ghost" @click="loadMapPage()" :disabled="mapLoading" x-text="t('common.actions.refresh')">Refresh</button>
+              </div>
             </div>
+            <label x-show="mapDisplayWorld()" class="flex items-start gap-2 mb-4 text-xs text-gray-400 cursor-pointer select-none max-w-xl">
+              <input type="checkbox" class="mt-0.5 accent-valheim-gold"
+                     :checked="mapRevealAll"
+                     @change="setMapRevealAll($event.target.checked)" />
+              <span>
+                <span class="text-gray-300" x-text="t('mapPage.revealAll')"></span>
+                <span class="block text-gray-500 mt-0.5" x-text="mapHasFog() ? t('mapPage.revealAllHint') : t('mapPage.revealAllHintNoMod')"></span>
+              </span>
+            </label>
             <div class="flex flex-col lg:flex-row gap-5">
-              <div class="map-canvas-wrap shrink-0">
-                <template x-for="(mk, i) in mapMarkers()" :key="i">
-                  <div class="map-marker" :class="mk.type" :style="markerStyle(mk)" :title="(mk.tag || mk.type) + ' (' + Math.round(mk.x) + ', ' + Math.round(mk.z) + ')'"></div>
-                </template>
-                <p x-show="!mapLoading && !mapMarkers().length" class="absolute inset-0 flex items-center justify-center text-xs text-gray-500 text-center px-4" x-text="t('mapPage.empty')">No markers found for this world.</p>
+              <div class="map-stage shrink-0">
+                <div class="map-canvas-wrap"
+                     :class="[mapHasImage() && 'map-canvas-wrap--fog', mapDragging && 'map-canvas-wrap--dragging']"
+                     x-ref="mapCanvasWrap"
+                     @wheel.prevent="mapZoomWheel($event)"
+                     @pointerdown="mapPointerDown($event)"
+                     @pointermove="mapPointerMove($event)"
+                     @pointerup="mapPointerUp($event)"
+                     @pointercancel="mapPointerUp($event)"
+                     @dblclick.prevent="mapResetView()">
+                  <div class="map-viewport" :style="mapViewportStyle()">
+                    <img x-show="mapHasImage()" class="map-fog-img" :key="mapFogUrl()" :src="mapFogUrl()" alt="" draggable="false" />
+                    <template x-for="(mk, i) in mapMarkers()" :key="i">
+                      <div class="map-marker" :class="[mk.type, mk.checked && 'checked']" :style="markerStyle(mk)"
+                           :title="markerLabel(mk) + ' (' + Math.round(mk.x) + ', ' + Math.round(mk.z) + ')'"></div>
+                    </template>
+                  </div>
+                  <p x-show="!mapLoading && !mapDisplayWorld()" class="absolute inset-0 flex items-center justify-center text-xs text-gray-500 text-center px-4 z-10" x-text="t('mapPage.noWorld')">No active world</p>
+                  <p x-show="!mapLoading && mapDisplayWorld() && !mapMarkers().length && !mapHasFog()" class="absolute bottom-3 inset-x-0 text-center text-xs text-gray-500 px-4 z-10 pointer-events-none" x-text="t('mapPage.empty')">No markers found for this world.</p>
+                  <p x-show="!mapLoading && mapDisplayWorld() && !mapMarkers().length && mapHasFog()" class="absolute bottom-3 inset-x-0 text-center text-xs text-gray-500 px-4 z-10 pointer-events-none" x-text="t('mapPage.emptyPins')">No shared pins yet.</p>
+                  <div x-show="mapHasImage()" class="map-zoom-controls" @pointerdown.stop>
+                    <button type="button" class="map-zoom-btn" @click="mapZoomIn()" :title="t('mapPage.zoomIn')">+</button>
+                    <button type="button" class="map-zoom-btn" @click="mapZoomOut()" :title="t('mapPage.zoomOut')">−</button>
+                    <button type="button" class="map-zoom-btn map-zoom-btn--reset" @click="mapResetView()" :title="t('mapPage.zoomReset')" x-text="t('mapPage.zoomResetShort')">Reset</button>
+                  </div>
+                </div>
+                <p x-show="mapHasImage()" class="text-[11px] text-gray-500 mt-2" x-text="t('mapPage.zoomHint')">Scroll to zoom · drag to pan · double-click to reset</p>
               </div>
               <div class="flex-1 min-w-0">
                 <p class="stat-label mb-2"><span x-text="t('mapPage.markers')">Markers</span> (<span x-text="mapMarkers().length"></span>)</p>
+                <p x-show="mapDisplayWorld() && !mapMarkers().length" class="text-xs text-gray-500" x-text="mapData.mod?.serversidemap ? t('mapPage.emptyPins') : t('mapPage.hintNoMod')"></p>
                 <div class="space-y-1 max-h-96 overflow-y-auto">
                   <template x-for="(mk, i) in mapMarkers()" :key="i">
                     <div class="flex items-center gap-2 bg-valheim-900 rounded px-3 py-1.5 text-xs">
-                      <span class="w-2 h-2 rounded-full" :class="mk.type === 'portal' ? 'bg-blue-400' : 'bg-valheim-gold-light'"></span>
-                      <span class="text-gray-300" x-text="mk.tag || mk.type"></span>
-                      <span class="ml-auto font-mono text-gray-500" x-text="Math.round(mk.x) + ', ' + Math.round(mk.z)"></span>
+                      <span class="map-marker-dot" :class="mk.type"></span>
+                      <span class="text-gray-300 truncate" x-text="markerLabel(mk)"></span>
+                      <span x-show="mk.checked" class="text-gray-600" title="checked">✓</span>
+                      <span class="ml-auto font-mono text-gray-500 shrink-0" x-text="Math.round(mk.x) + ', ' + Math.round(mk.z)"></span>
                     </div>
                   </template>
                 </div>
@@ -1483,13 +1541,58 @@
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6">
             <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
               <h3 class="font-display text-sm font-semibold text-valheim-gold" x-text="t('backups.list.title')">Stored backups</h3>
-              <label class="flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
-                <input type="checkbox" x-model="hideCheckpoints" class="rounded border-valheim-600" />
-                Hide checkpoints
-              </label>
+              <div class="flex flex-wrap items-center gap-3">
+                <label class="flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
+                  <input type="checkbox" x-model="hideCheckpoints" @change="onBackupFiltersChanged()" class="rounded border-valheim-600" />
+                  <span x-text="t('backups.list.hideCheckpoints')">Hide checkpoints</span>
+                </label>
+                <div x-show="filteredBackups().length" class="flex items-center gap-2 text-xs text-gray-500">
+                  <span x-text="t('common.pagination.perPage')">Per page</span>
+                  <template x-for="size in paginationPageSizes" :key="'backups-ps-' + size">
+                    <button @click="backupsSetPageSize(size)" class="btn btn-sm"
+                            :class="backupsPageSize === size ? 'btn-primary' : 'btn-ghost'"
+                            x-text="size"></button>
+                  </template>
+                </div>
+              </div>
             </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
+              <div>
+                <label class="block text-xs text-gray-500 mb-1" x-text="t('backups.filters.search')">Search</label>
+                <input type="search" x-model="backupSearchQuery" @input="onBackupFiltersChanged()"
+                       :placeholder="t('backups.filters.searchPlaceholder')"
+                       class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1" x-text="t('backups.filters.kind')">Type</label>
+                <select x-model="backupKindFilter" @change="onBackupFiltersChanged()"
+                        class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none">
+                  <template x-for="opt in getBackupKindFilters()" :key="'bk-kind-' + opt.id">
+                    <option :value="opt.id" x-text="opt.label"></option>
+                  </template>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1" x-text="t('backups.filters.modsLabel')">Mods</label>
+                <select x-model="backupModsFilter" @change="onBackupFiltersChanged()"
+                        class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none">
+                  <template x-for="opt in getBackupModsFilters()" :key="'bk-mods-' + opt.id">
+                    <option :value="opt.id" x-text="opt.label"></option>
+                  </template>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1" x-text="t('backups.filters.modQuery')">Mod name</label>
+                <input type="search" x-model="backupModQuery" @input="onBackupFiltersChanged()"
+                       :placeholder="t('backups.filters.modQueryPlaceholder')"
+                       class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none" />
+              </div>
+            </div>
+
             <p x-show="!visibleBackups().length" class="text-gray-500 text-sm text-center py-8" x-text="t('backups.list.empty')">No backups found in config/backups/</p>
-            <div x-show="visibleBackups().length" class="overflow-x-auto">
+            <p x-show="visibleBackups().length && !filteredBackups().length" class="text-gray-500 text-sm text-center py-8" x-text="t('backups.filters.noMatches')">No backups match the current filters.</p>
+            <div x-show="filteredBackups().length" class="overflow-x-auto">
               <table class="w-full text-sm">
                 <thead>
                   <tr class="text-left text-xs text-gray-500 border-b border-valheim-700">
@@ -1503,35 +1606,48 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <template x-for="b in visibleBackups()" :key="b.name">
+                  <template x-for="b in paginatedBackups()" :key="b.name">
                     <tr class="border-b border-valheim-700/50 last:border-0" :class="b.is_active && 'bg-valheim-900/40'">
                       <td class="py-2 pr-4 text-xs text-gray-400" x-text="b.label"></td>
                       <td class="py-2 pr-4">
-                        <div class="flex flex-wrap items-center gap-1.5">
-                          <span class="font-mono text-xs text-gray-300" x-text="b.name"></span>
-                          <span x-show="b.is_active" class="backup-badge backup-badge-active" x-text="t('backups.list.badges.active')">Active</span>
-                          <span x-show="b.is_latest && !b.is_active" class="backup-badge backup-badge-latest" x-text="t('backups.list.badges.latest')">Latest</span>
-                          <span x-show="b.is_checkpoint" class="backup-badge backup-badge-checkpoint" x-text="t('backups.list.badges.checkpoint')">Checkpoint</span>
+                        <div class="flex flex-col gap-0.5">
+                          <div class="flex flex-wrap items-center gap-1.5">
+                            <span class="text-xs text-gray-200" x-text="backupDisplayLabel(b)"></span>
+                            <span x-show="b.is_active" class="backup-badge backup-badge-active" x-text="t('backups.list.badges.active')">Active</span>
+                            <span x-show="b.is_latest && !b.is_active" class="backup-badge backup-badge-latest" x-text="t('backups.list.badges.latest')">Latest</span>
+                            <span x-show="b.is_checkpoint" class="backup-badge backup-badge-checkpoint" x-text="t('backups.list.badges.checkpoint')">Checkpoint</span>
+                          </div>
+                          <span x-show="b.display_name" class="font-mono text-[11px] text-gray-500" x-text="b.name"></span>
                         </div>
                       </td>
                       <td class="py-2 pr-4 text-xs text-gray-500" x-text="b.modified_display || formatDate(b.modified)"></td>
                       <td class="py-2 pr-4 text-xs text-gray-500" x-text="t('common.status.days', { count: b.age_days })"></td>
                       <td class="py-2 pr-4 text-xs text-gray-500" x-text="formatSize(b.size)"></td>
-                      <td class="py-2 pr-4 text-xs text-gray-400" x-text="formatModsCount(b)" :title="b.mods_enabled_count != null ? (b.mods_enabled_count + ' active') : ''"></td>
+                      <td class="py-2 pr-4 text-xs text-gray-400" x-text="formatModsCount(b)" :title="b.mods_enabled_count != null ? t('backups.list.activeMods', { count: b.mods_enabled_count }) : ''"></td>
                       <td class="py-2">
                         <div class="flex flex-wrap gap-2">
                           <button @click="openBackupDetailsModal(b)" class="btn btn-sm btn-ghost" x-text="t('audit.columns.details')">Details</button>
+                          <button @click="openRenameBackupModal(b)" class="btn btn-sm btn-ghost" x-text="t('backups.list.rename')">Rename</button>
                           <button @click="openRestoreModal(b)" :disabled="b.is_active || isBusy('restoreBackup:' + b.name)"
                                   class="btn btn-sm btn-primary" x-text="t('backups.list.restoreToHere')">Restore to here</button>
                           <a :href="backupDownloadUrl(b.name)" class="btn btn-sm btn-ghost" x-text="t('console.chart.download')">Download</a>
                           <button @click="openDeleteBackupModal(b)" :disabled="b.is_active || isBusy('deleteBackup:' + b.name)"
-                                  class="btn btn-sm btn-ghost-danger">Delete</button>
+                                  class="btn btn-sm btn-ghost-danger" x-text="t('common.actions.delete')">Delete</button>
                         </div>
                       </td>
                     </tr>
                   </template>
                 </tbody>
               </table>
+            </div>
+
+            <div x-show="filteredBackups().length" class="flex flex-wrap items-center justify-between gap-3 mt-4 text-xs text-gray-500">
+              <div class="flex items-center gap-2">
+                <button @click="backupsPrevPage()" :disabled="backupsPage <= 1" class="btn btn-sm btn-ghost" x-text="t('common.pagination.prev')">Previous</button>
+                <span x-text="t('common.pagination.pageOf', { page: backupsPage, total: backupsTotalPages() })"></span>
+                <button @click="backupsNextPage()" :disabled="backupsPage >= backupsTotalPages()" class="btn btn-sm btn-ghost" x-text="t('common.pagination.next')">Next</button>
+              </div>
+              <span x-text="t('common.pagination.showing', { from: backupsShowingFrom(), to: backupsShowingTo(), total: filteredBackups().length })"></span>
             </div>
           </div>
         </section>
@@ -2243,6 +2359,36 @@
     </div>
   </div>
 
+  <!-- Rename Backup Modal -->
+  <div class="modal-overlay" x-show="renameBackupModalOpen" x-transition @keydown.escape.window="closeRenameBackupModal()" style="display:none">
+    <div class="bg-valheim-800 rounded-xl border border-valheim-700 w-full max-w-md p-6 space-y-4" @click.outside="closeRenameBackupModal()">
+      <div class="flex items-center justify-between">
+        <h3 class="font-display text-base font-semibold text-valheim-gold" x-text="t('backups.modals.rename.title')">Rename backup</h3>
+        <button @click="closeRenameBackupModal()" class="btn btn-sm btn-ghost">✕</button>
+      </div>
+      <p class="text-xs text-gray-500" x-text="t('backups.modals.rename.hint')">Set a friendly name. The ZIP file name stays the same.</p>
+      <template x-if="renameBackupTarget">
+        <p class="text-xs font-mono text-gray-400" x-text="renameBackupTarget?.name"></p>
+      </template>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1" x-text="t('backups.modals.rename.label')">Display name</label>
+        <input type="text" x-model="renameBackupValue" maxlength="120"
+               :placeholder="t('backups.modals.rename.placeholder')"
+               @keydown.enter.prevent="confirmRenameBackup()"
+               class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none" />
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button @click="closeRenameBackupModal()" class="btn btn-ghost flex-1" x-text="t('common.actions.cancel')">Cancel</button>
+        <button @click="confirmRenameBackup()" :disabled="!renameBackupTarget || isBusy('renameBackup:' + (renameBackupTarget?.name || ''))"
+                class="btn btn-primary flex-1">
+          <span x-show="renameBackupTarget && actionPending === ('renameBackup:' + renameBackupTarget.name)" class="spinner"></span>
+          <span x-show="!renameBackupTarget || actionPending !== ('renameBackup:' + renameBackupTarget.name)" x-text="t('backups.modals.rename.save')">Save</span>
+          <span x-show="renameBackupTarget && actionPending === ('renameBackup:' + renameBackupTarget.name)" x-text="t('common.loading.saving')">Saving...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Purge All Backups Modal -->
   <div class="modal-overlay" x-show="purgeAllBackupsModalOpen" x-transition @keydown.escape.window="closePurgeAllBackupsModal()" style="display:none">
     <div class="bg-valheim-800 rounded-xl border border-red-800/50 w-full max-w-md p-6 space-y-4" @click.outside="closePurgeAllBackupsModal()">
@@ -2276,6 +2422,7 @@
       <template x-if="backupDetails && !backupDetailsLoading">
         <div class="space-y-4">
           <div class="backup-info-box space-y-1 text-sm">
+            <p x-show="backupDetails.display_name"><span class="text-gray-500" x-text="t('backups.modals.rename.label')">Display name</span>: <span class="text-gray-200" x-text="backupDetails.display_name"></span></p>
             <p><span class="text-gray-500" x-text="t('backups.modals.restore.name')">Name:</span> <span class="font-mono text-gray-200" x-text="backupDetails.name"></span></p>
             <p><span class="text-gray-500" x-text="t('backups.modals.restore.type')">Type:</span> <span x-text="backupDetails.label"></span></p>
             <p><span class="text-gray-500" x-text="t('backups.modals.restore.date')">Date:</span> <span x-text="backupDetails.modified_display || formatDate(backupDetails.modified)"></span></p>

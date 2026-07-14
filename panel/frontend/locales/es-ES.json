@@ -38,6 +38,9 @@
       "containerStopped": "Contenedor detenido",
       "live": "EN VIVO"
     },
+    "badges": {
+      "beta": "Beta"
+    },
     "refresh": "Actualizar",
     "menu": "Menú",
     "close": "Cerrar"
@@ -1456,9 +1459,23 @@
   "mapPage": {
     "title": "Mapa del mundo",
     "noWorld": "Sin mundo activo",
+    "world": "Mundo",
+    "activeWorld": "activo",
     "seed": "Semilla",
     "empty": "No se encontraron marcadores para este mundo.",
-    "markers": "Marcadores"
+    "emptyPins": "Aún no hay pines compartidos.",
+    "hintNoMod": "Opcional: instala ServerSideMap con intercambio de marcadores para pines y niebla reales. El mapa base funciona sin el mod.",
+    "markers": "Marcadores",
+    "explored": "Explorado",
+    "revealAll": "Mostrar totalmente explorado",
+    "revealAllHint": "Revela el disco completo del mapa. Desactivado mantiene la niebla de ServerSideMap.",
+    "revealAllHintNoMod": "Revela el mapa base teñido por la seed. Desactivado mantiene el disco con niebla (ServerSideMap no es obligatorio).",
+    "serverSideMap": "· ServerSideMap",
+    "zoomIn": "Acercar",
+    "zoomOut": "Alejar",
+    "zoomReset": "Restablecer vista",
+    "zoomResetShort": "Reset",
+    "zoomHint": "Scroll para zoom · arrastra para mover · doble clic para restablecer"
   },
   "metricsPage": {
     "ranges": {

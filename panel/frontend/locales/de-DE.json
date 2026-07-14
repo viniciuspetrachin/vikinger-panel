@@ -38,6 +38,9 @@
       "containerStopped": "Container gestoppt",
       "live": "LIVE"
     },
+    "badges": {
+      "beta": "Beta"
+    },
     "refresh": "Aktualisieren",
     "menu": "Menü",
     "close": "Schließen"
@@ -1456,9 +1459,23 @@
   "mapPage": {
     "title": "Weltkarte",
     "noWorld": "Keine aktive Welt",
+    "world": "Welt",
+    "activeWorld": "aktiv",
     "seed": "Seed",
     "empty": "Keine Marker für diese Welt gefunden.",
-    "markers": "Marker"
+    "emptyPins": "Noch keine geteilten Pins.",
+    "hintNoMod": "Optional: ServerSideMap mit Marker-Share installieren für geteilte Pins und echten Nebel. Die Basiskarte funktioniert ohne den Mod.",
+    "markers": "Marker",
+    "explored": "Erkundet",
+    "revealAll": "Vollständig erkundet anzeigen",
+    "revealAllHint": "Zeigt die gesamte Karte. Aus = Nebel des Krieges von ServerSideMap.",
+    "revealAllHintNoMod": "Zeigt die seed-getönte Basiskarte. Aus = vernebelte Scheibe (ServerSideMap nicht nötig).",
+    "serverSideMap": "· ServerSideMap",
+    "zoomIn": "Vergrößern",
+    "zoomOut": "Verkleinern",
+    "zoomReset": "Ansicht zurücksetzen",
+    "zoomResetShort": "Reset",
+    "zoomHint": "Scrollen zum Zoomen · Ziehen zum Verschieben · Doppelklick zum Zurücksetzen"
   },
   "metricsPage": {
     "ranges": {

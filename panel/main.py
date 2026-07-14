@@ -2279,14 +2279,53 @@ def summary_fields_from_manifest(manifest: dict) -> dict:
     mods = manifest.get("mods") or {}
     contents = manifest.get("contents") or {}
     game = manifest.get("game") or {}
+    items = mods.get("items") or []
+    mod_names: list[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        name = (item.get("name") or "").strip()
+        package_id = (item.get("package_id") or "").strip()
+        if name:
+            mod_names.append(name)
+        if package_id and package_id not in mod_names:
+            mod_names.append(package_id)
+    display_name = manifest.get("display_name")
+    if isinstance(display_name, str):
+        display_name = display_name.strip() or None
+    else:
+        display_name = None
     return {
         "mods_count": mods.get("total"),
         "mods_enabled_count": mods.get("enabled"),
+        "mod_names": mod_names,
+        "display_name": display_name,
         "world_name": manifest.get("world_name"),
         "game_buildid": game.get("buildid"),
         "has_manifest": not manifest.get("inferred", False),
         "manifest_inferred": bool(manifest.get("inferred", False)),
         "includes_mods_dlls": bool(contents.get("includes_mods_dlls")),
+    }
+
+
+def set_backup_display_name(name: str, display_name: str | None) -> dict:
+    """Define ou limpa o nome amigável do backup no sidecar (ZIP permanece igual)."""
+    target = validate_backup_name(name)
+    kind = classify_backup(name)
+    manifest = ensure_backup_manifest(target, kind)
+    cleaned = (display_name or "").strip()
+    if cleaned:
+        if len(cleaned) > 120:
+            raise HTTPException(400, "display_name must be at most 120 characters")
+        manifest["display_name"] = cleaned
+    else:
+        manifest.pop("display_name", None)
+    write_backup_sidecar(name, manifest)
+    return {
+        "ok": True,
+        "name": name,
+        "display_name": manifest.get("display_name"),
+        **summary_fields_from_manifest(manifest),
     }
 
 
@@ -2526,6 +2565,8 @@ def list_backups() -> list[dict]:
                 item.update({
                     "mods_count": None,
                     "mods_enabled_count": None,
+                    "mod_names": [],
+                    "display_name": None,
                     "world_name": None,
                     "game_buildid": None,
                     "has_manifest": False,
@@ -3344,6 +3385,10 @@ class BackupConfigUpdate(BaseModel):
 
 class BackupCreate(BaseModel):
     type: str
+
+
+class BackupRename(BaseModel):
+    display_name: Optional[str] = None
 
 
 class StorageLimitsUpdate(BaseModel):
@@ -4605,6 +4650,11 @@ def api_backup_details(name: str):
     return get_backup_details(name)
 
 
+@app.put("/api/backups/{name}/rename")
+def api_rename_backup(name: str, body: BackupRename):
+    return set_backup_display_name(name, body.display_name)
+
+
 @app.delete("/api/backups/{name}")
 def api_delete_backup(name: str):
     if ".." in name or "/" in name or "\\" in name:
@@ -4945,7 +4995,43 @@ def api_map(world: str):
         return world_map.build_map(name, WORLDS_DIR, DATA_DIR)
     except Exception:
         logger.debug("map build failed for %s", name, exc_info=True)
-        return {"world": name, "seed": "", "markers": [], "bounds": {}}
+        return {
+            "world": name,
+            "seed": "",
+            "markers": [],
+            "bounds": {},
+            "explored": {
+                "available": False,
+                "map_size": 0,
+                "cells": 0,
+                "total": 0,
+                "image_url": f"/api/map/{name}/fog.png",
+            },
+            "mod": {"serversidemap": False},
+        }
+
+
+@app.get("/api/map/{world}/fog.png")
+def api_map_fog(world: str, reveal: bool = Query(False)):
+    """PNG background for the Map tab.
+
+    Always available (seed-tinted base disc). ``reveal=true`` shows the full
+    disc; ``reveal=false`` applies ServerSideMap fog when the mod file exists,
+    otherwise the disc stays fully fogged. ServerSideMap is optional.
+    """
+    name = validate_world_name(world)
+    try:
+        png = world_map.build_fog_png(name, WORLDS_DIR, out_size=512, reveal_all=reveal)
+    except Exception:
+        logger.debug("map fog render failed for %s", name, exc_info=True)
+        png = None
+    if not png:
+        raise HTTPException(500, "Failed to render map image")
+    return Response(
+        content=png,
+        media_type="image/png",
+        headers={"Cache-Control": "no-cache"},
+    )
 
 
 @app.get("/api/alerts")

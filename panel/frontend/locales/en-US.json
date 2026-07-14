@@ -38,6 +38,9 @@
       "containerStopped": "Container stopped",
       "live": "LIVE"
     },
+    "badges": {
+      "beta": "Beta"
+    },
     "refresh": "Refresh",
     "menu": "Menu",
     "close": "Close"
@@ -167,6 +170,7 @@
       "backupRestoredLatest": "Backup \"{name}\" restored — server restarting.",
       "restoreUndone": "Restore undone — \"{name}\" is active.",
       "backupDeleted": "Backup \"{name}\" deleted",
+      "backupRenamed": "Backup renamed to \"{name}\"",
       "purgeDeleted": "Deleted {count} backup(s)",
       "purgeNone": "No backups to delete",
       "worldActivated": "World \"{name}\" activated",
@@ -1173,7 +1177,31 @@
       },
       "activeMods": "{count} active",
       "restoreToHere": "Restore to here",
-      "details": "Details"
+      "details": "Details",
+      "rename": "Rename"
+    },
+    "filters": {
+      "search": "Search",
+      "searchPlaceholder": "Name, world, type...",
+      "kind": "Type",
+      "modsLabel": "Mods filter",
+      "modQuery": "Find by mod",
+      "modQueryPlaceholder": "e.g. Jotunn or Author/Mod",
+      "noMatches": "No backups match the current filters.",
+      "kinds": {
+        "all": "All types",
+        "auto": "Automatic",
+        "manual-world": "Manual — world",
+        "manual-full": "Manual — full",
+        "manual-configs": "Manual — configs",
+        "checkpoint": "Checkpoint"
+      },
+      "mods": {
+        "all": "Any mods",
+        "withMods": "With mods",
+        "withDlls": "With mod DLLs",
+        "noMods": "Without mods"
+      }
     },
     "types": {
       "world": {
@@ -1211,6 +1239,13 @@
       "delete": {
         "title": "Delete backup",
         "confirm": "Permanently delete {name}?"
+      },
+      "rename": {
+        "title": "Rename backup",
+        "hint": "Set a friendly name. The ZIP file name stays the same.",
+        "label": "Display name",
+        "placeholder": "e.g. Pre-Ashlands update",
+        "save": "Save name"
       },
       "details": {
         "title": "Backup details",
@@ -1456,9 +1491,23 @@
   "mapPage": {
     "title": "World map",
     "noWorld": "No active world",
+    "world": "World",
+    "activeWorld": "active",
     "seed": "Seed",
     "empty": "No markers found for this world.",
-    "markers": "Markers"
+    "emptyPins": "No shared pins yet.",
+    "hintNoMod": "Optional: install ServerSideMap with marker share to sync shared pins and real fog of war. The base map works without it.",
+    "markers": "Markers",
+    "explored": "Explored",
+    "revealAll": "Show fully explored",
+    "revealAllHint": "Reveals the whole map disc. Leave off to keep fog of war from ServerSideMap.",
+    "revealAllHintNoMod": "Reveals the seed-tinted base map. Leave off for a fogged disc (ServerSideMap not required).",
+    "serverSideMap": "· ServerSideMap",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomReset": "Reset view",
+    "zoomResetShort": "Reset",
+    "zoomHint": "Scroll to zoom · drag to pan · double-click to reset"
   },
   "metricsPage": {
     "ranges": {

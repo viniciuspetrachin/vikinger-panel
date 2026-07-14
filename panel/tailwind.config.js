@@ -29,6 +29,11 @@ export default {
           "gold-light": v("gold-light"),
           moss: v("moss"),
           ember: v("ember"),
+          "accent-bg": v("accent-bg"),
+          success: v("success"),
+          danger: v("danger"),
+          warning: v("warning"),
+          "on-solid": v("on-solid"),
         },
         gray: {
           100: g("100"),

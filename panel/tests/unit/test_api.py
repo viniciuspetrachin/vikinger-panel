@@ -1530,6 +1530,38 @@ def test_backups_list_includes_mods_count(client, env_dir):
     assert full["mods_count"] >= 2
     assert full["world_name"] == "TestWorld"
     assert full["has_manifest"] is True
+    assert "AlphaMod.dll" in full["mod_names"]
+    assert full["display_name"] is None
+
+
+def test_backup_rename_display_name(client, env_dir):
+    _write_mods_fixture(env_dir)
+    created = client.post("/api/backups/create", json={"type": "world"}).json()
+    name = created["name"]
+
+    r = client.put(f"/api/backups/{name}/rename", json={"display_name": "Pre-update snapshot"})
+    assert r.status_code == 200
+    assert r.json()["display_name"] == "Pre-update snapshot"
+
+    listed = client.get("/api/backups").json()["backups"]
+    item = next(b for b in listed if b["name"] == name)
+    assert item["display_name"] == "Pre-update snapshot"
+
+    sidecar = __import__("json").loads(
+        (env_dir["backups"] / f"{name}.manifest.json").read_text(encoding="utf-8")
+    )
+    assert sidecar["display_name"] == "Pre-update snapshot"
+
+    cleared = client.put(f"/api/backups/{name}/rename", json={"display_name": ""})
+    assert cleared.status_code == 200
+    assert cleared.json()["display_name"] is None
+
+
+def test_backup_rename_rejects_too_long(client, env_dir):
+    created = client.post("/api/backups/create", json={"type": "configs"}).json()
+    name = created["name"]
+    r = client.put(f"/api/backups/{name}/rename", json={"display_name": "x" * 121})
+    assert r.status_code == 400
 
 
 def test_backup_details_endpoint(client, env_dir):
@@ -1831,6 +1863,17 @@ def test_map_endpoint(client):
     body = r.json()
     assert body["world"] == "TestWorld"
     assert "markers" in body and "bounds" in body
+    assert "explored" in body and "mod" in body
+    assert body["mod"]["serversidemap"] is False
+    assert body["explored"]["image_url"] == "/api/map/TestWorld/fog.png"
+    fog = client.get("/api/map/TestWorld/fog.png")
+    assert fog.status_code == 200
+    assert fog.headers["content-type"].startswith("image/png")
+    assert fog.content.startswith(b"\x89PNG")
+    revealed = client.get("/api/map/TestWorld/fog.png?reveal=true")
+    assert revealed.status_code == 200
+    assert revealed.content.startswith(b"\x89PNG")
+    assert revealed.content != fog.content
 
 
 def test_alert_transition_detection(env_dir, monkeypatch):

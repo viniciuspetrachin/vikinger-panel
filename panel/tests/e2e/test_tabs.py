@@ -80,6 +80,30 @@ def test_theme_toggle(page: Page, base_url: str) -> None:
     assert after != initial
 
 
+def test_light_theme_tokens(page: Page, base_url: str) -> None:
+    """Light theme uses warm parchment tokens (readable contrast on surfaces)."""
+    page.goto(base_url)
+    page.wait_for_selector("[x-cloak]", state="detached")
+    page.evaluate("() => document.documentElement.setAttribute('data-theme', 'light')")
+    tokens = page.evaluate(
+        """() => {
+          const s = getComputedStyle(document.documentElement);
+          return {
+            bg: s.getPropertyValue('--v-950').trim(),
+            surface: s.getPropertyValue('--v-900').trim(),
+            text: s.getPropertyValue('--g-100').trim(),
+            accent: s.getPropertyValue('--v-gold').trim(),
+            brand: s.getPropertyValue('--v-moss').trim(),
+          };
+        }"""
+    )
+    assert tokens["bg"] == "244 241 232"
+    assert tokens["surface"] == "255 255 255"
+    assert tokens["text"] == "26 26 24"
+    assert tokens["accent"] == "201 122 43"
+    assert tokens["brand"] == "31 58 46"
+
+
 def test_help_faq_search(page: Page, base_url: str) -> None:
     page.goto(base_url)
     page.wait_for_selector("[x-cloak]", state="detached")

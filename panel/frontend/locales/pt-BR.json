@@ -38,6 +38,9 @@
       "containerStopped": "Container parado",
       "live": "AO VIVO"
     },
+    "badges": {
+      "beta": "Beta"
+    },
     "refresh": "Atualizar",
     "menu": "Menu",
     "close": "Fechar"
@@ -167,6 +170,7 @@
       "backupRestoredLatest": "Backup \"{name}\" restaurado — servidor reiniciando.",
       "restoreUndone": "Restauração desfeita — \"{name}\" está ativo.",
       "backupDeleted": "Backup \"{name}\" excluído",
+      "backupRenamed": "Backup renomeado para \"{name}\"",
       "purgeDeleted": "{count} backup(s) excluído(s)",
       "purgeNone": "Nenhum backup para excluir",
       "worldActivated": "Mundo \"{name}\" ativado",
@@ -1173,7 +1177,31 @@
       },
       "activeMods": "{count} ativo",
       "restoreToHere": "Restaurar aqui",
-      "details": "Detalhes"
+      "details": "Detalhes",
+      "rename": "Renomear"
+    },
+    "filters": {
+      "search": "Busca",
+      "searchPlaceholder": "Nome, mundo, tipo...",
+      "kind": "Tipo",
+      "modsLabel": "Filtro de mods",
+      "modQuery": "Buscar por mod",
+      "modQueryPlaceholder": "ex.: Jotunn ou Author/Mod",
+      "noMatches": "Nenhum backup corresponde aos filtros atuais.",
+      "kinds": {
+        "all": "Todos os tipos",
+        "auto": "Automático",
+        "manual-world": "Manual — mundo",
+        "manual-full": "Manual — completo",
+        "manual-configs": "Manual — configs",
+        "checkpoint": "Ponto de verificação"
+      },
+      "mods": {
+        "all": "Qualquer mods",
+        "withMods": "Com mods",
+        "withDlls": "Com DLLs de mods",
+        "noMods": "Sem mods"
+      }
     },
     "types": {
       "world": {
@@ -1211,6 +1239,13 @@
       "delete": {
         "title": "Excluir backup",
         "confirm": "Excluir permanentemente {name}?"
+      },
+      "rename": {
+        "title": "Renomear backup",
+        "hint": "Defina um nome amigável. O nome do arquivo ZIP permanece o mesmo.",
+        "label": "Nome de exibição",
+        "placeholder": "ex.: Antes da atualização Ashlands",
+        "save": "Salvar nome"
       },
       "details": {
         "title": "Detalhes do backup",
@@ -1456,9 +1491,23 @@
   "mapPage": {
     "title": "Mapa do mundo",
     "noWorld": "Nenhum mundo ativo",
+    "world": "Mundo",
+    "activeWorld": "ativo",
     "seed": "Seed",
     "empty": "Nenhum marcador encontrado para este mundo.",
-    "markers": "Marcadores"
+    "emptyPins": "Nenhum pin compartilhado ainda.",
+    "hintNoMod": "Opcional: instale o ServerSideMap com compartilhamento de marcadores para sincronizar pins e fog reais. O mapa base funciona sem o mod.",
+    "markers": "Marcadores",
+    "explored": "Explorado",
+    "revealAll": "Mostrar totalmente explorado",
+    "revealAllHint": "Revela o disco inteiro do mapa. Desligado mantém o fog of war do ServerSideMap.",
+    "revealAllHintNoMod": "Revela o mapa base tintado pela seed. Desligado mantém o disco com névoa (ServerSideMap não é obrigatório).",
+    "serverSideMap": "· ServerSideMap",
+    "zoomIn": "Aumentar zoom",
+    "zoomOut": "Diminuir zoom",
+    "zoomReset": "Resetar visão",
+    "zoomResetShort": "Reset",
+    "zoomHint": "Scroll para zoom · arraste para mover · duplo clique para resetar"
   },
   "metricsPage": {
     "ranges": {

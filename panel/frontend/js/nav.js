@@ -33,7 +33,7 @@ export const nav = {
     { id: "dashboard", labelKey: "nav.items.overview", icon: icons.dashboard },
     { id: "players", labelKey: "nav.items.players", icon: icons.players },
     { id: "mods", labelKey: "nav.items.mods", icon: icons.mods },
-    { id: "map", labelKey: "nav.items.map", icon: icons.map },
+    { id: "map", labelKey: "nav.items.map", icon: icons.map, badgeKey: "nav.badges.beta" },
     { id: "backups", labelKey: "nav.items.backups", icon: icons.backups },
     { id: "console", labelKey: "nav.items.console", icon: icons.console },
     { id: "metrics", labelKey: "nav.items.metrics", icon: icons.metrics },
@@ -68,7 +68,11 @@ export const nav = {
 
   visiblePrimary() {
     void this.localeVersion;
-    return this.navPrimary.map((item) => ({ ...item, label: this.t(item.labelKey) }));
+    return this.navPrimary.map((item) => ({
+      ...item,
+      label: this.t(item.labelKey),
+      badge: item.badgeKey ? this.t(item.badgeKey) : "",
+    }));
   },
 
   visibleConfigTabs() {
