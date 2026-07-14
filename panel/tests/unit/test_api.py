@@ -1833,6 +1833,39 @@ def test_map_endpoint(client):
     assert "markers" in body and "bounds" in body
 
 
+def test_alert_transition_detection(env_dir, monkeypatch):
+    fired = []
+    monkeypatch.setattr(main.panel_alerts, "dispatch", lambda cfg, ev, ctx=None: fired.append((ev, ctx)))
+    main._alert_state.clear()
+    main._alert_state.update({"container": None, "players": set(), "init": False})
+    cfg = {"events": {"server_down": True, "player_join": True, "backup_fail": False}}
+
+    # First pass primes state (no alert), container running with TestPlayer online.
+    monkeypatch.setattr(main, "container_running", lambda: True)
+    main._check_and_dispatch_alerts(cfg)
+    assert fired == []
+
+    # Server goes down -> server_down fires.
+    monkeypatch.setattr(main, "container_running", lambda: False)
+    main._check_and_dispatch_alerts(cfg)
+    assert any(ev == "server_down" for ev, _ in fired)
+
+    # Back up + a new player -> server_up + player_join fire.
+    fired.clear()
+    monkeypatch.setattr(main, "container_running", lambda: True)
+    monkeypatch.setattr(main, "get_players_info", lambda: {"count": 1, "players": [{"steam_id": "99999999999999999", "name": "New"}], "online": True})
+    main._check_and_dispatch_alerts(cfg)
+    events = {ev for ev, _ in fired}
+    assert "server_up" in events
+    assert "player_join" in events
+
+
+def test_alerts_active_gate():
+    assert main._alerts_active({"events": {"server_down": True}, "discord": {"enabled": True}}) is True
+    assert main._alerts_active({"events": {"server_down": True}, "discord": {"enabled": False}, "telegram": {"enabled": False}}) is False
+    assert main._alerts_active({"events": {"server_down": False}, "discord": {"enabled": True}}) is False
+
+
 def test_metrics_rates(client, monkeypatch):
     main._metrics_prev = {
         "ts": time.time() - 2,

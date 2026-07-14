@@ -4857,11 +4857,62 @@ def _scheduled_restart():
 
 
 def _scheduled_backup():
-    return trigger_backup()
+    try:
+        return trigger_backup()
+    except Exception as e:
+        dispatch_alert("backup_fail", {"error": str(e)})
+        raise
 
 
 def _scheduled_mod_update():
     return update_all_mod_packages()
+
+
+# ── Alert event detection (transition-based, opt-in) ─────────────────────────
+_alert_state: dict = {"container": None, "players": set(), "init": False}
+
+
+def _alerts_active(cfg: dict) -> bool:
+    events = cfg.get("events", {})
+    channels = cfg.get("discord", {}).get("enabled") or cfg.get("telegram", {}).get("enabled")
+    return bool(channels) and any(events.values())
+
+
+def _check_and_dispatch_alerts(cfg: dict) -> None:
+    """Detect state transitions and fire configured alerts (best-effort)."""
+    events = cfg.get("events", {})
+    running = container_running()
+    prev = _alert_state
+    if prev["container"] is not None and events.get("server_down"):
+        if prev["container"] and not running:
+            panel_alerts.dispatch(cfg, "server_down", {})
+        elif not prev["container"] and running:
+            panel_alerts.dispatch(cfg, "server_up", {})
+    prev["container"] = running
+
+    if events.get("player_join") and running:
+        try:
+            info = get_players_info()
+            current = {p["steam_id"] for p in info.get("players", []) if p.get("steam_id")}
+        except Exception:
+            current = set()
+        if prev["init"]:
+            for sid in current - prev["players"]:
+                panel_alerts.dispatch(cfg, "player_join", {"player": sid})
+        prev["players"] = current
+    prev["init"] = True
+
+
+async def _alert_monitor_loop() -> None:
+    """Poll for alert-worthy transitions. Cheap no-op while alerts are disabled."""
+    while True:
+        try:
+            cfg = read_alerts_config()
+            if _alerts_active(cfg):
+                await asyncio.to_thread(_check_and_dispatch_alerts, cfg)
+        except Exception:  # pragma: no cover - defensive
+            pass
+        await asyncio.sleep(15.0)
 
 
 panel_scheduler_instance = panel_scheduler.PanelScheduler(
@@ -5014,6 +5065,7 @@ async def _live_broadcast_loop() -> None:
 @app.on_event("startup")
 async def _on_async_startup() -> None:
     asyncio.ensure_future(_live_broadcast_loop())
+    asyncio.ensure_future(_alert_monitor_loop())
 
 
 @app.websocket("/ws/live")
