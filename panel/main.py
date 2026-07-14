@@ -22,6 +22,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+import auto_messages
 from fwl_io import WorldConfig, WorldMeta, config_summary_from_meta, read_fwl, world_config_details, write_fwl
 from log_utils import clean_docker_logs
 from rcon_client import (
@@ -112,6 +113,8 @@ _SIZE_UNIT = {
 
 LOGS_DIR = PANEL_DATA_DIR / "logs"
 MODS_REGISTRY_FILE = PANEL_DATA_DIR / "mods-registry.json"
+AUTO_MESSAGES_FILE = PANEL_DATA_DIR / "auto-messages.json"
+PLAYERS_SEEN_FILE = PANEL_DATA_DIR / "players-seen.json"
 UNLINKABLE_DLLS = frozenset({"YamlDotNetDetector.dll"})
 SETUP_FILE = PANEL_DATA_DIR / "setup.json"
 APP_MANIFEST_PATH = DATA_DIR / "dl" / "server" / "steamapps" / "appmanifest_896660.acf"
@@ -143,6 +146,7 @@ def ensure_panel_data_dirs() -> None:
 def _on_startup() -> None:
     ensure_panel_data_dirs()
     configure_storage_limits()
+    configure_auto_messages()
     try:
         copied = ensure_bundled_mods(
             bundled_dir=BUNDLED_MODS_DIR,
@@ -158,6 +162,7 @@ def _on_startup() -> None:
         maybe_ensure_rcon_password()
     except OSError as e:
         logger.warning("Não foi possível garantir senha RCON: %s", e)
+    auto_messages.start_worker()
 
 
 @app.exception_handler(Exception)
@@ -178,6 +183,44 @@ def configure_storage_limits() -> None:
         get_protected_backups=get_protected_backups,
         write_audit=write_audit,
         dir_size_bytes=dir_size_bytes,
+    )
+
+
+def _auto_messages_context() -> dict:
+    env = read_env()
+    worlds, active, _running, _reconciled = build_worlds_list()
+    configured = env.get("WORLD_NAME", "").strip()
+    mods = list_mods_data()
+    return {
+        "server_name": effective_server_name(env),
+        "world_name": active or configured,
+        "server_port": env.get("SERVER_PORT", "2456"),
+        "max_players": str(read_max_players()["max_players"]),
+        "server_public": env.get("SERVER_PUBLIC", "true"),
+        "mods_count": str(len(mods)),
+        "mods_enabled": str(sum(1 for m in mods if m.get("enabled"))),
+    }
+
+
+def _auto_messages_rcon_available() -> bool:
+    if not container_running():
+        return False
+    if not is_plugin_installed(PLUGINS_DIR, PLUGINS_DISABLED_DIR):
+        return False
+    if not is_mod_enabled(PLUGINS_DIR, PLUGINS_DISABLED_DIR):
+        return False
+    return _rcon_settings() is not None
+
+
+def configure_auto_messages() -> None:
+    auto_messages.configure(
+        messages_file=AUTO_MESSAGES_FILE,
+        players_seen_file=PLAYERS_SEEN_FILE,
+        get_context=_auto_messages_context,
+        get_players=get_players_info,
+        send_rcon=_run_rcon,
+        rcon_available=_auto_messages_rcon_available,
+        container_running=container_running,
     )
 
 
@@ -3180,6 +3223,40 @@ class ConsoleCommand(BaseModel):
     command: str
 
 
+class AutoMessagesSettings(BaseModel):
+    enabled: bool
+
+
+class AutoMessageCreate(BaseModel):
+    name: str = "Message"
+    text: str
+    enabled: bool = True
+    channel: str = "say"
+    trigger: str = "interval"
+    interval_seconds: Optional[int] = 1800
+    run_at: Optional[str] = None
+    daily_time: Optional[str] = None
+    only_when_players_online: bool = True
+
+
+class AutoMessageUpdate(BaseModel):
+    name: Optional[str] = None
+    text: Optional[str] = None
+    enabled: Optional[bool] = None
+    channel: Optional[str] = None
+    trigger: Optional[str] = None
+    interval_seconds: Optional[int] = None
+    run_at: Optional[str] = None
+    daily_time: Optional[str] = None
+    only_when_players_online: Optional[bool] = None
+
+
+class AutoMessagePreview(BaseModel):
+    text: str
+    player_name: Optional[str] = None
+    player_steam_id: Optional[str] = None
+
+
 class PlayerActionBody(BaseModel):
     action: str
 
@@ -4419,6 +4496,90 @@ def api_purge_all_backups(body: PurgeAllBackupsRequest):
     configure_storage_limits()
     result = storage_limits.purge_all_backups()
     return {"ok": True, **result}
+
+
+# ── Auto messages ────────────────────────────────────────────────────────────
+
+@app.get("/api/auto-messages")
+def api_list_auto_messages():
+    configure_auto_messages()
+    data = auto_messages.list_messages()
+    return {
+        **data,
+        "rcon_available": _auto_messages_rcon_available(),
+    }
+
+
+@app.put("/api/auto-messages/settings")
+def api_auto_messages_settings(body: AutoMessagesSettings):
+    configure_auto_messages()
+    store = auto_messages.update_settings(enabled=body.enabled)
+    return {"ok": True, "enabled": store["enabled"], "messages": store["messages"]}
+
+
+@app.post("/api/auto-messages")
+def api_create_auto_message(body: AutoMessageCreate):
+    configure_auto_messages()
+    try:
+        msg = auto_messages.create_message(body.model_dump())
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    return {"ok": True, "message": msg}
+
+
+@app.put("/api/auto-messages/{msg_id}")
+def api_update_auto_message(msg_id: str, body: AutoMessageUpdate):
+    configure_auto_messages()
+    payload = {k: v for k, v in body.model_dump().items() if v is not None}
+    try:
+        msg = auto_messages.update_message(msg_id, payload)
+    except KeyError:
+        raise HTTPException(404, "Message not found") from None
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    return {"ok": True, "message": msg}
+
+
+@app.delete("/api/auto-messages/{msg_id}")
+def api_delete_auto_message(msg_id: str):
+    configure_auto_messages()
+    try:
+        auto_messages.delete_message(msg_id)
+    except KeyError:
+        raise HTTPException(404, "Message not found") from None
+    return {"ok": True}
+
+
+@app.post("/api/auto-messages/{msg_id}/send")
+def api_send_auto_message(msg_id: str):
+    configure_auto_messages()
+    msg = auto_messages.get_message(msg_id)
+    if not msg:
+        raise HTTPException(404, "Message not found")
+    _require_rcon()
+    try:
+        result = auto_messages.send_message_now(msg, mark=True)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    except RuntimeError as e:
+        raise HTTPException(503, str(e)) from e
+    return result
+
+
+@app.post("/api/auto-messages/preview")
+def api_preview_auto_message(body: AutoMessagePreview):
+    configure_auto_messages()
+    players = get_players_info()
+    base = _auto_messages_context()
+    player = None
+    if body.player_name or body.player_steam_id:
+        player = {
+            "name": body.player_name or "Player",
+            "steam_id": body.player_steam_id or "76561198000000000",
+        }
+    ctx = auto_messages.build_tag_context(base=base, players=players, player=player)
+    rendered = auto_messages.render_template(body.text, ctx)
+    return {"ok": True, "rendered": rendered, "context": ctx}
 
 
 # ── Audit ────────────────────────────────────────────────────────────────────

@@ -78,10 +78,14 @@ def env_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "LOGS_DIR", logs)
     monkeypatch.setattr(main, "AUDIT_FILE", logs / "audit.jsonl")
     monkeypatch.setattr(main, "MODS_REGISTRY_FILE", panel_data / "mods-registry.json")
+    monkeypatch.setattr(main, "AUTO_MESSAGES_FILE", panel_data / "auto-messages.json")
+    monkeypatch.setattr(main, "PLAYERS_SEEN_FILE", panel_data / "players-seen.json")
     monkeypatch.setattr(main, "SETUP_FILE", panel_data / "setup.json")
     monkeypatch.setattr(main, "APP_MANIFEST_PATH", data / "dl" / "server" / "steamapps" / "appmanifest_896660.acf")
+    monkeypatch.setenv("VIKINGER_DISABLE_AUTO_MESSAGES_WORKER", "1")
 
     main.configure_storage_limits()
+    main.configure_auto_messages()
 
     monkeypatch.setattr(main, "container_running", lambda: True)
     monkeypatch.setattr(main, "get_container_world_name", lambda: "TestWorld")
@@ -162,10 +166,14 @@ def fresh_env_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "LOGS_DIR", logs)
     monkeypatch.setattr(main, "AUDIT_FILE", logs / "audit.jsonl")
     monkeypatch.setattr(main, "MODS_REGISTRY_FILE", panel_data / "mods-registry.json")
+    monkeypatch.setattr(main, "AUTO_MESSAGES_FILE", panel_data / "auto-messages.json")
+    monkeypatch.setattr(main, "PLAYERS_SEEN_FILE", panel_data / "players-seen.json")
     monkeypatch.setattr(main, "SETUP_FILE", panel_data / "setup.json")
     monkeypatch.setattr(main, "APP_MANIFEST_PATH", data / "dl" / "server" / "steamapps" / "appmanifest_896660.acf")
+    monkeypatch.setenv("VIKINGER_DISABLE_AUTO_MESSAGES_WORKER", "1")
 
     main.configure_storage_limits()
+    main.configure_auto_messages()
 
     monkeypatch.setattr(main, "container_running", lambda: False)
     monkeypatch.setattr(main, "get_container_world_name", lambda: None)

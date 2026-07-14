@@ -1,5 +1,7 @@
 """E2E Playwright — navega cada aba do painel sem erros 500."""
 
+import re
+
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -11,6 +13,7 @@ TAB_IDS = [
     "worlds",
     "mods",
     "backups",
+    "messages",
     "files",
     "logs",
     "audit",
@@ -98,4 +101,18 @@ def test_backups_tab_content(page: Page, base_url: str) -> None:
     expect(page.get_by_role("heading", name="Automatic scheduling")).to_be_visible()
     expect(page.get_by_role("heading", name="Stored backups")).to_be_visible()
     expect(page.get_by_text("Server state")).to_be_visible()
+    assert_no_error_toast(page)
+
+
+def test_messages_tab_content(page: Page, base_url: str) -> None:
+    page.goto(base_url)
+    page.wait_for_selector("[x-cloak]", state="detached")
+    goto_tab(page, "messages")
+
+    expect(page.get_by_role("heading", name="Automatic messages")).to_be_visible()
+    expect(page.locator("h3").filter(has_text=re.compile(r"^Messages$"))).to_be_visible()
+    expect(page.get_by_role("button", name="New message")).to_be_visible()
+    page.get_by_role("button", name="New message").click()
+    expect(page.get_by_role("heading", name="New message")).to_be_visible()
+    expect(page.get_by_text("Click a tag to insert:")).to_be_visible()
     assert_no_error_toast(page)

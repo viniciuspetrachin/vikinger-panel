@@ -25,6 +25,18 @@ services:
       - --reload
       - --reload-dir
       - /app
+      - --reload-include
+      - "*.py"
+      - --reload-exclude
+      - "static/*"
+      - --reload-exclude
+      - "frontend/*"
+      - --reload-exclude
+      - "node_modules/*"
+      - --reload-exclude
+      - "__pycache__/*"
+      - --reload-delay
+      - "0.5"
 
   assets:
     image: node:22-alpine

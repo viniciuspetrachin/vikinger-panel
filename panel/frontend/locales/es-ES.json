@@ -17,6 +17,7 @@
       "worlds": "Mundos",
       "mods": "Mods y config",
       "backups": "Copias de seguridad",
+      "messages": "Mensajes",
       "files": "Archivos",
       "logs": "Consola",
       "audit": "Auditoría",
@@ -1338,5 +1339,76 @@
   "resources": {
     "noLimit": "Sin límite",
     "hostSuffix": "(anfitrión)"
+  },
+  "messages": {
+    "settings": {
+      "title": "Mensajes automáticos",
+      "desc": "Programa anuncios en el juego vía RCON (say / showMessage). Usa el mod ValheimRcon incluido.",
+      "enabled": "Función activa",
+      "rconHint": "RCON no disponible — los mensajes no se enviarán hasta que ValheimRcon esté listo y el servidor en marcha."
+    },
+    "list": {
+      "title": "Mensajes",
+      "create": "Nuevo mensaje",
+      "empty": "Aún no hay mensajes automáticos.",
+      "active": "Activo",
+      "inactive": "Apagado",
+      "sendNow": "Enviar ahora",
+      "enable": "Activar",
+      "disable": "Desactivar"
+    },
+    "form": {
+      "createTitle": "Nuevo mensaje",
+      "editTitle": "Editar mensaje",
+      "defaultName": "Anuncio",
+      "name": "Nombre",
+      "channel": "Canal",
+      "trigger": "Disparador",
+      "interval": "Intervalo",
+      "intervalSeconds": "Segundos (mín. 30)",
+      "runAt": "Ejecutar en",
+      "dailyTime": "Hora diaria",
+      "onlyWhenOnline": "Enviar solo con jugadores en línea",
+      "text": "Texto del mensaje",
+      "textPlaceholder": "¡Bienvenido a %server_name%! En línea: %players_online%",
+      "tagsHint": "Haz clic en una etiqueta para insertar:",
+      "preview": "Vista previa",
+      "previewBtn": "Vista previa"
+    },
+    "channels": {
+      "say": "Chat (say)",
+      "showMessage": "En pantalla (showMessage)"
+    },
+    "triggers": {
+      "interval": "Cada X segundos",
+      "once": "Una vez en fecha/hora",
+      "daily": "Cada día a la hora",
+      "on_first_join": "Bienvenida (primer join)",
+      "on_join": "Cada entrada de jugador"
+    },
+    "intervalPresets": {
+      "60": "Cada 1 minuto",
+      "300": "Cada 5 minutos",
+      "900": "Cada 15 minutos",
+      "1800": "Cada 30 minutos",
+      "3600": "Cada hora",
+      "custom": "Personalizado"
+    },
+    "summary": {
+      "interval": "Cada {seconds}s",
+      "once": "Una vez en {at}",
+      "daily": "Diario a las {time}",
+      "on_first_join": "En el primer join",
+      "on_join": "En cada entrada"
+    },
+    "confirmDelete": "¿Eliminar el mensaje \"{name}\"?",
+    "toasts": {
+      "settingsSaved": "Ajustes de mensajes guardados",
+      "created": "Mensaje creado",
+      "updated": "Mensaje actualizado",
+      "deleted": "Mensaje eliminado",
+      "sent": "Enviado: {text}",
+      "textRequired": "El texto del mensaje es obligatorio"
+    }
   }
 }

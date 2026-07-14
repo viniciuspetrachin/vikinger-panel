@@ -566,7 +566,7 @@
                          :style="'width:' + Math.min(backupStoragePct() || 0, 100) + '%'"></div>
                   </div>
                   <p class="text-xs text-gray-500 text-right" x-show="backupStoragePct() != null">
-                    <span x-text="(backupStoragePct() || 0) + '%'"></span> <span x-text="t('common.units.ofLimit')">of limit</span>
+                    <span x-text="(backupStoragePct() || 0) + '%'"></span> <span x-text="t('common.status.ofLimit')">of limit</span>
                   </p>
                 </div>
               </div>
@@ -1331,7 +1331,7 @@
                         </div>
                       </td>
                       <td class="py-2 pr-4 text-xs text-gray-500" x-text="b.modified_display || formatDate(b.modified)"></td>
-                      <td class="py-2 pr-4 text-xs text-gray-500" x-text="t('common.units.days', { count: b.age_days })"></td>
+                      <td class="py-2 pr-4 text-xs text-gray-500" x-text="t('common.status.days', { count: b.age_days })"></td>
                       <td class="py-2 pr-4 text-xs text-gray-500" x-text="formatSize(b.size)"></td>
                       <td class="py-2 pr-4 text-xs text-gray-400" x-text="formatModsCount(b)" :title="b.mods_enabled_count != null ? (b.mods_enabled_count + ' active') : ''"></td>
                       <td class="py-2">
@@ -1348,6 +1348,172 @@
                   </template>
                 </tbody>
               </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- AUTO MESSAGES -->
+        <section x-show="page === 'messages'" class="space-y-6">
+          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6 space-y-4">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 class="font-display text-sm font-semibold text-valheim-gold" x-text="t('messages.settings.title')">Automatic messages</h3>
+                <p class="text-sm text-gray-400 mt-1" x-text="t('messages.settings.desc')">Schedule chat announcements via RCON say / showMessage.</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-3">
+                <label class="flex items-center gap-2 text-sm text-gray-300">
+                  <input type="checkbox" x-model="autoMessagesEnabled" class="rounded border-valheim-600 accent-valheim-gold" />
+                  <span x-text="t('messages.settings.enabled')">Enabled</span>
+                </label>
+                <button @click="saveAutoMessageSettings()" :disabled="isBusy('saveAutoMessageSettings')" class="btn btn-sm btn-warning">
+                  <span x-show="actionPending === 'saveAutoMessageSettings'" class="spinner"></span>
+                  <span x-text="t('common.actions.save')">Save</span>
+                </button>
+              </div>
+            </div>
+            <p x-show="!autoMessagesRconAvailable" class="text-xs text-amber-400/90" x-text="t('messages.settings.rconHint')">RCON unavailable — messages will not send until ValheimRcon is ready.</p>
+          </div>
+
+          <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-6">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <h3 class="font-display text-sm font-semibold text-valheim-gold" x-text="t('messages.list.title')">Messages</h3>
+              <button @click="openAutoMessageCreate()" class="btn btn-sm btn-primary" x-text="t('messages.list.create')">New message</button>
+            </div>
+            <p x-show="!autoMessages.length" class="text-gray-500 text-sm text-center py-8" x-text="t('messages.list.empty')">No automatic messages yet.</p>
+            <div x-show="autoMessages.length" class="space-y-3">
+              <template x-for="msg in autoMessages" :key="msg.id">
+                <div class="bg-valheim-900/60 border border-valheim-700 rounded-lg p-4 space-y-3">
+                  <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="min-w-0 space-y-1">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <h4 class="text-sm font-medium text-gray-100" x-text="msg.name"></h4>
+                        <span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded"
+                              :class="msg.enabled ? 'bg-emerald-900/50 text-emerald-300' : 'bg-valheim-800 text-gray-500'"
+                              x-text="msg.enabled ? t('messages.list.active') : t('messages.list.inactive')"></span>
+                      </div>
+                      <p class="text-sm text-gray-300 break-words" x-text="msg.text"></p>
+                      <p class="text-xs text-gray-500">
+                        <span x-text="channelLabel(msg.channel)"></span>
+                        ·
+                        <span x-text="scheduleSummary(msg)"></span>
+                      </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <button @click="sendAutoMessageNow(msg)" :disabled="isBusy('sendAutoMessage:' + msg.id) || !autoMessagesRconAvailable"
+                              class="btn btn-sm btn-neutral" x-text="t('messages.list.sendNow')">Send now</button>
+                      <button @click="toggleAutoMessage(msg)" :disabled="isBusy('toggleAutoMessage:' + msg.id)"
+                              class="btn btn-sm btn-ghost" x-text="msg.enabled ? t('messages.list.disable') : t('messages.list.enable')">Toggle</button>
+                      <button @click="openAutoMessageEdit(msg)" class="btn btn-sm btn-ghost" x-text="t('common.actions.edit')">Edit</button>
+                      <button @click="deleteAutoMessage(msg)" :disabled="isBusy('deleteAutoMessage:' + msg.id)"
+                              class="btn btn-sm btn-ghost-danger" x-text="t('common.actions.delete')">Delete</button>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Create / edit form -->
+          <div x-show="autoMessageFormOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" @keydown.escape.window="closeAutoMessageForm()">
+            <div class="bg-valheim-800 border border-valheim-700 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-4" @click.outside="closeAutoMessageForm()">
+              <div class="flex items-center justify-between gap-3">
+                <h3 class="font-display text-sm font-semibold text-valheim-gold"
+                    x-text="autoMessageEditingId ? t('messages.form.editTitle') : t('messages.form.createTitle')">Message</h3>
+                <button @click="closeAutoMessageForm()" class="btn btn-sm btn-ghost" x-text="t('common.actions.close')">✕</button>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                  <label class="block text-xs text-gray-500 mb-1" x-text="t('messages.form.name')">Name</label>
+                  <input x-model="autoMessageForm.name"
+                         class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none" />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-500 mb-1" x-text="t('messages.form.channel')">Channel</label>
+                  <select x-model="autoMessageForm.channel"
+                          class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none">
+                    <template x-for="c in getAutoMessageChannels()" :key="c.id">
+                      <option :value="c.id" x-text="c.label"></option>
+                    </template>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-500 mb-1" x-text="t('messages.form.trigger')">Trigger</label>
+                  <select x-model="autoMessageForm.trigger"
+                          class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none">
+                    <template x-for="tr in getAutoMessageTriggers()" :key="tr.id">
+                      <option :value="tr.id" x-text="tr.label"></option>
+                    </template>
+                  </select>
+                </div>
+
+                <div x-show="autoMessageForm.trigger === 'interval'">
+                  <label class="block text-xs text-gray-500 mb-1" x-text="t('messages.form.interval')">Interval</label>
+                  <select x-model="autoMessageForm.intervalPreset" @change="onIntervalPresetChange()"
+                          class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none">
+                    <template x-for="p in getAutoMessageIntervalPresets()" :key="p.id">
+                      <option :value="p.id" x-text="p.label"></option>
+                    </template>
+                  </select>
+                </div>
+                <div x-show="autoMessageForm.trigger === 'interval' && autoMessageForm.intervalPreset === 'custom'">
+                  <label class="block text-xs text-gray-500 mb-1" x-text="t('messages.form.intervalSeconds')">Seconds</label>
+                  <input type="number" min="30" x-model.number="autoMessageForm.interval_seconds"
+                         class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none" />
+                </div>
+                <div x-show="autoMessageForm.trigger === 'once'" class="md:col-span-2">
+                  <label class="block text-xs text-gray-500 mb-1" x-text="t('messages.form.runAt')">Run at</label>
+                  <input type="datetime-local" x-model="autoMessageForm.run_at"
+                         class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none" />
+                </div>
+                <div x-show="autoMessageForm.trigger === 'daily'">
+                  <label class="block text-xs text-gray-500 mb-1" x-text="t('messages.form.dailyTime')">Daily time</label>
+                  <input type="time" x-model="autoMessageForm.daily_time"
+                         class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none" />
+                </div>
+
+                <div class="md:col-span-2" x-show="['interval','once','daily'].includes(autoMessageForm.trigger)">
+                  <label class="flex items-center gap-2 text-sm text-gray-300">
+                    <input type="checkbox" x-model="autoMessageForm.only_when_players_online" class="rounded border-valheim-600 accent-valheim-gold" />
+                    <span x-text="t('messages.form.onlyWhenOnline')">Only when players are online</span>
+                  </label>
+                </div>
+
+                <div class="md:col-span-2">
+                  <label class="block text-xs text-gray-500 mb-1" x-text="t('messages.form.text')">Message text</label>
+                  <textarea x-model="autoMessageForm.text" rows="3"
+                            class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none"
+                            :placeholder="t('messages.form.textPlaceholder')"></textarea>
+                </div>
+
+                <div class="md:col-span-2">
+                  <p class="text-xs text-gray-500 mb-2" x-text="t('messages.form.tagsHint')">Click a tag to insert:</p>
+                  <div class="flex flex-wrap gap-1.5">
+                    <template x-for="tag in autoMessageTags" :key="tag.tag">
+                      <button type="button" @click="insertAutoMessageTag(tag.tag)"
+                              class="text-[11px] font-mono px-2 py-1 rounded bg-valheim-900 border border-valheim-600 text-gray-300 hover:border-valheim-gold hover:text-valheim-gold"
+                              x-text="tag.tag"></button>
+                    </template>
+                  </div>
+                </div>
+
+                <div class="md:col-span-2 space-y-2" x-show="autoMessagePreview">
+                  <p class="text-xs text-gray-500" x-text="t('messages.form.preview')">Preview</p>
+                  <p class="text-sm text-gray-200 bg-valheim-900 border border-valheim-700 rounded-lg px-3 py-2" x-text="autoMessagePreview"></p>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap gap-2 pt-2">
+                <button @click="previewAutoMessage()" :disabled="isBusy('previewAutoMessage')" class="btn btn-sm btn-neutral">
+                  <span x-show="actionPending === 'previewAutoMessage'" class="spinner"></span>
+                  <span x-text="t('messages.form.previewBtn')">Preview</span>
+                </button>
+                <button @click="saveAutoMessage()" :disabled="isBusy('saveAutoMessage')" class="btn btn-sm btn-primary">
+                  <span x-show="actionPending === 'saveAutoMessage'" class="spinner"></span>
+                  <span x-text="t('common.actions.save')">Save</span>
+                </button>
+                <button @click="closeAutoMessageForm()" class="btn btn-sm btn-ghost" x-text="t('common.actions.cancel')">Cancel</button>
+              </div>
             </div>
           </div>
         </section>
@@ -1372,7 +1538,7 @@
                      :placeholder="t('files.searchPlaceholder')"
                      class="flex-1 bg-valheim-900 border border-valheim-600 rounded-lg px-3 py-2 text-sm focus:border-valheim-gold focus:outline-none" />
               <p class="text-xs text-gray-500 self-center whitespace-nowrap" x-show="fileSearchActive()">
-                <span x-text="fileSearchMatchCount()"></span><span x-text="fileSearchMatchCount() === 1 ? t('common.units.match') : t('common.units.matches')"></span>
+                <span x-text="fileSearchMatchCount()"></span><span x-text="fileSearchMatchCount() === 1 ? t('common.status.match') : t('common.status.matches')"></span>
               </p>
             </div>
             <div class="flex flex-wrap gap-2">
@@ -1446,7 +1612,7 @@
                   <span x-show="fileEditorDirty" id="file-editor-dirty" class="editor-dirty-badge">Unsaved changes</span>
                   <span x-show="cfgEditorMode === 'raw'" class="text-xs text-gray-600 ml-auto" x-text="t('common.editor.ctrlSaveSearch')">Ctrl+S to save · Ctrl+F to search</span>
                   <span x-show="cfgEditorMode === 'form' && cfgSearchQuery" class="text-xs text-gray-500 ml-auto">
-                    <span x-text="cfgFormMatchCount()"></span> <span x-text="t('common.units.matchEs')">match(es)</span>
+                    <span x-text="cfgFormMatchCount()"></span> <span x-text="t('common.status.matchEs')">match(es)</span>
                   </span>
                 </div>
                 <div x-show="cfgEditorMode === 'form' && cfgDocument" class="cfg-form-panel max-h-[520px] overflow-y-auto space-y-3 pr-1">

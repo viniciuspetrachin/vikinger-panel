@@ -8,6 +8,7 @@ import { worlds } from "./state/worlds.js";
 import { mods } from "./state/mods.js";
 import { updates } from "./state/updates.js";
 import { backups } from "./state/backups.js";
+import { messages } from "./state/messages.js";
 import { files } from "./state/files.js";
 import { logs } from "./state/logs.js";
 import { console as consoleState } from "./state/console.js";
@@ -85,6 +86,7 @@ function panel() {
       if (this.page === "mods") await this.loadModsPage();
       if (this.page === "worlds") await this.loadWorldsPage();
       if (this.page === "backups") await this.loadBackups();
+      if (this.page === "messages") await this.loadAutoMessages();
       if (this.page === "files") {
         await this._fetchFileTree();
         this.$nextTick(() => {
@@ -147,6 +149,7 @@ function panel() {
     mods,
     updates,
     backups,
+    messages,
     files,
     logs,
     consoleState,

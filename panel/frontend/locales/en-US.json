@@ -17,6 +17,7 @@
       "worlds": "Worlds",
       "mods": "Mods & Config",
       "backups": "Backups",
+      "messages": "Messages",
       "files": "Files",
       "logs": "Console",
       "audit": "Audit",
@@ -1338,5 +1339,76 @@
   "resources": {
     "noLimit": "No limit",
     "hostSuffix": "(host)"
+  },
+  "messages": {
+    "settings": {
+      "title": "Automatic messages",
+      "desc": "Schedule in-game announcements via RCON (say / showMessage). Uses the bundled ValheimRcon mod.",
+      "enabled": "Feature enabled",
+      "rconHint": "RCON unavailable — messages will not send until ValheimRcon is ready and the server is running."
+    },
+    "list": {
+      "title": "Messages",
+      "create": "New message",
+      "empty": "No automatic messages yet.",
+      "active": "Active",
+      "inactive": "Off",
+      "sendNow": "Send now",
+      "enable": "Enable",
+      "disable": "Disable"
+    },
+    "form": {
+      "createTitle": "New message",
+      "editTitle": "Edit message",
+      "defaultName": "Announcement",
+      "name": "Name",
+      "channel": "Channel",
+      "trigger": "Trigger",
+      "interval": "Interval",
+      "intervalSeconds": "Seconds (min. 30)",
+      "runAt": "Run at",
+      "dailyTime": "Daily time",
+      "onlyWhenOnline": "Only send when players are online",
+      "text": "Message text",
+      "textPlaceholder": "Welcome to %server_name%! Online: %players_online%",
+      "tagsHint": "Click a tag to insert:",
+      "preview": "Preview",
+      "previewBtn": "Preview"
+    },
+    "channels": {
+      "say": "Chat (say)",
+      "showMessage": "On-screen (showMessage)"
+    },
+    "triggers": {
+      "interval": "Every X seconds",
+      "once": "Once at date/time",
+      "daily": "Daily at time",
+      "on_first_join": "New player welcome",
+      "on_join": "Every player join"
+    },
+    "intervalPresets": {
+      "60": "Every 1 minute",
+      "300": "Every 5 minutes",
+      "900": "Every 15 minutes",
+      "1800": "Every 30 minutes",
+      "3600": "Every hour",
+      "custom": "Custom"
+    },
+    "summary": {
+      "interval": "Every {seconds}s",
+      "once": "Once at {at}",
+      "daily": "Daily at {time}",
+      "on_first_join": "On first join",
+      "on_join": "On every join"
+    },
+    "confirmDelete": "Delete message \"{name}\"?",
+    "toasts": {
+      "settingsSaved": "Message settings saved",
+      "created": "Message created",
+      "updated": "Message updated",
+      "deleted": "Message deleted",
+      "sent": "Sent: {text}",
+      "textRequired": "Message text is required"
+    }
   }
 }

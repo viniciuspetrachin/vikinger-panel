@@ -11,6 +11,7 @@ from typing import Callable, Optional
 logger = logging.getLogger("vikinger-panel")
 
 GB = 1024**3
+MIN_MAX_GB = 0.01
 
 STORAGE_LIMITS_FILE: Path = Path()
 BACKUPS_DIR: Path = Path()
@@ -86,7 +87,7 @@ def _normalize_category(raw: dict | None) -> dict:
     if max_gb is not None:
         try:
             max_gb = float(max_gb)
-            if max_gb <= 0:
+            if max_gb < MIN_MAX_GB:
                 max_gb = None
         except (TypeError, ValueError):
             max_gb = None

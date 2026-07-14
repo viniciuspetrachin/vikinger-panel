@@ -17,6 +17,7 @@
       "worlds": "Welten",
       "mods": "Mods & Config",
       "backups": "Backups",
+      "messages": "Nachrichten",
       "files": "Dateien",
       "logs": "Konsole",
       "audit": "Audit",
@@ -1338,5 +1339,76 @@
   "resources": {
     "noLimit": "Keine Begrenzung",
     "hostSuffix": "(Gastgeber)"
+  },
+  "messages": {
+    "settings": {
+      "title": "Automatische Nachrichten",
+      "desc": "Plane Ingame-Ankündigungen über RCON (say / showMessage). Nutzt das mitgelieferte ValheimRcon-Mod.",
+      "enabled": "Funktion aktiv",
+      "rconHint": "RCON nicht verfügbar — Nachrichten werden erst gesendet, wenn ValheimRcon bereit und der Server läuft."
+    },
+    "list": {
+      "title": "Nachrichten",
+      "create": "Neue Nachricht",
+      "empty": "Noch keine automatischen Nachrichten.",
+      "active": "Aktiv",
+      "inactive": "Aus",
+      "sendNow": "Jetzt senden",
+      "enable": "Aktivieren",
+      "disable": "Deaktivieren"
+    },
+    "form": {
+      "createTitle": "Neue Nachricht",
+      "editTitle": "Nachricht bearbeiten",
+      "defaultName": "Ankündigung",
+      "name": "Name",
+      "channel": "Kanal",
+      "trigger": "Auslöser",
+      "interval": "Intervall",
+      "intervalSeconds": "Sekunden (min. 30)",
+      "runAt": "Ausführen um",
+      "dailyTime": "Tägliche Uhrzeit",
+      "onlyWhenOnline": "Nur senden, wenn Spieler online sind",
+      "text": "Nachrichtentext",
+      "textPlaceholder": "Willkommen auf %server_name%! Online: %players_online%",
+      "tagsHint": "Klicke auf ein Tag zum Einfügen:",
+      "preview": "Vorschau",
+      "previewBtn": "Vorschau"
+    },
+    "channels": {
+      "say": "Chat (say)",
+      "showMessage": "Bildschirm (showMessage)"
+    },
+    "triggers": {
+      "interval": "Alle X Sekunden",
+      "once": "Einmal zu Datum/Uhrzeit",
+      "daily": "Täglich zur Uhrzeit",
+      "on_first_join": "Willkommen (erster Join)",
+      "on_join": "Bei jedem Spielerbeitritt"
+    },
+    "intervalPresets": {
+      "60": "Jede Minute",
+      "300": "Alle 5 Minuten",
+      "900": "Alle 15 Minuten",
+      "1800": "Alle 30 Minuten",
+      "3600": "Jede Stunde",
+      "custom": "Benutzerdefiniert"
+    },
+    "summary": {
+      "interval": "Alle {seconds}s",
+      "once": "Einmal um {at}",
+      "daily": "Täglich um {time}",
+      "on_first_join": "Beim ersten Join",
+      "on_join": "Bei jedem Join"
+    },
+    "confirmDelete": "Nachricht \"{name}\" löschen?",
+    "toasts": {
+      "settingsSaved": "Nachrichteneinstellungen gespeichert",
+      "created": "Nachricht erstellt",
+      "updated": "Nachricht aktualisiert",
+      "deleted": "Nachricht gelöscht",
+      "sent": "Gesendet: {text}",
+      "textRequired": "Nachrichtentext ist erforderlich"
+    }
   }
 }
