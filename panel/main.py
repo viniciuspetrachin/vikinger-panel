@@ -4891,10 +4891,10 @@ def api_metrics_history(
 def api_map(world: str):
     name = validate_world_name(world)
     try:
-        data = world_map.build_map(name, WORLDS_DIR, DATA_DIR)
-    except Exception as e:
-        raise HTTPException(500, f"Failed to build map: {e}") from e
-    return data
+        return world_map.build_map(name, WORLDS_DIR, DATA_DIR)
+    except Exception:
+        logger.debug("map build failed for %s", name, exc_info=True)
+        return {"world": name, "seed": "", "markers": [], "bounds": {}}
 
 
 @app.get("/api/alerts")
