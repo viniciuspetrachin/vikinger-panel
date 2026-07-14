@@ -526,11 +526,29 @@ def test_server_backup_disk_limit_section(page: Page, base_url: str) -> None:
 
     select.select_option("10")
     page.get_by_role("button", name="Save backup limit").click()
+    page.wait_for_function(
+        "() => document.querySelector('body')._x_dataStack[0].actionPending === 'saveBackupStorageLimit'",
+        timeout=3000,
+    )
+    page.wait_for_function(
+        "() => !document.querySelector('body')._x_dataStack[0].actionPending",
+        timeout=10000,
+    )
     expect(usage_panel.get_by_text("10 GB", exact=True)).to_be_visible(timeout=10000)
+    expect(select).to_have_value("10")
 
     select.select_option("0")
     page.get_by_role("button", name="Save backup limit").click()
+    page.wait_for_function(
+        "() => document.querySelector('body')._x_dataStack[0].actionPending === 'saveBackupStorageLimit'",
+        timeout=3000,
+    )
+    page.wait_for_function(
+        "() => !document.querySelector('body')._x_dataStack[0].actionPending",
+        timeout=10000,
+    )
     expect(usage_panel.get_by_text("Unlimited", exact=True)).to_be_visible(timeout=10000)
+    expect(select).to_have_value("0")
     expect(page.get_by_role("button", name="Save backup limit")).to_be_visible()
 
 
