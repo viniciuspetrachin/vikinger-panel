@@ -14,18 +14,24 @@ export const dashboard = {
   actionPending: null,
   netChartInstance: null,
   metricsInterval: null,
+  dashboardBooted: false,
 
   async loadDashboardData() {
-    await this.refreshStatus();
-    await Promise.all([this.loadPlayers(), this.loadPlayerLists(), this.loadConsoleStatus()]);
-    await this.loadDashLogs();
+    return this.withPageLoad("dashboard", async () => {
+      await this.refreshStatus();
+      await Promise.all([this.loadPlayers(), this.loadPlayerLists(), this.loadConsoleStatus()]);
+      await this.loadDashLogs();
+      this.dashboardBooted = true;
+    });
   },
 
   async refreshStatus() {
-    return this.withBusy("refreshStatus", async () => {
+    return this.withPageLoad("status", async () => {
       try {
         this.status = await this.api("GET", "/api/status");
-      } catch (e) { this.toast(e.message, "error"); }
+      } catch (e) {
+        this.toast(e.message, "error");
+      }
     });
   },
 

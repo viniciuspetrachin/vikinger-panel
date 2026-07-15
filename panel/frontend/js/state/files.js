@@ -49,6 +49,8 @@ export const files = {
   cfgSavedSnapshot: "",
   cfgSearchQuery: "",
   cfgExpandedSections: {},
+  fileTreeLazy: false,
+  fileFolderLoading: {},
 
   getFileScopes() {
     void this.localeVersion;
@@ -67,18 +69,22 @@ export const files = {
   },
 
   async _fetchFileTree() {
-    try {
-      const data = await this.api("GET", `/api/files/tree?scope=${this.fileScope}`);
-      this.fileTree = data.tree || [];
-      this.fileExpandedPaths = {};
-      if (this.editPath && !this.editPath.startsWith(`${this.fileScope}/`)) {
-        this.editPath = "";
-        this.editContent = "";
-        window.PanelEditor?.destroy("file");
+    return this.withPageLoad("files", async () => {
+      try {
+        const data = await this.api("GET", `/api/files/tree?scope=${this.fileScope}`);
+        this.fileTree = data.tree || [];
+        this.fileTreeLazy = !!data.lazy;
+        this.fileExpandedPaths = {};
+        this.fileFolderLoading = {};
+        if (this.editPath && !this.editPath.startsWith(`${this.fileScope}/`)) {
+          this.editPath = "";
+          this.editContent = "";
+          window.PanelEditor?.destroy("file");
+        }
+      } catch (e) {
+        this.toast(e.message, "error");
       }
-    } catch (e) {
-      this.toast(e.message, "error");
-    }
+    });
   },
 
   async loadFileTree() {
@@ -200,15 +206,62 @@ export const files = {
 
   toggleFileFolder(path) {
     const next = { ...this.fileExpandedPaths };
-    if (next[path]) delete next[path];
-    else next[path] = true;
+    if (next[path]) {
+      delete next[path];
+      this.fileExpandedPaths = next;
+      return;
+    }
+    next[path] = true;
     this.fileExpandedPaths = next;
+    this.ensureFileFolderLoaded(path);
   },
 
-  renderTree(items, depth = 0, _expanded = null, _selected = null) {
+  findFileTreeNode(items, path) {
+    for (const item of items || []) {
+      if (item.path === path) return item;
+      if (item.children?.length) {
+        const found = this.findFileTreeNode(item.children, path);
+        if (found) return found;
+      }
+    }
+    return null;
+  },
+
+  async ensureFileFolderLoaded(path) {
+    const node = this.findFileTreeNode(this.fileTree, path);
+    if (!node || node.type !== "dir") return;
+    if (!node.lazy && Array.isArray(node.children) && node.children.length) return;
+    if (!node.lazy && Array.isArray(node.children) && !node.children.length && this.fileScope === "config") {
+      return;
+    }
+    if (this.fileFolderLoading[path]) return;
+    this.fileFolderLoading = { ...this.fileFolderLoading, [path]: true };
+    try {
+      const data = await this.api(
+        "GET",
+        `/api/files/tree?scope=${this.fileScope}&path=${encodeURIComponent(path)}`,
+      );
+      node.children = data.tree || [];
+      node.lazy = false;
+      // Force Alpine to re-render x-html tree.
+      this.fileTree = [...this.fileTree];
+    } catch (e) {
+      this.toast(e.message, "error");
+    } finally {
+      const next = { ...this.fileFolderLoading };
+      delete next[path];
+      this.fileFolderLoading = next;
+    }
+  },
+
+  renderTree(items, depth = 0, _expanded = null, _selected = null, _folderLoading = null) {
     void _expanded;
     void _selected;
+    void _folderLoading;
     if (!items?.length) {
+      if (depth === 0 && this.isPageLoading("files")) {
+        return `<div class="page-loading-inline"><span class="spinner"></span><span>${this.escapeHtml(this.t("common.loading.loading"))}</span></div>`;
+      }
       if (depth === 0 && this.fileSearchActive()) {
         return `<p class="file-tree-empty">${this.escapeHtml(this.t("files.noMatches"))}</p>`;
       }
@@ -231,15 +284,22 @@ export const files = {
 
     if (item.type === "dir") {
       const expanded = this.isFileFolderExpanded(item.path);
+      const loading = !!this.fileFolderLoading[item.path];
       const chevronCls = expanded ? "file-tree-chevron is-expanded" : "file-tree-chevron";
       let html =
         `<button type="button" class="file-tree-row file-tree-folder" data-path="${this.escapeHtml(item.path)}" style="--file-depth:${pad}px">` +
-        `<span class="${chevronCls}">${CHEVRON_SVG}</span>` +
+        `<span class="${chevronCls}">${loading ? '<span class="spinner spinner-xs"></span>' : CHEVRON_SVG}</span>` +
         `<span class="file-tree-icon file-tree-icon-folder">${FOLDER_SVG}</span>` +
         `<span class="file-tree-name">${name}</span>` +
         `</button>`;
-      if (expanded && item.children?.length) {
-        html += this.renderTree(item.children, depth + 1);
+      if (expanded) {
+        if (loading && !(item.children && item.children.length)) {
+          html += `<div class="file-tree-children"><p class="file-tree-empty">${this.escapeHtml(this.t("common.loading.loading"))}</p></div>`;
+        } else if (item.children?.length) {
+          html += this.renderTree(item.children, depth + 1);
+        } else if (!item.lazy) {
+          html += `<div class="file-tree-children"><p class="file-tree-empty">${this.escapeHtml(this.t("files.tree.emptyFolder"))}</p></div>`;
+        }
       }
       return html;
     }
@@ -265,45 +325,47 @@ export const files = {
   },
 
   async editFile(path) {
-    try {
-      const data = await this.api("GET", `/api/files/read?path=${encodeURIComponent(path)}`);
-      this.editPath = path;
-      this.editContent = data.content;
-      this.cfgDocument = null;
-      this.cfgStructured = false;
-      this.cfgEditorMode = "raw";
-      this.cfgSearchQuery = "";
-      this.cfgExpandedSections = {};
-      if (this.isBepinexPluginCfg(path)) {
-        try {
-          const parsed = await this.api("GET", `/api/bepinex/configs/parse?path=${encodeURIComponent(path)}`);
-          if (parsed.structured && parsed.document?.sections?.length) {
-            this.cfgDocument = parsed.document;
-            this.cfgStructured = true;
-            this.cfgEditorMode = "form";
-            this.cfgSavedSnapshot = JSON.stringify(parsed.document);
-            const expanded = {};
-            for (const sec of parsed.document.sections) expanded[sec.name] = true;
-            this.cfgExpandedSections = expanded;
+    return this.withPageLoad("fileOpen", async () => {
+      try {
+        const data = await this.api("GET", `/api/files/read?path=${encodeURIComponent(path)}`);
+        this.editPath = path;
+        this.editContent = data.content;
+        this.cfgDocument = null;
+        this.cfgStructured = false;
+        this.cfgEditorMode = "raw";
+        this.cfgSearchQuery = "";
+        this.cfgExpandedSections = {};
+        if (this.isBepinexPluginCfg(path)) {
+          try {
+            const parsed = await this.api("GET", `/api/bepinex/configs/parse?path=${encodeURIComponent(path)}`);
+            if (parsed.structured && parsed.document?.sections?.length) {
+              this.cfgDocument = parsed.document;
+              this.cfgStructured = true;
+              this.cfgEditorMode = "form";
+              this.cfgSavedSnapshot = JSON.stringify(parsed.document);
+              const expanded = {};
+              for (const sec of parsed.document.sections) expanded[sec.name] = true;
+              this.cfgExpandedSections = expanded;
+            }
+          } catch {
+            /* fallback to raw editor */
           }
-        } catch {
-          /* fallback to raw editor */
         }
+        if (this.page !== "files") {
+          this.page = "files";
+        }
+        await this.$nextTick();
+        if (this.cfgEditorMode === "raw") {
+          await this.mountFileEditor(data.content);
+        } else {
+          window.PanelEditor?.destroy("file");
+          const el = document.getElementById("file-editor-host");
+          if (el) el.innerHTML = "";
+        }
+      } catch (e) {
+        this.toast(e.message, "error");
       }
-      if (this.page !== "files") {
-        this.page = "files";
-      }
-      await this.$nextTick();
-      if (this.cfgEditorMode === "raw") {
-        await this.mountFileEditor(data.content);
-      } else {
-        window.PanelEditor?.destroy("file");
-        const el = document.getElementById("file-editor-host");
-        if (el) el.innerHTML = "";
-      }
-    } catch (e) {
-      this.toast(e.message, "error");
-    }
+    });
   },
 
   onFileTreeClick(event) {

@@ -197,14 +197,16 @@ export const backups = {
   },
 
   async loadBackups() {
-    try {
-      const data = await this.api("GET", "/api/backups");
-      this.backups = data.backups || [];
-      this.backupConfig = data.config || {};
-      this.backupState = data.state || { active: null, restored_at: null, undo: null, undo_of: null };
-      this.syncBackupPresetFromCron(this.backupConfig.BACKUPS_CRON || "0 * * * *");
-      this.backupsPage = this.clampPage(this.backupsPage, this.backupsTotalPages());
-    } catch (e) { this.toast(e.message, "error"); }
+    return this.withPageLoad("backups", async () => {
+      try {
+        const data = await this.api("GET", "/api/backups");
+        this.backups = data.backups || [];
+        this.backupConfig = data.config || {};
+        this.backupState = data.state || { active: null, restored_at: null, undo: null, undo_of: null };
+        this.syncBackupPresetFromCron(this.backupConfig.BACKUPS_CRON || "0 * * * *");
+        this.backupsPage = this.clampPage(this.backupsPage, this.backupsTotalPages());
+      } catch (e) { this.toast(e.message, "error"); }
+    });
   },
 
   backupConfigPayload() {

@@ -11,7 +11,7 @@ export const audit = {
   auditTotalPages: 1,
 
   async loadAudit() {
-    return this.withBusy("loadAudit", async () => {
+    return this.withPageLoad("audit", async () => {
       try {
         const data = await this.api(
           "GET",

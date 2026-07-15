@@ -59,6 +59,51 @@ def test_all_primary_tabs_load(page: Page, base_url: str) -> None:
         assert_no_error_toast(page)
 
 
+def test_dashboard_loads_status_quickly(page: Page, base_url: str) -> None:
+    """Dashboard should get status without staying on empty em-dashes forever."""
+    page.goto(base_url)
+    page.wait_for_selector("[x-cloak]", state="detached")
+    page.wait_for_function(
+        """() => {
+            const r = document.querySelector('body')?._x_dataStack?.[0];
+            return r && typeof r.status?.container === 'string' && r.status.container.length > 0;
+        }""",
+        timeout=15000,
+    )
+    # Skeleton/loading for first paint should clear once status arrives.
+    page.wait_for_function(
+        """() => {
+            const r = document.querySelector('body')?._x_dataStack?.[0];
+            return r && !r.pageLoading?.dashboard;
+        }""",
+        timeout=15000,
+    )
+    assert_no_error_toast(page)
+
+
+def test_files_tab_shows_tree_or_loading(page: Page, base_url: str) -> None:
+    page.goto(base_url)
+    page.wait_for_selector("[x-cloak]", state="detached")
+    goto_config(page, "files")
+    page.wait_for_function(
+        """() => {
+            const r = document.querySelector('body')?._x_dataStack?.[0];
+            if (!r || r.page !== 'files') return false;
+            if (r.pageLoading?.files) return true;
+            return Array.isArray(r.fileTree);
+        }""",
+        timeout=15000,
+    )
+    page.wait_for_function(
+        """() => {
+            const r = document.querySelector('body')?._x_dataStack?.[0];
+            return r && !r.pageLoading?.files && Array.isArray(r.fileTree);
+        }""",
+        timeout=15000,
+    )
+    assert_no_error_toast(page)
+
+
 def test_all_config_tabs_load(page: Page, base_url: str) -> None:
     page.goto(base_url)
     page.wait_for_selector("[x-cloak]", state="detached")

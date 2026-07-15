@@ -112,15 +112,17 @@ export const messages = {
   },
 
   async loadAutoMessages() {
-    try {
-      const data = await this.api("GET", "/api/auto-messages");
-      this.autoMessagesEnabled = data.enabled !== false;
-      this.autoMessages = data.messages || [];
-      this.autoMessageTags = data.tags || [];
-      this.autoMessagesRconAvailable = !!data.rcon_available;
-    } catch (e) {
-      this.toast(e.message, "error");
-    }
+    return this.withPageLoad("messages", async () => {
+      try {
+        const data = await this.api("GET", "/api/auto-messages");
+        this.autoMessagesEnabled = data.enabled !== false;
+        this.autoMessages = data.messages || [];
+        this.autoMessageTags = data.tags || [];
+        this.autoMessagesRconAvailable = !!data.rcon_available;
+      } catch (e) {
+        this.toast(e.message, "error");
+      }
+    });
   },
 
   openAutoMessageCreate() {

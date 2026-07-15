@@ -8,16 +8,18 @@ export const alerts = {
   },
 
   async loadAlerts() {
-    try {
-      const cfg = await this.api("GET", "/api/alerts");
-      this.alertsConfig = {
-        events: { server_down: false, player_join: false, backup_fail: false, ...(cfg.events || {}) },
-        discord: { enabled: false, webhook_url: "", ...(cfg.discord || {}) },
-        telegram: { enabled: false, bot_token: "", chat_id: "", ...(cfg.telegram || {}) },
-      };
-    } catch (e) {
-      /* silent */
-    }
+    return this.withPageLoad("alerts", async () => {
+      try {
+        const cfg = await this.api("GET", "/api/alerts");
+        this.alertsConfig = {
+          events: { server_down: false, player_join: false, backup_fail: false, ...(cfg.events || {}) },
+          discord: { enabled: false, webhook_url: "", ...(cfg.discord || {}) },
+          telegram: { enabled: false, bot_token: "", chat_id: "", ...(cfg.telegram || {}) },
+        };
+      } catch (e) {
+        /* silent */
+      }
+    });
   },
 
   async saveAlerts() {
