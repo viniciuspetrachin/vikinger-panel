@@ -109,6 +109,14 @@ All notable changes to this project will be documented in this file.
 - **Aba Mapa:** deixava de mostrar conteúdo em saves reais (scan heurístico de portais no `.db` não encontra prefabs); agora usa pins/fog do ServerSideMap quando o mod está presente.
 - **Aba Mapa:** “mostrar totalmente explorado” não atualizava / ficava oculto sem o mod; agora o toggle sempre aparece com mundo selecionado e força reload da imagem.
 
+## [2.1.11]
+
+### Added
+
+### Changed
+
+### Fixed
+
 ## [Unreleased]
 
 ### Added
