@@ -83,7 +83,9 @@ def env_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "SETUP_FILE", panel_data / "setup.json")
     monkeypatch.setattr(main, "APP_MANIFEST_PATH", data / "dl" / "server" / "steamapps" / "appmanifest_896660.acf")
     monkeypatch.setenv("VIKINGER_DISABLE_AUTO_MESSAGES_WORKER", "1")
+    monkeypatch.setenv("VIKINGER_DISABLE_LIVE_SNAPSHOT", "1")
 
+    main.clear_live_caches()
     main.configure_storage_limits()
     main.configure_auto_messages()
 
@@ -171,7 +173,9 @@ def fresh_env_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "SETUP_FILE", panel_data / "setup.json")
     monkeypatch.setattr(main, "APP_MANIFEST_PATH", data / "dl" / "server" / "steamapps" / "appmanifest_896660.acf")
     monkeypatch.setenv("VIKINGER_DISABLE_AUTO_MESSAGES_WORKER", "1")
+    monkeypatch.setenv("VIKINGER_DISABLE_LIVE_SNAPSHOT", "1")
 
+    main.clear_live_caches()
     main.configure_storage_limits()
     main.configure_auto_messages()
 

@@ -12,11 +12,15 @@ export const mods = {
   modsViewMode: "cards",
 
   async loadModsPage() {
-    await this.loadUpdatesConfig();
-    await this.loadMods();
-    await this.loadBepinexConfigs();
-    await this.loadOrphanedConfigs();
-    this.updateExportSkipped();
+    return this.withPageLoad("mods", async () => {
+      await Promise.all([
+        this.loadUpdatesConfig(),
+        this.loadMods(),
+        this.loadBepinexConfigs(),
+        this.loadOrphanedConfigs(),
+      ]);
+      this.updateExportSkipped();
+    });
   },
 
   updateExportSkipped() {
