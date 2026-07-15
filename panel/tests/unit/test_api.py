@@ -29,6 +29,25 @@ def test_status(client):
     assert body["players_count"] == 1
 
 
+def test_status_uses_live_snapshot(client, monkeypatch):
+    main.clear_live_caches()
+    calls = {"n": 0}
+    real = main._compute_status
+
+    def counting():
+        calls["n"] += 1
+        return real()
+
+    monkeypatch.setattr(main, "_compute_status", counting)
+    r1 = client.get("/api/status")
+    r2 = client.get("/api/status")
+    assert r1.status_code == 200
+    assert r2.status_code == 200
+    assert r1.json()["server"] == r2.json()["server"]
+    # First fills snapshot; second serves cached snapshot without recompute.
+    assert calls["n"] == 1
+
+
 def test_players(client):
     r = client.get("/api/players")
     assert r.status_code == 200
@@ -1199,7 +1218,47 @@ def test_delete_world_missing(client):
 def test_file_tree(client):
     r = client.get("/api/files/tree?scope=config")
     assert r.status_code == 200
-    assert isinstance(r.json()["tree"], list)
+    body = r.json()
+    assert isinstance(body["tree"], list)
+    assert body.get("lazy") is False
+
+
+def test_file_tree_data_is_lazy(client, env_dir):
+    nested = env_dir["data"] / "subdir" / "deep"
+    nested.mkdir(parents=True)
+    (nested / "note.txt").write_text("hi")
+    (env_dir["data"] / "root.txt").write_text("root")
+    main.clear_live_caches()
+
+    r = client.get("/api/files/tree?scope=data")
+    assert r.status_code == 200
+    body = r.json()
+    assert body.get("lazy") is True
+    tree = body["tree"]
+    names = {item["name"] for item in tree}
+    assert "root.txt" in names
+    assert "subdir" in names
+    sub = next(item for item in tree if item["name"] == "subdir")
+    assert sub.get("lazy") is True
+    assert sub.get("children") == []
+
+    r2 = client.get("/api/files/tree?scope=data&path=data/subdir")
+    assert r2.status_code == 200
+    children = r2.json()["tree"]
+    child_names = {item["name"] for item in children}
+    assert "deep" in child_names
+
+
+def test_file_tree_cache_invalidates_on_write(client):
+    main.clear_live_caches()
+    r1 = client.get("/api/files/tree?scope=config")
+    assert r1.status_code == 200
+    before = {item["name"] for item in r1.json()["tree"]}
+    client.put("/api/files/write?path=config/tree-cache-note.txt", json={"content": "x"})
+    r2 = client.get("/api/files/tree?scope=config")
+    after = {item["name"] for item in r2.json()["tree"]}
+    assert "tree-cache-note.txt" in after
+    assert "tree-cache-note.txt" not in before or "tree-cache-note.txt" in after
 
 
 def test_file_tree_root_scope_rejected(client):

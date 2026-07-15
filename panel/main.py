@@ -10,6 +10,7 @@ import os
 import re
 import shutil
 import subprocess
+import threading
 import time
 import zipfile
 from datetime import datetime, timezone
@@ -100,6 +101,10 @@ MEMORY_MAX_GB = 28
 MEMORY_UNLIMITED_SLIDER = 29
 VANILLA_MAX_PLAYERS = 10
 DISK_USAGE_CACHE_TTL = 60
+CONTAINER_CACHE_TTL = 1.5
+PLAYERS_CACHE_TTL = 1.5
+LIVE_SNAPSHOT_INTERVAL = 1.5
+FILE_TREE_CACHE_TTL = 8.0
 
 ALLOWED_EXTENSIONS = {".cfg", ".txt", ".json", ".md", ".env", ".yml", ".yaml", ".ini", ".log", ".sh", ".xml", ".prefs"}
 
@@ -108,6 +113,14 @@ _disk_usage_cache: Optional[dict] = None
 _disk_usage_cache_ts: float = 0.0
 _mod_update_cache: dict[str, tuple[float, dict]] = {}
 MOD_UPDATE_CACHE_TTL = 300
+
+_container_running_cache: Optional[bool] = None
+_container_running_cache_ts: float = 0.0
+_players_info_cache: Optional[dict] = None
+_players_info_cache_ts: float = 0.0
+_live_snapshot: Optional[dict] = None
+_live_snapshot_lock = threading.Lock()
+_file_tree_cache: dict[str, tuple[float, list]] = {}
 
 _SIZE_UNIT = {
     "B": 1,
@@ -525,9 +538,20 @@ def write_env(updates: dict[str, str]) -> None:
         set_key(str(ENV_FILE), key, value)
 
 
-def container_running() -> bool:
+def container_running(force_refresh: bool = False) -> bool:
+    global _container_running_cache, _container_running_cache_ts
+    now = time.time()
+    if (
+        not force_refresh
+        and _container_running_cache is not None
+        and now - _container_running_cache_ts < CONTAINER_CACHE_TTL
+    ):
+        return _container_running_cache
     r = docker("inspect", "-f", "{{.State.Running}}", CONTAINER_NAME)
-    return r.returncode == 0 and r.stdout.strip() == "true"
+    result = r.returncode == 0 and r.stdout.strip() == "true"
+    _container_running_cache = result
+    _container_running_cache_ts = now
+    return result
 
 
 def supervisor_status() -> dict[str, str]:
@@ -1713,7 +1737,8 @@ _PLAYER_LIST_SYNC = {
 }
 
 
-def file_tree(base: Path, prefix: str = "") -> list[dict]:
+def file_tree(base: Path, prefix: str = "", depth: Optional[int] = None) -> list[dict]:
+    """Build a file tree. depth=None walks fully; depth=0 is one level (lazy dirs)."""
     items = []
     if not base.exists():
         return items
@@ -1729,7 +1754,22 @@ def file_tree(base: Path, prefix: str = "") -> list[dict]:
             items.append({"name": entry.name, "path": rel, "type": "broken", "error": "broken symlink"})
             continue
         if is_dir:
-            items.append({"name": entry.name, "path": rel, "type": "dir", "children": file_tree(entry, rel)})
+            if depth is not None and depth <= 0:
+                items.append({
+                    "name": entry.name,
+                    "path": rel,
+                    "type": "dir",
+                    "children": [],
+                    "lazy": True,
+                })
+            else:
+                child_depth = None if depth is None else depth - 1
+                items.append({
+                    "name": entry.name,
+                    "path": rel,
+                    "type": "dir",
+                    "children": file_tree(entry, rel, depth=child_depth),
+                })
         else:
             try:
                 stat = entry.stat()
@@ -1744,6 +1784,31 @@ def file_tree(base: Path, prefix: str = "") -> list[dict]:
                 "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
             })
     return items
+
+
+def _invalidate_file_tree_cache(scope: Optional[str] = None) -> None:
+    if scope is None:
+        _file_tree_cache.clear()
+        return
+    prefix = f"{scope}:"
+    for key in list(_file_tree_cache):
+        if key.startswith(prefix):
+            del _file_tree_cache[key]
+
+
+def _file_tree_cache_key(scope: str, path: str, depth: Optional[int]) -> str:
+    return f"{scope}:{path}:{depth if depth is not None else 'full'}"
+
+
+def _get_cached_file_tree(scope: str, path: str, depth: Optional[int], builder) -> list:
+    key = _file_tree_cache_key(scope, path, depth)
+    now = time.time()
+    cached = _file_tree_cache.get(key)
+    if cached and now - cached[0] < FILE_TREE_CACHE_TTL:
+        return cached[1]
+    tree = builder()
+    _file_tree_cache[key] = (now, tree)
+    return tree
 
 
 THUNDERSTORE_COMMUNITY = "valheim"
@@ -3127,11 +3192,23 @@ def parse_players_from_logs(log_text: str) -> dict:
     return {"count": count, "players": players, "online": count > 0}
 
 
-def get_players_info() -> dict:
+def get_players_info(force_refresh: bool = False) -> dict:
+    global _players_info_cache, _players_info_cache_ts
+    now = time.time()
+    if (
+        not force_refresh
+        and _players_info_cache is not None
+        and now - _players_info_cache_ts < PLAYERS_CACHE_TTL
+    ):
+        return dict(_players_info_cache)
     if not container_running():
-        return {"count": 0, "players": [], "online": False}
-    logs = get_logs(3000)
-    return parse_players_from_logs(logs)
+        result = {"count": 0, "players": [], "online": False}
+    else:
+        logs = get_logs(3000)
+        result = parse_players_from_logs(logs)
+    _players_info_cache = result
+    _players_info_cache_ts = now
+    return dict(result)
 
 
 def _collect_mod_entry(dll: Path, enabled: bool, cfg_index: list) -> dict:
@@ -3493,20 +3570,37 @@ def get_container_uptime() -> tuple[Optional[float], str]:
     return secs, human
 
 
-@app.get("/api/status")
-def api_status():
+def _count_worlds_fast() -> int:
+    if not WORLDS_DIR.exists():
+        return 0
+    return sum(1 for fwl in WORLDS_DIR.glob("*.fwl") if "_backup" not in fwl.stem)
+
+
+def _count_mods_fast() -> int:
+    count = 0
+    if PLUGINS_DIR.exists():
+        count += sum(1 for _ in PLUGINS_DIR.glob("*.dll"))
+    disabled = PLUGINS_DIR / "disabled"
+    if disabled.exists():
+        count += sum(1 for _ in disabled.glob("*.dll"))
+    return count
+
+
+def _compute_status() -> dict:
+    """Build dashboard status without full worlds reconcile (hot path)."""
     env = read_env()
-    sup = supervisor_status()
+    is_running = container_running()
     players = get_players_info()
-    worlds, active, running, reconciled = build_worlds_list()
     configured = env.get("WORLD_NAME", "").strip()
+    running = get_container_world_name() if is_running else ""
+    active = running if running else configured
     uptime_secs, uptime_display = get_container_uptime()
     return {
-        "container": "running" if container_running() else "stopped",
+        "container": "running" if is_running else "stopped",
         "server": server_process_status(),
         "uptime_seconds": uptime_secs,
         "uptime_display": uptime_display,
-        "supervisor": sup,
+        "supervisor": supervisor_status() if is_running else {},
         "config": {
             "server_name": effective_server_name(env),
             "server_name_display": strip_server_name_branding(env.get("SERVER_NAME", ""))
@@ -3519,14 +3613,54 @@ def api_status():
         },
         "running_world_name": running,
         "world_in_sync": not running or running == (active or configured),
-        "world_reconciled": reconciled,
-        "mods_count": len(list_mods_data()),
-        "worlds_count": len(worlds),
+        "world_reconciled": {"reconciled": False},
+        "mods_count": _count_mods_fast(),
+        "worlds_count": _count_worlds_fast(),
         "players_count": players["count"],
         "capabilities": {
             "world_config": True,
         },
     }
+
+
+def _refresh_live_snapshot() -> dict:
+    """Recompute status+players and store as the shared live snapshot."""
+    global _live_snapshot
+    status = _compute_status()
+    players = players_with_sessions()
+    status = dict(status)
+    status["players_count"] = players.get("count", status.get("players_count", 0))
+    snap = {"ts": time.time(), "status": status, "players": players}
+    with _live_snapshot_lock:
+        _live_snapshot = snap
+    return snap
+
+
+def get_live_snapshot(force_refresh: bool = False) -> dict:
+    """Return last-known status/players; compute once if empty or forced."""
+    with _live_snapshot_lock:
+        snap = _live_snapshot
+    if force_refresh or snap is None:
+        return _refresh_live_snapshot()
+    return snap
+
+
+def clear_live_caches() -> None:
+    """Reset short-lived caches (used by tests)."""
+    global _container_running_cache, _container_running_cache_ts
+    global _players_info_cache, _players_info_cache_ts, _live_snapshot
+    _container_running_cache = None
+    _container_running_cache_ts = 0.0
+    _players_info_cache = None
+    _players_info_cache_ts = 0.0
+    with _live_snapshot_lock:
+        _live_snapshot = None
+    _file_tree_cache.clear()
+
+
+@app.get("/api/status")
+def api_status():
+    return get_live_snapshot()["status"]
 
 
 def players_with_sessions() -> dict:
@@ -3543,7 +3677,7 @@ def players_with_sessions() -> dict:
 
 @app.get("/api/players")
 def api_players():
-    return players_with_sessions()
+    return get_live_snapshot()["players"]
 
 
 @app.get("/api/metrics")
@@ -4281,7 +4415,11 @@ def api_delete_world(name: str):
 # ── Files ────────────────────────────────────────────────────────────────────
 
 @app.get("/api/files/tree")
-def api_file_tree(scope: str = "config"):
+def api_file_tree(
+    scope: str = "config",
+    path: Optional[str] = Query(None),
+    depth: Optional[int] = Query(None),
+):
     scopes = {
         "config": CONFIG_DIR,
         "data": DATA_DIR,
@@ -4289,8 +4427,28 @@ def api_file_tree(scope: str = "config"):
     if scope not in scopes:
         raise HTTPException(400, "Invalid scope — use config or data")
     base = scopes[scope]
-    rel_prefix = scope
-    return {"tree": file_tree(base, rel_prefix)}
+    # config stays fully expanded (small); data defaults to one level (lazy).
+    if depth is None:
+        depth = None if scope == "config" else 0
+    if path:
+        if not path.startswith(f"{scope}/") and path != scope:
+            raise HTTPException(400, "path must be under the requested scope")
+        target = safe_path(path)
+        if not target.is_dir():
+            raise HTTPException(404, "Directory not found")
+        rel_prefix = path.rstrip("/")
+
+        def build():
+            return file_tree(target, rel_prefix, depth=0)
+
+        tree = _get_cached_file_tree(scope, path, 0, build)
+        return {"tree": tree, "path": path, "lazy": True}
+
+    def build_root():
+        return file_tree(base, scope, depth=depth)
+
+    tree = _get_cached_file_tree(scope, "", depth, build_root)
+    return {"tree": tree, "lazy": depth is not None}
 
 
 @app.get("/api/files/read")
@@ -4311,6 +4469,8 @@ def api_write_file(path: str, body: FileContent):
         raise HTTPException(400, "Cannot edit binary files")
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(body.content)
+    scope = path.split("/", 1)[0] if "/" in path else path
+    _invalidate_file_tree_cache(scope if scope in ("config", "data") else None)
     return {"ok": True, "path": path}
 
 
@@ -4334,6 +4494,8 @@ def api_delete_file(path: str):
         shutil.rmtree(target)
     else:
         target.unlink()
+    scope = path.split("/", 1)[0] if "/" in path else path
+    _invalidate_file_tree_cache(scope if scope in ("config", "data") else None)
     return {"ok": True}
 
 
@@ -5111,19 +5273,18 @@ def api_put_schedule(body: ScheduleConfigUpdate):
 
 
 async def _build_live_payload() -> dict:
-    """Payload pushed over /ws/live: status + metrics + players."""
+    """Payload pushed over /ws/live: status + metrics + players from shared snapshot."""
     try:
-        status = api_status()
+        snap = await asyncio.to_thread(get_live_snapshot)
+        status = snap.get("status") or {}
+        players = snap.get("players") or {"count": 0, "players": [], "online": False}
     except Exception:
         status = {}
+        players = {"count": 0, "players": [], "online": False}
     try:
-        metrics = api_metrics(light=True)
+        metrics = await asyncio.to_thread(api_metrics, True)
     except Exception:
         metrics = {}
-    try:
-        players = players_with_sessions()
-    except Exception:
-        players = {"count": 0, "players": [], "online": False}
     return {
         "ts": time.time(),
         "status": status,
@@ -5132,11 +5293,23 @@ async def _build_live_payload() -> dict:
     }
 
 
+async def _live_snapshot_loop() -> None:
+    """Keep the shared status/players snapshot warm even without WS clients."""
+    if os.environ.get("VIKINGER_DISABLE_LIVE_SNAPSHOT") == "1":
+        return
+    while True:
+        try:
+            await asyncio.to_thread(_refresh_live_snapshot)
+        except Exception:  # pragma: no cover - defensive
+            pass
+        await asyncio.sleep(LIVE_SNAPSHOT_INTERVAL)
+
+
 async def _live_broadcast_loop() -> None:
     """Single shared loop: builds the payload once and fans it out to clients.
 
     Only does work while at least one client is connected, so it adds no docker
-    overhead on an idle panel.
+    overhead on an idle panel beyond the always-on snapshot loop.
     """
     while True:
         try:
@@ -5150,8 +5323,21 @@ async def _live_broadcast_loop() -> None:
 
 @app.on_event("startup")
 async def _on_async_startup() -> None:
+    asyncio.ensure_future(_live_snapshot_loop())
     asyncio.ensure_future(_live_broadcast_loop())
     asyncio.ensure_future(_alert_monitor_loop())
+    # Warm disk + snapshot in background so the first dashboard paint is fast.
+    def _warmup():
+        try:
+            get_valheim_disk_usage()
+        except Exception:
+            pass
+        try:
+            _refresh_live_snapshot()
+        except Exception:
+            pass
+
+    threading.Thread(target=_warmup, name="panel-warmup", daemon=True).start()
 
 
 @app.websocket("/ws/live")
