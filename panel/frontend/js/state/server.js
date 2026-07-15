@@ -132,12 +132,16 @@ export const server = {
   },
 
   async loadServerPage() {
-    await this.loadWorlds();
-    await this.loadUpdatesPage();
-    await this.loadEnv();
-    await Promise.all([this.loadMemoryConfig(), this.loadCapacity(), this.loadStorageLimits()]);
-    this.selectedWorld = this.envValues.WORLD_NAME || this.worlds.find((w) => w.active)?.name || "";
-    this.$nextTick(() => this.mountListEditors());
+    return this.withPageLoad("server", async () => {
+      await Promise.all([
+        this.loadWorlds(),
+        this.loadUpdatesPage(),
+        this.loadEnv(),
+      ]);
+      await Promise.all([this.loadMemoryConfig(), this.loadCapacity(), this.loadStorageLimits()]);
+      this.selectedWorld = this.envValues.WORLD_NAME || this.worlds.find((w) => w.active)?.name || "";
+      this.$nextTick(() => this.mountListEditors());
+    });
   },
 
   async loadCapacity() {

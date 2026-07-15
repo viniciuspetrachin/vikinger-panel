@@ -19,13 +19,15 @@ export const schedule = {
   },
 
   async loadSchedule() {
-    try {
-      const data = await this.api("GET", "/api/schedule");
-      if (data.config) this.scheduleConfig = data.config;
-      this.scheduleStatus = data.status || {};
-    } catch (e) {
-      /* silent */
-    }
+    return this.withPageLoad("schedule", async () => {
+      try {
+        const data = await this.api("GET", "/api/schedule");
+        if (data.config) this.scheduleConfig = data.config;
+        this.scheduleStatus = data.status || {};
+      } catch (e) {
+        /* silent */
+      }
+    });
   },
 
   async saveSchedule() {

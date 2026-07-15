@@ -261,6 +261,65 @@
     animation: spin 0.6s linear infinite;
     display: inline-block;
   }
+  .spinner-xs {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-width: 1.5px;
+  }
+  .spinner-lg {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-width: 2.5px;
+  }
+
+  /* ── Page loading / skeletons ── */
+  .page-loading-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 0.75rem;
+    color: rgb(var(--g-500));
+    font-size: 0.8125rem;
+  }
+  .page-loading-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    min-height: 8rem;
+    color: rgb(var(--g-500));
+    font-size: 0.875rem;
+  }
+  .skeleton-pulse {
+    background: linear-gradient(
+      90deg,
+      rgb(var(--g-800) / 0.55) 0%,
+      rgb(var(--g-700) / 0.7) 50%,
+      rgb(var(--g-800) / 0.55) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.2s ease-in-out infinite;
+    border-radius: 0.5rem;
+  }
+  @keyframes skeleton-shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+  }
+  .skeleton-stat {
+    height: 4.5rem;
+  }
+  .skeleton-line {
+    height: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  .page-refreshing-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.7rem;
+    color: rgb(var(--g-500));
+  }
 
   /* ── Log viewer ── */
   .log-viewer {

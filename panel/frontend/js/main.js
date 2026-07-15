@@ -30,6 +30,7 @@ function panel() {
   const core = {
     page: "dashboard",
     loading: false,
+    pageLoading: {},
     toasts: [],
 
     // ── Core network + UX ──
@@ -61,6 +62,20 @@ function panel() {
       }
     },
 
+    /** Soft page-load flag (does not block withBusy). Stale data stays visible. */
+    async withPageLoad(key, fn) {
+      this.pageLoading = { ...this.pageLoading, [key]: true };
+      try {
+        return await fn.call(this);
+      } finally {
+        this.pageLoading = { ...this.pageLoading, [key]: false };
+      }
+    },
+
+    isPageLoading(key) {
+      return !!this.pageLoading?.[key];
+    },
+
     // ── Lifecycle ──
     async init() {
       this.actionPending = null;
@@ -68,10 +83,13 @@ function panel() {
       this.initNav();
       await this.loadVersion();
       this.initI18nFromApi(this.versionInfo.default_locale || "en-US");
-      await this.loadSetupStatus();
-      await this.loadDashboardData();
-      await this.loadMemoryConfig();
+      // Open live socket early; REST fills the gap until the first frame.
       this.initLive();
+      await Promise.all([
+        this.loadSetupStatus(),
+        this.loadDashboardData(),
+        this.loadMemoryConfig(),
+      ]);
       if (this.metricsActive()) this.startMetricsPolling();
       // REST polling as a fallback for when the live socket is unavailable.
       setInterval(() => {
@@ -103,9 +121,13 @@ function panel() {
       if (this.page === "backups") await this.loadBackups();
       if (this.page === "messages") await this.loadAutoMessages();
       if (this.page === "players") {
-        await this.loadPlayers();
-        await this.loadPlayerLists();
-        await this.loadConsoleStatus();
+        await this.withPageLoad("players", async () => {
+          await Promise.all([
+            this.loadPlayers(),
+            this.loadPlayerLists(),
+            this.loadConsoleStatus(),
+          ]);
+        });
       }
       if (this.page === "map") await this.loadMapPage();
       if (this.page === "metrics") {
@@ -122,8 +144,9 @@ function panel() {
         });
       }
       if (this.page === "console") {
-        await this.loadLogs();
-        await this.loadConsoleStatus();
+        await this.withPageLoad("console", async () => {
+          await Promise.all([this.loadLogs(), this.loadConsoleStatus()]);
+        });
       }
       if (this.page === "audit") await this.loadAudit();
       if (this.page === "about") await this.loadAboutPage();

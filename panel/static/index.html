@@ -156,8 +156,8 @@
           </button>
           <h2 class="font-display text-lg font-semibold text-gray-100 truncate" x-text="pageTitle()"></h2>
         </div>
-        <button @click="refreshStatus()" :disabled="actionPending === 'refreshStatus'" class="btn btn-sm btn-ghost shrink-0">
-          <svg class="w-4 h-4" :class="actionPending === 'refreshStatus' && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        <button @click="refreshStatus()" :disabled="isPageLoading('status')" class="btn btn-sm btn-ghost shrink-0">
+          <svg class="w-4 h-4" :class="isPageLoading('status') && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           <span class="hidden sm:inline" x-text="t('nav.refresh')">Refresh</span>
         </button>
       </header>
@@ -179,8 +179,19 @@
 
         <!-- OVERVIEW (cockpit) -->
         <section x-show="page === 'dashboard'" class="space-y-6">
+          <!-- First-load skeleton when status is still empty -->
+          <div x-show="isPageLoading('dashboard') && !status.server" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3" aria-busy="true">
+            <template x-for="i in 6" :key="'skel-'+i">
+              <div class="stat-card skeleton-pulse skeleton-stat"></div>
+            </template>
+          </div>
+          <div x-show="isPageLoading('dashboard') && !status.server" class="page-loading-block">
+            <span class="spinner spinner-lg"></span>
+            <span x-text="t('common.loading.loading')">Loading...</span>
+          </div>
+
           <!-- Above-the-fold cockpit -->
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div x-show="status.server || !isPageLoading('dashboard')" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <div class="stat-card">
               <span class="stat-label" x-text="t('dashboard.stats.server')">Server</span>
               <span class="stat-value capitalize"
@@ -215,7 +226,7 @@
           </div>
 
           <!-- Quick actions + live sparkline -->
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div x-show="status.server || !isPageLoading('dashboard')" class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div class="stat-card lg:col-span-2">
               <h3 class="section-title mb-3" x-text="t('dashboard.quickControls.title')">Quick Controls</h3>
               <div class="flex flex-wrap gap-2">
@@ -257,7 +268,7 @@
           </div>
 
           <!-- Supervisor -->
-          <div class="stat-card">
+          <div x-show="status.server || !isPageLoading('dashboard')" class="stat-card">
             <h3 class="section-title mb-3" x-text="t('dashboard.supervisor.title')">Supervisor</h3>
             <div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
               <template x-for="(state, proc) in status.supervisor" :key="proc">
@@ -281,7 +292,11 @@
                 <span x-text="t('playersPage.online')">online</span>
               </span>
             </div>
-            <p x-show="!(players.players || []).length" class="text-sm text-gray-500" x-text="t('dashboard.players.empty')">No players connected right now.</p>
+            <p x-show="!(players.players || []).length && isPageLoading('players')" class="page-loading-block">
+              <span class="spinner spinner-lg"></span>
+              <span x-text="t('common.loading.loading')">Loading...</span>
+            </p>
+            <p x-show="!(players.players || []).length && !isPageLoading('players')" class="text-sm text-gray-500" x-text="t('dashboard.players.empty')">No players connected right now.</p>
             <div x-show="(players.players || []).length" class="overflow-x-auto">
               <table class="w-full text-sm">
                 <thead>
@@ -1177,7 +1192,11 @@
               <span x-text="t('common.pagination.showing', { from: modsShowingFrom(), to: modsShowingTo(), total: mods.length })"></span>
             </div>
           </div>
-          <p x-show="!mods.length" class="text-gray-500 text-sm text-center py-8" x-text="t('mods.empty')">No mods installed</p>
+          <p x-show="!mods.length && isPageLoading('mods')" class="page-loading-block">
+            <span class="spinner spinner-lg"></span>
+            <span x-text="t('common.loading.loading')">Loading...</span>
+          </p>
+          <p x-show="!mods.length && !isPageLoading('mods')" class="text-gray-500 text-sm text-center py-8" x-text="t('mods.empty')">No mods installed</p>
 
           <div x-show="orphanedConfigsCount > 0"
                class="bg-valheim-800 rounded-xl border border-amber-600/40 p-5 flex flex-col sm:flex-row sm:items-center gap-4">
@@ -1590,7 +1609,11 @@
               </div>
             </div>
 
-            <p x-show="!visibleBackups().length" class="text-gray-500 text-sm text-center py-8" x-text="t('backups.list.empty')">No backups found in config/backups/</p>
+            <p x-show="!visibleBackups().length && isPageLoading('backups')" class="page-loading-block">
+              <span class="spinner spinner-lg"></span>
+              <span x-text="t('common.loading.loading')">Loading...</span>
+            </p>
+            <p x-show="!visibleBackups().length && !isPageLoading('backups')" class="text-gray-500 text-sm text-center py-8" x-text="t('backups.list.empty')">No backups found in config/backups/</p>
             <p x-show="visibleBackups().length && !filteredBackups().length" class="text-gray-500 text-sm text-center py-8" x-text="t('backups.filters.noMatches')">No backups match the current filters.</p>
             <div x-show="filteredBackups().length" class="overflow-x-auto">
               <table class="w-full text-sm">
@@ -1852,11 +1875,15 @@
           </div>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div class="file-tree-panel bg-valheim-800 rounded-xl border border-valheim-700 overflow-hidden flex flex-col max-h-[560px]">
-              <div class="file-tree-header px-3 py-2 border-b border-valheim-700 text-xs font-medium text-gray-400 uppercase tracking-wide">
-                Browser
+              <div class="file-tree-header px-3 py-2 border-b border-valheim-700 text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center justify-between gap-2">
+                <span>Browser</span>
+                <span x-show="isPageLoading('files')" class="page-refreshing-badge">
+                  <span class="spinner spinner-xs"></span>
+                  <span x-text="t('common.loading.loading')">Loading...</span>
+                </span>
               </div>
               <div class="file-tree-scroll flex-1 overflow-y-auto p-1" @click="onFileTreeClick($event)">
-                <div x-show="!fileSearchActive()" x-html="renderTree(fileTree, 0, fileExpandedPaths, editPath)"></div>
+                <div x-show="!fileSearchActive()" x-html="renderTree(fileTree, 0, fileExpandedPaths, editPath, fileFolderLoading)"></div>
                 <div x-show="fileSearchActive() && flatFileMatches().length" class="file-flat-list">
                   <template x-for="item in flatFileMatches()" :key="item.path">
                     <button type="button" class="file-tree-row file-tree-file"
@@ -1873,8 +1900,12 @@
                 </div>
               </div>
             </div>
-            <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-4">
-              <div x-show="!editPath" class="text-gray-500 text-sm text-center py-12">Select a file to edit</div>
+            <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-4 relative">
+              <div x-show="isPageLoading('fileOpen')" class="page-loading-block absolute inset-0 bg-valheim-800/80 z-10 rounded-xl">
+                <span class="spinner spinner-lg"></span>
+                <span x-text="t('common.loading.loading')">Loading...</span>
+              </div>
+              <div x-show="!editPath && !isPageLoading('fileOpen')" class="text-gray-500 text-sm text-center py-12">Select a file to edit</div>
               <div x-show="editPath">
                 <div class="flex items-center justify-between mb-3">
                   <p class="text-xs text-valheim-gold font-mono truncate" x-text="editPath"></p>
@@ -2194,7 +2225,11 @@
           </div>
 
           <div class="bg-valheim-800 rounded-xl border border-valheim-700 p-4 overflow-x-auto">
-            <p x-show="auditTotal === 0" class="text-gray-500 text-sm text-center py-8" x-text="t('audit.empty')">No events recorded</p>
+            <p x-show="auditTotal === 0 && isPageLoading('audit')" class="page-loading-block">
+              <span class="spinner spinner-lg"></span>
+              <span x-text="t('common.loading.loading')">Loading...</span>
+            </p>
+            <p x-show="auditTotal === 0 && !isPageLoading('audit')" class="text-gray-500 text-sm text-center py-8" x-text="t('audit.empty')">No events recorded</p>
             <table x-show="auditTotal > 0" class="w-full text-xs">
               <thead>
                 <tr class="text-left text-gray-500 border-b border-valheim-700">

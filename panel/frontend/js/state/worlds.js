@@ -61,11 +61,13 @@ export const worlds = {
   },
 
   async loadWorldsPage() {
-    await this.loadWorlds();
-    if (!this.worldConfigName && this.worlds.length) {
-      this.worldConfigName = this.worlds.find((w) => w.active)?.name || this.worlds[0].name;
-    }
-    await this.loadWorldConfig();
+    return this.withPageLoad("worlds", async () => {
+      await this.loadWorlds();
+      if (!this.worldConfigName && this.worlds.length) {
+        this.worldConfigName = this.worlds.find((w) => w.active)?.name || this.worlds[0].name;
+      }
+      await this.loadWorldConfig();
+    });
   },
 
   async loadWorlds() {
