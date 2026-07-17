@@ -29,6 +29,61 @@ def test_status(client):
     assert body["players_count"] == 1
 
 
+def test_network_info_uses_env_lan_ip(client, monkeypatch):
+    main.clear_live_caches()
+    monkeypatch.setenv("PANEL_HOST_LAN_IP", "192.168.1.50")
+    monkeypatch.setenv("PANEL_PUBLIC_IP", "187.35.27.156")
+    monkeypatch.setenv("PANEL_PORT", "8080")
+    monkeypatch.setattr(main, "_lan_ip_via_socket", lambda: None)
+    monkeypatch.setattr(main, "_lan_ip_via_host_network", lambda: None)
+    monkeypatch.setattr(main, "_fetch_public_ip", lambda: None)
+
+    r = client.get("/api/network")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["lan_ip"] == "192.168.1.50"
+    assert body["public_ip"] == "187.35.27.156"
+    assert body["server_port"] == "2456"
+    assert body["panel_port"] == "8080"
+    assert body["lan_connect"] == "192.168.1.50:2456"
+    assert body["public_connect"] == "187.35.27.156:2456"
+
+
+def test_network_info_skips_docker_bridge_and_uses_host_probe(client, monkeypatch):
+    main.clear_live_caches()
+    monkeypatch.delenv("PANEL_HOST_LAN_IP", raising=False)
+    monkeypatch.delenv("PANEL_PUBLIC_IP", raising=False)
+    monkeypatch.setattr(main, "_lan_ip_via_socket", lambda: "172.20.0.4")
+    monkeypatch.setattr(main, "_lan_ip_via_host_network", lambda: "10.0.0.12")
+    monkeypatch.setattr(main, "_fetch_public_ip", lambda: "203.0.113.10")
+
+    r = client.get("/api/network")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["lan_ip"] == "10.0.0.12"
+    assert body["lan_connect"] == "10.0.0.12:2456"
+    assert body["public_ip"] == "203.0.113.10"
+    assert body["public_connect"] == "203.0.113.10:2456"
+
+
+def test_network_info_returns_null_when_unavailable(client, monkeypatch):
+    main.clear_live_caches()
+    monkeypatch.delenv("PANEL_HOST_LAN_IP", raising=False)
+    monkeypatch.delenv("PANEL_PUBLIC_IP", raising=False)
+    monkeypatch.setattr(main, "_lan_ip_via_socket", lambda: None)
+    monkeypatch.setattr(main, "_lan_ip_via_host_network", lambda: None)
+    monkeypatch.setattr(main, "_fetch_public_ip", lambda: None)
+
+    r = client.get("/api/network")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["lan_ip"] is None
+    assert body["public_ip"] is None
+    assert body["lan_connect"] is None
+    assert body["public_connect"] is None
+    assert body["panel_port"] == "8080"
+
+
 def test_status_uses_live_snapshot(client, monkeypatch):
     main.clear_live_caches()
     calls = {"n": 0}
@@ -924,8 +979,7 @@ def test_updates_check(client, monkeypatch):
     r = client.post("/api/updates/check")
     assert r.status_code == 200
     assert calls
-    assert "valheim-updater" in calls[0]
-
+    assert any("valheim-updater" in c for c in calls)
 
 def test_compare_versions():
     assert main.compare_versions("1.0.0", "1.0.0") == 0

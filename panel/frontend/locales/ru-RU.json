@@ -944,7 +944,17 @@
     "connect": {
       "title": "Как подключиться",
       "intro": "В Valheim используйте <strong class=\"text-gray-200\">Join IP</strong> и введите:",
-      "hint": "Пароль задается на вкладке Сервер. Откройте UDP <strong>2456–2458</strong> на своем маршрутизаторе для внешнего доступа."
+      "localIp": "Локальный IP",
+      "localIpHint": "Та же Wi‑Fi/LAN — для игроков дома.",
+      "internetIp": "Интернет IP",
+      "internetIpHint": "Друзья вне вашей сети — нужно открыть UDP-порты.",
+      "portGuideTitle": "Как открыть порты для игры через интернет",
+      "portGuideLinux": "В Linux разрешите в фаерволе: <code class=\"text-gray-300\">sudo ufw allow 2456:2458/udp &amp;&amp; sudo ufw reload</code>",
+      "portGuideRouter": "На роутере создайте <strong class=\"text-gray-300\">Port Forwarding</strong> / Virtual Server / переадресацию портов: UDP <strong class=\"text-gray-300\">2456–2458</strong> → на локальный адрес выше.",
+      "portGuideSearch": "Ищите в Google: <strong class=\"text-gray-300\">port forwarding [бренд/модель роутера]</strong> — меню у каждого производителя своё.",
+      "portGuidePassword": "Пароль сервера задаётся на вкладке Сервер. Делитесь интернет-IP только когда порты уже работают.",
+      "hint": "Пароль задается на вкладке Сервер. Откройте UDP <strong>2456–2458</strong> на своем маршрутизаторе для внешнего доступа.",
+      "panelExposureWarning": "У панели (порт <strong>8080</strong>) пока нет аутентификации. Не стоит открывать её в интернет — любой, кто узнает адрес, сможет изменить панель и сервер."
     },
     "players": {
       "title": "Подключенные игроки",

@@ -15,14 +15,33 @@ export const dashboard = {
   netChartInstance: null,
   metricsInterval: null,
   dashboardBooted: false,
+  networkInfo: {
+    lan_ip: null,
+    public_ip: null,
+    server_port: "2456",
+    panel_port: "8080",
+    lan_connect: null,
+    public_connect: null,
+  },
 
   async loadDashboardData() {
     return this.withPageLoad("dashboard", async () => {
       await this.refreshStatus();
-      await Promise.all([this.loadPlayers(), this.loadPlayerLists(), this.loadConsoleStatus()]);
+      await Promise.all([
+        this.loadPlayers(),
+        this.loadPlayerLists(),
+        this.loadConsoleStatus(),
+        this.loadNetworkInfo(),
+      ]);
       await this.loadDashLogs();
       this.dashboardBooted = true;
     });
+  },
+
+  async loadNetworkInfo() {
+    try {
+      this.networkInfo = await this.api("GET", "/api/network");
+    } catch (e) { /* silencioso no dashboard */ }
   },
 
   async refreshStatus() {
@@ -136,10 +155,20 @@ export const dashboard = {
     return this.metrics.cpu?.percent ?? 0;
   },
 
-  connectAddress() {
-    const port = this.status.config?.server_port || "2456";
-    const host = window.location.hostname || "YOUR_IP";
-    return `${host}:${port}`;
+  localConnectAddress() {
+    return this.networkInfo?.lan_connect || "";
+  },
+
+  internetConnectAddress() {
+    return this.networkInfo?.public_connect || "";
+  },
+
+  connectAddressLabel(kind) {
+    const port = this.networkInfo?.server_port || this.status.config?.server_port || "2456";
+    if (kind === "local") {
+      return this.localConnectAddress() || `—:${port}`;
+    }
+    return this.internetConnectAddress() || `—:${port}`;
   },
 
   async loadDashLogs() {

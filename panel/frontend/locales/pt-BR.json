@@ -945,7 +945,17 @@
     "connect": {
       "title": "Como conectar",
       "intro": "Em Valheim, use <strong class=\"text-gray-200\">Join IP</strong> e digite:",
-      "hint": "A senha é definida na guia Servidor. Abra UDP <strong>2456–2458</strong> em seu roteador para acesso externo."
+      "localIp": "IP Local",
+      "localIpHint": "Mesma rede Wi‑Fi/LAN — quem está em casa usa este.",
+      "internetIp": "IP Internet",
+      "internetIpHint": "Amigos fora da sua rede — precisa liberar as portas UDP.",
+      "portGuideTitle": "Como liberar acesso pela internet",
+      "portGuideLinux": "No Linux, libere o firewall: <code class=\"text-gray-300\">sudo ufw allow 2456:2458/udp &amp;&amp; sudo ufw reload</code>",
+      "portGuideRouter": "No roteador, crie <strong class=\"text-gray-300\">Port Forwarding</strong> / Virtual Server / redirecionamento de porta: UDP <strong class=\"text-gray-300\">2456–2458</strong> apontando para o endereço local acima.",
+      "portGuideSearch": "Pesquise no Google: <strong class=\"text-gray-300\">port forwarding [marca/modelo do roteador]</strong> ou <strong class=\"text-gray-300\">abrir porta UDP [marca do roteador]</strong> — cada marca usa um menu diferente.",
+      "portGuidePassword": "A senha do servidor fica na guia Servidor. Só compartilhe o IP Internet depois que as portas estiverem ok.",
+      "hint": "A senha é definida na guia Servidor. Abra UDP <strong>2456–2458</strong> em seu roteador para acesso externo.",
+      "panelExposureWarning": "O painel (porta <strong>8080</strong>) ainda não tem autenticação. Não é ideal expô-lo à internet — qualquer um que descobrisse o endereço poderia mexer no painel e no servidor."
     },
     "players": {
       "title": "Jogadores Conectados",

@@ -945,7 +945,17 @@
     "connect": {
       "title": "How to connect",
       "intro": "In Valheim, use <strong class=\"text-gray-200\">Join IP</strong> and enter:",
-      "hint": "Password is set on the Server tab. Open UDP <strong>2456–2458</strong> on your router for external access."
+      "localIp": "Local IP",
+      "localIpHint": "Same Wi‑Fi / LAN — players at home use this.",
+      "internetIp": "Internet IP",
+      "internetIpHint": "Friends outside your network — needs UDP ports open.",
+      "portGuideTitle": "How to open ports for internet play",
+      "portGuideLinux": "On Linux, allow the firewall: <code class=\"text-gray-300\">sudo ufw allow 2456:2458/udp &amp;&amp; sudo ufw reload</code>",
+      "portGuideRouter": "On the router, create <strong class=\"text-gray-300\">Port Forwarding</strong> / Virtual Server / port redirect: UDP <strong class=\"text-gray-300\">2456–2458</strong> → the local address above.",
+      "portGuideSearch": "Search the web for <strong class=\"text-gray-300\">port forwarding [your router brand/model]</strong> or <strong class=\"text-gray-300\">abrir porta UDP [marca do roteador]</strong> — menus differ by vendor.",
+      "portGuidePassword": "Server password is set on the Server tab. Share the Internet IP with friends only after ports work.",
+      "hint": "Password is set on the Server tab. Open UDP <strong>2456–2458</strong> on your router for external access.",
+      "panelExposureWarning": "The panel (port <strong>8080</strong>) has no authentication yet. Do not expose it to the internet — anyone who finds it could change the panel and your server."
     },
     "players": {
       "title": "Connected Players",

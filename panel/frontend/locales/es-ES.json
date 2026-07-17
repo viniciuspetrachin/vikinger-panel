@@ -944,7 +944,17 @@
     "connect": {
       "title": "Cómo conectarse",
       "intro": "En Valheim, use <strong class=\"text-gray-200\">Join IP</strong> e ingrese:",
-      "hint": "La contraseña se establece en la pestaña Servidor. Abra UDP <strong>2456–2458</strong> en su enrutador para acceso externo."
+      "localIp": "IP local",
+      "localIpHint": "Misma red Wi‑Fi/LAN — quien está en casa usa este.",
+      "internetIp": "IP de Internet",
+      "internetIpHint": "Amigos fuera de tu red — hay que abrir puertos UDP.",
+      "portGuideTitle": "Cómo abrir puertos para jugar por Internet",
+      "portGuideLinux": "En Linux, permita el firewall: <code class=\"text-gray-300\">sudo ufw allow 2456:2458/udp &amp;&amp; sudo ufw reload</code>",
+      "portGuideRouter": "En el router, cree <strong class=\"text-gray-300\">Port Forwarding</strong> / Virtual Server / redirección de puertos: UDP <strong class=\"text-gray-300\">2456–2458</strong> → la dirección local de arriba.",
+      "portGuideSearch": "Busque en Google: <strong class=\"text-gray-300\">port forwarding [marca/modelo del router]</strong> o <strong class=\"text-gray-300\">abrir puerto UDP [marca del router]</strong> — cada marca usa un menú distinto.",
+      "portGuidePassword": "La contraseña del servidor está en la pestaña Servidor. Comparta el IP de Internet solo cuando los puertos funcionen.",
+      "hint": "La contraseña se establece en la pestaña Servidor. Abra UDP <strong>2456–2458</strong> en su enrutador para acceso externo.",
+      "panelExposureWarning": "El panel (puerto <strong>8080</strong>) aún no tiene autenticación. No es ideal exponerlo a Internet: cualquiera que descubra la dirección podría alterar el panel y el servidor."
     },
     "players": {
       "title": "Jugadores conectados",

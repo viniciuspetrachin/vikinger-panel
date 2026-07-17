@@ -174,8 +174,13 @@ def test_overview_connect_block(page: Page, base_url: str) -> None:
     page.goto(base_url)
     page.wait_for_selector("[x-cloak]", state="detached")
 
-    expect(page.get_by_role("heading", name="How to connect", exact=True)).to_be_visible()
-    expect(page.get_by_role("button", name="Copy address", exact=True)).to_be_visible()
+    connect = page.locator(".stat-card").filter(has=page.get_by_role("heading", name="How to connect", exact=True))
+    expect(connect.get_by_role("heading", name="How to connect", exact=True)).to_be_visible()
+    expect(connect.get_by_text("Local IP", exact=True)).to_be_visible()
+    expect(connect.get_by_text("Internet IP", exact=True)).to_be_visible()
+    expect(connect.get_by_text("How to open ports for internet play", exact=True)).to_be_visible()
+    expect(connect.get_by_role("button", name="Copy address", exact=True).first).to_be_visible()
+    expect(connect.get_by_text("has no authentication yet")).to_be_visible()
     assert_no_error_toast(page)
 
 

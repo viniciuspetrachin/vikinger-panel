@@ -4,11 +4,13 @@
 import asyncio
 import base64
 import io
+import ipaddress
 import json
 import logging
 import os
 import re
 import shutil
+import socket
 import subprocess
 import threading
 import time
@@ -3667,18 +3669,209 @@ def clear_live_caches() -> None:
     """Reset short-lived caches (used by tests)."""
     global _container_running_cache, _container_running_cache_ts
     global _players_info_cache, _players_info_cache_ts, _live_snapshot
+    global _lan_ip_cache, _lan_ip_cache_ts, _public_ip_cache, _public_ip_cache_ts
     _container_running_cache = None
     _container_running_cache_ts = 0.0
     _players_info_cache = None
     _players_info_cache_ts = 0.0
+    _lan_ip_cache = None
+    _lan_ip_cache_ts = 0.0
+    _public_ip_cache = None
+    _public_ip_cache_ts = 0.0
     with _live_snapshot_lock:
         _live_snapshot = None
     _file_tree_cache.clear()
 
 
+_lan_ip_cache: Optional[str] = None
+_lan_ip_cache_ts: float = 0.0
+_public_ip_cache: Optional[str] = None
+_public_ip_cache_ts: float = 0.0
+_LAN_IP_CACHE_TTL = 300.0
+_PUBLIC_IP_CACHE_TTL = 600.0
+_IP_MISS_TTL = 30.0
+_DOCKER_BRIDGE_NET = ipaddress.ip_network("172.16.0.0/12")
+_PUBLIC_IP_URLS = (
+    "https://api.ipify.org",
+    "https://ifconfig.me/ip",
+    "https://icanhazip.com",
+)
+
+
+def _is_usable_ip(ip: str) -> bool:
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    return not (
+        addr.is_loopback
+        or addr.is_link_local
+        or addr.is_multicast
+        or addr.is_unspecified
+        or addr.is_reserved
+    )
+
+
+def _is_docker_bridge_ip(ip: str) -> bool:
+    try:
+        return ipaddress.ip_address(ip) in _DOCKER_BRIDGE_NET
+    except ValueError:
+        return False
+
+
+def _is_public_wan_ip(ip: str) -> bool:
+    """True for a globally routable address (not RFC1918 / loopback / link-local)."""
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    return _is_usable_ip(ip) and not addr.is_private
+
+
+def _lan_ip_via_socket() -> Optional[str]:
+    """Best-effort LAN IP from the process network namespace."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("8.8.8.8", 80))
+            ip = sock.getsockname()[0]
+    except OSError:
+        return None
+    return ip if _is_usable_ip(ip) else None
+
+
+def _lan_ip_via_host_network() -> Optional[str]:
+    """Resolve host LAN IP from inside Docker via a short-lived host-network probe."""
+    image = (os.environ.get("PANEL_IMAGE") or "vikinger-panel:latest").strip()
+    probe = (
+        "import socket;"
+        "s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);"
+        "s.connect(('8.8.8.8',80));"
+        "print(s.getsockname()[0], end='');"
+        "s.close()"
+    )
+    try:
+        result = docker(
+            "run",
+            "--rm",
+            "--network",
+            "host",
+            "--entrypoint",
+            "python3",
+            image,
+            "-c",
+            probe,
+            timeout=20,
+        )
+    except HTTPException:
+        return None
+    if result.returncode != 0:
+        return None
+    ip = (result.stdout or "").strip().splitlines()[-1].strip() if result.stdout else ""
+    if _is_usable_ip(ip) and not _is_docker_bridge_ip(ip):
+        return ip
+    return None
+
+
+def detect_lan_ip(force: bool = False) -> Optional[str]:
+    """Return the host LAN IP suitable for sharing the Valheim join address."""
+    global _lan_ip_cache, _lan_ip_cache_ts
+    now = time.time()
+    if not force and _lan_ip_cache is not None:
+        ttl = _LAN_IP_CACHE_TTL if _lan_ip_cache else _IP_MISS_TTL
+        if (now - _lan_ip_cache_ts) < ttl:
+            return _lan_ip_cache or None
+
+    env_ip = (os.environ.get("PANEL_HOST_LAN_IP") or "").strip()
+    if env_ip and _is_usable_ip(env_ip):
+        _lan_ip_cache, _lan_ip_cache_ts = env_ip, now
+        return env_ip
+
+    socket_ip = _lan_ip_via_socket()
+    if socket_ip and not _is_docker_bridge_ip(socket_ip):
+        _lan_ip_cache, _lan_ip_cache_ts = socket_ip, now
+        return socket_ip
+
+    host_ip = _lan_ip_via_host_network()
+    if host_ip:
+        _lan_ip_cache, _lan_ip_cache_ts = host_ip, now
+        return host_ip
+
+    _lan_ip_cache, _lan_ip_cache_ts = "", now
+    return None
+
+
+def _fetch_public_ip() -> Optional[str]:
+    """Ask public echo services for the WAN IP seen from this host."""
+    try:
+        import httpx
+    except ImportError:  # pragma: no cover
+        return None
+    headers = {"User-Agent": "VikingerPanel/1.0", "Accept": "text/plain"}
+    try:
+        with httpx.Client(timeout=4.0, follow_redirects=True, headers=headers) as client:
+            for url in _PUBLIC_IP_URLS:
+                try:
+                    resp = client.get(url)
+                    if resp.status_code != 200:
+                        continue
+                    ip = (resp.text or "").strip().split()[0]
+                    if _is_public_wan_ip(ip):
+                        return ip
+                except Exception:  # noqa: BLE001 — try next provider
+                    continue
+    except Exception:  # noqa: BLE001
+        return None
+    return None
+
+
+def detect_public_ip(force: bool = False) -> Optional[str]:
+    """Return the public (internet) IP for friends joining from outside the LAN."""
+    global _public_ip_cache, _public_ip_cache_ts
+    now = time.time()
+    if not force and _public_ip_cache is not None:
+        ttl = _PUBLIC_IP_CACHE_TTL if _public_ip_cache else _IP_MISS_TTL
+        if (now - _public_ip_cache_ts) < ttl:
+            return _public_ip_cache or None
+
+    env_ip = (os.environ.get("PANEL_PUBLIC_IP") or "").strip()
+    if env_ip and _is_public_wan_ip(env_ip):
+        _public_ip_cache, _public_ip_cache_ts = env_ip, now
+        return env_ip
+
+    fetched = _fetch_public_ip()
+    if fetched:
+        _public_ip_cache, _public_ip_cache_ts = fetched, now
+        return fetched
+
+    _public_ip_cache, _public_ip_cache_ts = "", now
+    return None
+
+
+def network_info() -> dict:
+    env = read_env()
+    server_port = str(env.get("SERVER_PORT") or "2456")
+    panel_port = str(os.environ.get("PANEL_PORT") or "8080")
+    lan_ip = detect_lan_ip()
+    public_ip = detect_public_ip()
+    return {
+        "lan_ip": lan_ip,
+        "public_ip": public_ip,
+        "server_port": server_port,
+        "panel_port": panel_port,
+        "lan_connect": f"{lan_ip}:{server_port}" if lan_ip else None,
+        "public_connect": f"{public_ip}:{server_port}" if public_ip else None,
+    }
+
+
 @app.get("/api/status")
 def api_status():
     return get_live_snapshot()["status"]
+
+
+@app.get("/api/network")
+def api_network():
+    """Local + internet join addresses for the Overview 'How to connect' block."""
+    return network_info()
 
 
 def players_with_sessions() -> dict:
