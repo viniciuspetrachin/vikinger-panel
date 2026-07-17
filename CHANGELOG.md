@@ -135,6 +135,14 @@ All notable changes to this project will be documented in this file.
 
 - Send test could report success without delivering when the webhook was not saved yet.
 
+## [2.1.13]
+
+### Added
+
+### Changed
+
+### Fixed
+
 ## [Unreleased]
 
 ### Added
