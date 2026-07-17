@@ -1,5 +1,9 @@
 # Vikinger Panel — Free Valheim Server Manager (Docker)
 
+<p align="center">
+  <img src="assets/social-preview.jpg" alt="Vikinger Panel — Valheim Server Manager" width="800" />
+</p>
+
 **Host a Valheim dedicated server at home** with a modern web panel — no coding required.
 Manage worlds, passwords, **BepInEx mods**, Thunderstore installs, backups, and player lists
 from your browser.
