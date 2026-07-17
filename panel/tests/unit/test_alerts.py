@@ -51,6 +51,40 @@ def test_format_event_mod_added():
     assert "1.2.3" in out["message"]
 
 
+def test_format_event_mod_updated_removed():
+    updated = alerts.format_event("mod_updated", {"mod": "CoolMod", "version": "2.0.0"})
+    assert "CoolMod" in updated["message"]
+    assert "2.0.0" in updated["message"]
+    removed = alerts.format_event("mod_removed", {"mod": "OldMod"})
+    assert "OldMod" in removed["message"]
+
+
+def test_format_event_player_chat():
+    out = alerts.format_event("player_chat", {"player": "Exforgant", "text": "Ola discord"})
+    assert out.get("chat") is True
+    assert out["username"] == "Exforgant"
+    assert out["content"] == "Ola discord"
+    assert "Exforgant" in out["message"]
+
+
+def test_extract_prefixed_chat_default_and_custom():
+    logs = (
+        "Got character ZDOID from Exforgant : 1:1\n"
+        "Exforgant: @discord Ola discord\n"
+        "Other: hello\n"
+        "[Chat] Bjorn: !dc hi there\n"
+    )
+    hits = alerts.extract_prefixed_chat(logs, prefix="@discord")
+    assert len(hits) == 1
+    assert hits[0]["player"] == "Exforgant"
+    assert hits[0]["text"] == "Ola discord"
+
+    custom = alerts.extract_prefixed_chat(logs, prefix="!dc")
+    assert len(custom) == 1
+    assert custom[0]["player"] == "Bjorn"
+    assert custom[0]["text"] == "hi there"
+
+
 def test_format_event_server_lifecycle():
     assert "start" in alerts.format_event("server_starting", {})["message"].lower()
     assert "shut" in alerts.format_event("server_stopping", {})["message"].lower()
@@ -173,6 +207,45 @@ def test_dispatch_server_up_paired_with_server_down():
     }
     http = FakeHttp(status_code=204)
     result = alerts.dispatch(config, "server_up", {}, http=http)
+    assert result["discord"] is True
+
+
+def test_dispatch_server_up_paired_with_restarting():
+    config = {
+        "discord": {"enabled": True, "webhook_url": "https://hook"},
+        "events": {"server_restarting": True},
+    }
+    http = FakeHttp(status_code=204)
+    result = alerts.dispatch(config, "server_up", {}, http=http)
+    assert result["discord"] is True
+
+
+def test_dispatch_player_chat_as_webhook_username():
+    config = {
+        "discord": {"enabled": True, "webhook_url": "https://hook"},
+        "events": {"player_chat": True},
+    }
+    http = FakeHttp(status_code=204)
+    result = alerts.dispatch(
+        config, "player_chat", {"player": "Exforgant", "text": "Ola discord"}, http=http
+    )
+    assert result["discord"] is True
+    payload = http.calls[0]["json"]
+    assert payload["username"] == "Exforgant"
+    assert payload["content"] == "Ola discord"
+    assert "embeds" not in payload
+
+
+def test_dispatch_player_chat_via_chat_bridge_flag():
+    config = {
+        "discord": {"enabled": True, "webhook_url": "https://hook"},
+        "events": {},
+        "chat_bridge": {"enabled": True, "prefix": "@discord"},
+    }
+    http = FakeHttp(status_code=204)
+    result = alerts.dispatch(
+        config, "player_chat", {"player": "A", "text": "hi"}, http=http
+    )
     assert result["discord"] is True
 
 

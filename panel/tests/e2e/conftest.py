@@ -13,8 +13,40 @@ import pytest
 from playwright.sync_api import Page
 
 PANEL_DIR = Path(__file__).resolve().parents[2]
+REPO_ROOT = PANEL_DIR.parent
 sys.path.insert(0, str(PANEL_DIR))
 from fwl_io import WorldConfig, write_fwl  # noqa: E402
+
+
+def _load_repo_dotenv() -> None:
+    """Load repo ``.env`` into ``os.environ`` without overriding existing vars."""
+    env_path = REPO_ROOT / ".env"
+    if not env_path.is_file():
+        return
+    try:
+        from dotenv import dotenv_values
+    except Exception:
+        return
+    for key, value in (dotenv_values(env_path) or {}).items():
+        if key and value is not None and key not in os.environ:
+            os.environ[key] = value
+
+
+_load_repo_dotenv()
+
+
+@pytest.fixture(scope="session")
+def discord_test_webhook() -> str:
+    """Real Discord test webhook from ``DISCORD_TEST_WEBHOOK_URL`` (.env).
+
+    Skips delivery tests when unset so CI/local runs do not require Discord.
+    """
+    url = (os.environ.get("DISCORD_TEST_WEBHOOK_URL") or "").strip().strip("'\"")
+    if not url:
+        pytest.skip("DISCORD_TEST_WEBHOOK_URL not set (add it to repo .env for Discord e2e)")
+    if "discord.com/api/webhooks/" not in url and "discordapp.com/api/webhooks/" not in url:
+        pytest.fail("DISCORD_TEST_WEBHOOK_URL does not look like a Discord webhook URL")
+    return url
 
 
 @pytest.fixture(autouse=True)

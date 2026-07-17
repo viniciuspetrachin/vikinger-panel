@@ -249,8 +249,9 @@ def test_alerts_page(page: Page, base_url: str) -> None:
     page.wait_for_selector("[x-cloak]", state="detached")
     goto_primary(page, "alerts")
 
-    expect(page.get_by_role("heading", name="Discord", exact=True)).to_be_visible()
-    expect(page.get_by_text("Events")).to_be_visible()
+    expect(page.locator("h3.section-title").filter(has_text="Discord")).to_be_visible()
+    expect(page.locator("p.stat-label").filter(has_text="Events")).to_be_visible()
+    expect(page.get_by_text("Chat bridge", exact=False)).to_be_visible()
     assert_no_error_toast(page)
 
 

@@ -601,6 +601,23 @@
               </div>
             </div>
 
+            <!-- In-game chat → Discord bridge -->
+            <div class="surface p-4 space-y-3 mb-6">
+              <label class="flex items-center gap-3 text-sm font-medium">
+                <span class="switch"><input type="checkbox" x-model="alertsConfig.chat_bridge.enabled" /><span class="switch-track"></span></span>
+                <span x-text="t('alerts.chatBridge')">Chat bridge</span>
+              </label>
+              <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                <label class="text-sm text-gray-400 shrink-0" x-text="t('alerts.chatPrefix')">Prefix</label>
+                <input type="text" class="input w-full sm:max-w-xs" maxlength="64"
+                       x-model="alertsConfig.chat_bridge.prefix"
+                       :placeholder="t('alerts.chatPrefixPlaceholder')" />
+              </div>
+              <p class="text-xs text-gray-500" x-text="t('alerts.chatBridgeHint')">
+                Players type the prefix in chat (e.g. @discord hello) to post the rest to Discord.
+              </p>
+            </div>
+
             <!-- Extra channels (Telegram today; add more blocks later) -->
             <div class="mb-6">
               <button type="button" class="text-sm text-gray-400 hover:text-valheim-gold"

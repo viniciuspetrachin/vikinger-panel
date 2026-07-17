@@ -566,10 +566,51 @@ def test_mod_toggle_visible(page: Page, base_url: str) -> None:
 # ── Alerts / Schedule ────────────────────────────────────────────────────────
 
 def test_alerts_save(page: Page, base_url: str) -> None:
+    """UI save only — does not call Discord (avoids webhook spam)."""
     _boot(page, base_url)
     open_primary(page, "alerts")
     with page.expect_response(lambda r: "/api/alerts" in r.url and r.request.method == "PUT", timeout=8000):
         page.get_by_role("button", name="Save", exact=True).click()
+
+
+def test_alerts_send_test_uses_env_webhook(
+    page: Page, base_url: str, discord_test_webhook: str
+) -> None:
+    """One real Discord delivery via DISCORD_TEST_WEBHOOK_URL (never hardcode in repo)."""
+    _boot(page, base_url)
+    with page.expect_response(
+        lambda r: "/api/alerts" in r.url and r.request.method == "GET", timeout=10000
+    ):
+        open_primary(page, "alerts")
+    expect(page.locator("h3.section-title").filter(has_text="Discord")).to_be_visible()
+    expect(page.get_by_text("Events", exact=True)).to_be_visible()
+
+    # Set webhook via Alpine (switch checkbox is CSS-hidden / hard to click reliably).
+    page.evaluate(
+        """(url) => {
+            const root = document.querySelector('body')?._x_dataStack?.[0];
+            if (!root?.alertsConfig) throw new Error('alertsConfig missing');
+            root.alertsConfig.discord.enabled = true;
+            root.alertsConfig.discord.webhook_url = url;
+        }""",
+        discord_test_webhook,
+    )
+
+    with page.expect_response(
+        lambda r: "/api/alerts" in r.url and r.request.method == "PUT", timeout=8000
+    ):
+        page.get_by_role("button", name="Save", exact=True).click()
+
+    with page.expect_response(
+        lambda r: "/api/alerts/test" in r.url and r.request.method == "POST", timeout=15000
+    ) as resp_info:
+        page.get_by_role("button", name="Send test", exact=True).click()
+    resp = resp_info.value
+    assert resp.ok, f"alerts/test failed: {resp.status} {resp.text()}"
+    body = resp.json()
+    assert body.get("ok") is True
+    assert (body.get("result") or {}).get("discord") is True
+    expect(page.get_by_text("Test notification sent")).to_be_visible(timeout=8000)
 
 
 def test_schedule_save(page: Page, base_url: str) -> None:

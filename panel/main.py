@@ -1493,8 +1493,10 @@ def apply_mod_package_update(pkg: dict) -> dict:
         installed,
         pkg.get("source_url") or "",
     )
+    package_id = pkg.get("id") or f"{pkg.get('owner')}/{pkg.get('name')}"
+    dispatch_alert("mod_updated", {"mod": package_id, "version": latest})
     return {
-        "package_id": pkg.get("id"),
+        "package_id": package_id,
         "updated": True,
         "installed": installed,
         "version": latest,
@@ -2467,8 +2469,24 @@ def finalize_recent_auto_backup_manifests(before_mtime: float) -> list[str]:
     return finalized
 
 
-def _resolve_backup_entry(arcname: str) -> tuple[Path, str]:
+def _normalize_backup_arcname(arcname: str) -> str:
+    """Normalize ZIP entry paths from panel and Valheim-container backups.
+
+    Manual panel zips use ``worlds_local/...``. Automatic backups from
+    ``lloesche/valheim-server`` nest under ``config/worlds_local/...`` and may
+    include sidecars such as ``.fwl.old`` / ``.db.old``.
+    """
     arc = arcname.replace("\\", "/").lstrip("/")
+    while arc.startswith("./"):
+        arc = arc[2:]
+    # Container auto-backups zip from /config (or include a config/ prefix).
+    if arc == "config" or arc.startswith("config/"):
+        arc = arc[len("config") :].lstrip("/")
+    return arc
+
+
+def _resolve_backup_entry(arcname: str) -> tuple[Path, str]:
+    arc = _normalize_backup_arcname(arcname)
     if not arc or ".." in arc.split("/"):
         raise ValueError(f"Invalid path: {arcname}")
     if _is_backup_metadata_arcname(arc):
@@ -3912,7 +3930,12 @@ def api_set_capacity(body: CapacityUpdate):
 
 @app.post("/api/server/backup")
 def api_server_backup():
-    output = trigger_backup()
+    try:
+        output = trigger_backup()
+    except Exception as e:
+        dispatch_alert("backup_fail", {"error": str(getattr(e, "detail", None) or e)})
+        raise
+    dispatch_alert("backup_ok", {})
     return {"ok": True, "message": "Backup requested", "output": output}
 
 
@@ -3941,6 +3964,12 @@ def api_server_action(action: str):
     alert_event = alert_by_action.get(action)
     if alert_event:
         dispatch_alert(alert_event, {})
+    if action in ("start",):
+        _mark_pending_ready("start")
+    elif action in ("restart", "recreate"):
+        _mark_pending_ready("restart")
+    elif action == "stop":
+        _clear_pending_ready()
 
     r = actions[action]()
     if r.returncode != 0:
@@ -4152,6 +4181,7 @@ def api_delete_mod(name: str):
     path.unlink()
     remove_runtime_plugin(name)
     remove_dll_from_registry(name)
+    dispatch_alert("mod_removed", {"mod": name})
     return {"ok": True, "deleted": name}
 
 
@@ -5020,17 +5050,23 @@ SCHEDULE_SETTING_KEY = "schedule_config"
 DEFAULT_ALERTS_CONFIG = {
     "events": {
         "server_down": False,
+        "server_up": False,
         "server_starting": False,
         "server_stopping": False,
         "server_restarting": False,
         "server_high_load": False,
         "player_join": False,
         "player_leave": False,
+        "player_chat": False,
         "mod_added": False,
+        "mod_updated": False,
+        "mod_removed": False,
+        "backup_ok": False,
         "backup_fail": False,
     },
     "discord": {"enabled": False, "webhook_url": ""},
     "telegram": {"enabled": False, "bot_token": "", "chat_id": ""},
+    "chat_bridge": {"enabled": False, "prefix": "@discord"},
 }
 
 DEFAULT_SCHEDULE_CONFIG = {
@@ -5091,14 +5127,28 @@ def dispatch_alert(event_type: str, ctx: dict | None = None) -> None:
 
 
 # Scheduler wiring (callables reference existing panel operations).
+def _mark_pending_ready(kind: str) -> None:
+    """Remember that we expect the game world to become ready after start/restart."""
+    _alert_state["pending_ready"] = kind
+    _alert_state["pending_ready_since"] = time.time()
+
+
+def _clear_pending_ready() -> None:
+    _alert_state["pending_ready"] = None
+    _alert_state["pending_ready_since"] = None
+
+
 def _scheduled_restart():
     dispatch_alert("server_restarting", {})
+    _mark_pending_ready("restart")
     return restart_valheim_container()
 
 
 def _scheduled_backup():
     try:
-        return trigger_backup()
+        result = trigger_backup()
+        dispatch_alert("backup_ok", {})
+        return result
     except Exception as e:
         dispatch_alert("backup_fail", {"error": str(e)})
         raise
@@ -5111,6 +5161,8 @@ def _scheduled_mod_update():
 # ── Alert event detection (transition-based, opt-in) ─────────────────────────
 # Wait for the character name to appear in logs (or fall back to players-seen cache).
 JOIN_NAME_WAIT_SECONDS = 45.0
+PENDING_READY_TIMEOUT_SECONDS = 180.0
+WORLD_LOADED_MARKER = "World loaded"
 
 _alert_state: dict = {
     "container": None,
@@ -5119,13 +5171,17 @@ _alert_state: dict = {
     "pending_joins": {},  # steam_id -> unix ts when join was first seen
     "high_load": False,
     "init": False,
+    "pending_ready": None,  # "start" | "restart" | None
+    "pending_ready_since": None,
+    "chat_seen": set(),  # recent line hashes for chat bridge dedupe
 }
 
 
 def _alerts_active(cfg: dict) -> bool:
     events = cfg.get("events", {})
     channels = cfg.get("discord", {}).get("enabled") or cfg.get("telegram", {}).get("enabled")
-    return bool(channels) and any(events.values())
+    bridge = (cfg.get("chat_bridge") or {}).get("enabled")
+    return bool(channels) and (any(events.values()) or bool(bridge))
 
 
 def _remember_player_names(players: list[dict]) -> dict[str, str]:
@@ -5174,17 +5230,103 @@ def _flush_pending_join(
     return False
 
 
+def _logs_indicate_world_ready() -> bool:
+    """True when recent docker/BepInEx logs show the world finished loading."""
+    try:
+        logs = get_logs(200)
+        if WORLD_LOADED_MARKER in logs:
+            return True
+    except Exception:
+        pass
+    try:
+        bepinex = bepinex_log(200)
+        if WORLD_LOADED_MARKER in bepinex:
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def _collect_alert_log_text(lines: int = 120) -> str:
+    parts: list[str] = []
+    try:
+        parts.append(get_logs(lines) or "")
+    except Exception:
+        pass
+    try:
+        parts.append(bepinex_log(lines) or "")
+    except Exception:
+        pass
+    return "\n".join(parts)
+
+
+def _scan_and_dispatch_chat_bridge(cfg: dict) -> None:
+    """Parse recent logs for chat lines with the configured prefix and notify."""
+    bridge = cfg.get("chat_bridge") or {}
+    events = cfg.get("events") or {}
+    if not (bridge.get("enabled") or events.get("player_chat")):
+        return
+    prefix = (bridge.get("prefix") or panel_alerts.DEFAULT_CHAT_PREFIX).strip()
+    if not prefix:
+        prefix = panel_alerts.DEFAULT_CHAT_PREFIX
+    text = _collect_alert_log_text(150)
+    if not text.strip():
+        return
+    seen = _alert_state.setdefault("chat_seen", set())
+    matches = panel_alerts.extract_prefixed_chat(text, prefix=prefix)
+    for item in matches:
+        key = f"{item['player']}|{item['text']}|{item.get('line', '')[-120:]}"
+        digest = hash(key)
+        if digest in seen:
+            continue
+        seen.add(digest)
+        panel_alerts.dispatch(
+            cfg,
+            "player_chat",
+            {"player": item["player"], "text": item["text"]},
+        )
+    # Bound memory: keep only the newest hashes.
+    if len(seen) > 400:
+        _alert_state["chat_seen"] = set(list(seen)[-200:])
+
+
+def _maybe_dispatch_server_ready(cfg: dict, running: bool) -> None:
+    """Emit server_up when an intentional start/restart finishes (world ready)."""
+    pending = _alert_state.get("pending_ready")
+    if not pending:
+        return
+    since = float(_alert_state.get("pending_ready_since") or 0.0)
+    timed_out = since > 0 and (time.time() - since) >= PENDING_READY_TIMEOUT_SECONDS
+    if not running:
+        if timed_out:
+            _clear_pending_ready()
+        return
+    ready = _logs_indicate_world_ready() or timed_out
+    if not ready:
+        return
+    panel_alerts.dispatch(cfg, "server_up", {})
+    _clear_pending_ready()
+
+
 def _check_and_dispatch_alerts(cfg: dict) -> None:
     """Detect state transitions and fire configured alerts (best-effort)."""
     events = cfg.get("events", {})
     running = container_running()
     prev = _alert_state
-    if prev["container"] is not None and events.get("server_down"):
+    intentional = prev.get("pending_ready") in ("start", "restart")
+
+    if prev["container"] is not None:
         if prev["container"] and not running:
-            panel_alerts.dispatch(cfg, "server_down", {})
-        elif not prev["container"] and running:
+            # Skip transient offline noise during intentional restart.
+            if not (intentional and prev.get("pending_ready") == "restart"):
+                if events.get("server_down"):
+                    panel_alerts.dispatch(cfg, "server_down", {})
+        elif not prev["container"] and running and not intentional:
+            # Unplanned recovery (crash bounce) — still notify when paired.
             panel_alerts.dispatch(cfg, "server_up", {})
     prev["container"] = running
+
+    _maybe_dispatch_server_ready(cfg, running)
 
     watch_players = events.get("player_join") or events.get("player_leave")
     pending = prev.setdefault("pending_joins", {})
@@ -5258,6 +5400,11 @@ def _check_and_dispatch_alerts(cfg: dict) -> None:
             prev["high_load"] = True
         elif cleared:
             prev["high_load"] = False
+
+    try:
+        _scan_and_dispatch_chat_bridge(cfg)
+    except Exception:
+        logger.debug("chat bridge scan failed", exc_info=True)
 
     prev["init"] = True
 
@@ -5352,6 +5499,7 @@ class AlertsConfigUpdate(BaseModel):
     events: Optional[dict] = None
     discord: Optional[dict] = None
     telegram: Optional[dict] = None
+    chat_bridge: Optional[dict] = None
 
 
 class AlertsTestRequest(BaseModel):

@@ -1148,8 +1148,7 @@ def test_put_world_config_via_docker_fallback(client, env_dir, monkeypatch):
         json={"config": {"preset": "casual", "portals": "", "combat": "", "deathpenalty": "", "resources": "", "raids": ""}},
     )
     assert r.status_code == 200
-    assert calls
-    assert calls[0][0] == "cp"
+    assert any(c[0] == "cp" for c in calls), f"expected docker cp fallback, got {calls!r}"
     assert r.json()["inferred_preset"] == "casual"
 
 
@@ -1458,6 +1457,40 @@ def test_backup_restore_manual_world_format(client, env_dir, monkeypatch):
     r = client.post("/api/backups/manual-world-20250708.zip/restore")
     assert r.status_code == 200
     assert (worlds / "TestWorld.db").read_bytes() == b"restored db"
+
+
+def test_backup_restore_valheim_auto_config_prefix(client, env_dir, monkeypatch):
+    """Auto backups from lloesche/valheim-server use config/worlds_local/ + .fwl.old sidecars."""
+    worlds = env_dir["worlds"]
+    make_test_fwl(worlds / "PsyDevWorld.fwl", "PsyDevWorld")
+    (worlds / "PsyDevWorld.db").write_bytes(b"old db")
+
+    backup = env_dir["backups"] / "worlds-20260716-210014.zip"
+    with zipfile.ZipFile(backup, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("config/worlds_local/PsyDevWorld.fwl.old", "old fwl copy")
+        zf.writestr("config/worlds_local/PsyDevWorld.db.old", b"old db copy")
+        zf.writestr("config/worlds_local/PsyDevWorld.fwl", "restored fwl")
+        zf.writestr("config/worlds_local/PsyDevWorld.db", b"restored db")
+        zf.writestr("config/worlds_local/PsyDevWorld.mod.serversidemap.explored", b"map")
+
+    monkeypatch.setattr(main, "stop_valheim_container", lambda: FakeCompleted(0))
+    monkeypatch.setattr(main, "restart_valheim_container", lambda: FakeCompleted(0))
+
+    r = client.post("/api/backups/worlds-20260716-210014.zip/restore")
+    assert r.status_code == 200, r.text
+    assert (worlds / "PsyDevWorld.fwl").read_text() == "restored fwl"
+    assert (worlds / "PsyDevWorld.db").read_bytes() == b"restored db"
+    assert (worlds / "PsyDevWorld.fwl.old").read_text() == "old fwl copy"
+    assert (worlds / "PsyDevWorld.mod.serversidemap.explored").read_bytes() == b"map"
+
+
+def test_resolve_backup_entry_strips_config_prefix():
+    dest, rel = main._resolve_backup_entry("config/worlds_local/PsyDevWorld.fwl.old")
+    assert dest == main.WORLDS_DIR
+    assert rel == "PsyDevWorld.fwl.old"
+    dest2, rel2 = main._resolve_backup_entry("config/adminlist.txt")
+    assert dest2 == main.CONFIG_DIR
+    assert rel2 == "adminlist.txt"
 
 
 def test_backup_restore_rejects_traversal(client, env_dir):
@@ -1948,6 +1981,9 @@ def test_alert_transition_detection(env_dir, monkeypatch):
         "pending_joins": {},
         "high_load": False,
         "init": False,
+        "pending_ready": None,
+        "pending_ready_since": None,
+        "chat_seen": set(),
     })
     cfg = {
         "events": {
@@ -2050,6 +2086,9 @@ def test_alert_join_uses_name_cache_and_waits_for_reveal(env_dir, monkeypatch, t
         "pending_joins": {},
         "high_load": False,
         "init": True,
+        "pending_ready": None,
+        "pending_ready_since": None,
+        "chat_seen": set(),
     })
     cfg = {"events": {"player_join": True}}
     monkeypatch.setattr(main, "container_running", lambda: True)
@@ -2099,6 +2138,95 @@ def test_alerts_active_gate():
     assert main._alerts_active({"events": {"server_down": True}, "discord": {"enabled": True}}) is True
     assert main._alerts_active({"events": {"server_down": True}, "discord": {"enabled": False}, "telegram": {"enabled": False}}) is False
     assert main._alerts_active({"events": {"server_down": False}, "discord": {"enabled": True}}) is False
+    assert main._alerts_active({
+        "events": {},
+        "discord": {"enabled": True},
+        "chat_bridge": {"enabled": True},
+    }) is True
+
+
+def test_alert_restart_lifecycle_emits_server_up(env_dir, monkeypatch):
+    fired = []
+    monkeypatch.setattr(main.panel_alerts, "dispatch", lambda cfg, ev, ctx=None: fired.append((ev, ctx)))
+    main._alert_state.clear()
+    main._alert_state.update({
+        "container": True,
+        "players": set(),
+        "player_names": {},
+        "pending_joins": {},
+        "high_load": False,
+        "init": True,
+        "pending_ready": "restart",
+        "pending_ready_since": __import__("time").time(),
+        "chat_seen": set(),
+    })
+    cfg = {
+        "events": {"server_restarting": True, "server_down": False},
+        "discord": {"enabled": True},
+    }
+    monkeypatch.setattr(main, "container_running", lambda: False)
+    main._check_and_dispatch_alerts(cfg)
+    assert not any(ev == "server_down" for ev, _ in fired)
+
+    fired.clear()
+    monkeypatch.setattr(main, "container_running", lambda: True)
+    monkeypatch.setattr(main, "get_logs", lambda lines=100: "World loaded\n")
+    monkeypatch.setattr(main, "bepinex_log", lambda lines=80: "")
+    main._check_and_dispatch_alerts(cfg)
+    assert any(ev == "server_up" for ev, _ in fired)
+    assert main._alert_state["pending_ready"] is None
+
+
+def test_alert_chat_bridge_dispatches_prefixed_message(env_dir, monkeypatch):
+    fired = []
+    monkeypatch.setattr(main.panel_alerts, "dispatch", lambda cfg, ev, ctx=None: fired.append((ev, ctx)))
+    main._alert_state.clear()
+    main._alert_state.update({
+        "container": True,
+        "players": set(),
+        "player_names": {},
+        "pending_joins": {},
+        "high_load": False,
+        "init": True,
+        "pending_ready": None,
+        "pending_ready_since": None,
+        "chat_seen": set(),
+    })
+    cfg = {
+        "events": {"player_chat": False},
+        "chat_bridge": {"enabled": True, "prefix": "@discord"},
+        "discord": {"enabled": True},
+    }
+    monkeypatch.setattr(main, "container_running", lambda: True)
+    monkeypatch.setattr(
+        main,
+        "get_logs",
+        lambda lines=100: "Exforgant: @discord Ola discord\n",
+    )
+    monkeypatch.setattr(main, "bepinex_log", lambda lines=80: "")
+    main._check_and_dispatch_alerts(cfg)
+    assert ("player_chat", {"player": "Exforgant", "text": "Ola discord"}) in fired
+    # Dedupes on second poll.
+    fired.clear()
+    main._check_and_dispatch_alerts(cfg)
+    assert fired == []
+
+
+def test_alerts_config_persists_chat_bridge(client, monkeypatch, tmp_path):
+    monkeypatch.setenv("PANEL_DB_PATH", str(tmp_path / "panel.db"))
+    r = client.put("/api/alerts", json={
+        "chat_bridge": {"enabled": True, "prefix": "!dc"},
+        "events": {"mod_updated": True, "mod_removed": True, "backup_ok": True, "server_up": True},
+        "discord": {"enabled": True, "webhook_url": "https://discord.test/hook"},
+    })
+    assert r.status_code == 200
+    body = r.json()
+    assert body["chat_bridge"]["enabled"] is True
+    assert body["chat_bridge"]["prefix"] == "!dc"
+    assert body["events"]["mod_updated"] is True
+    assert body["events"]["server_up"] is True
+    got = client.get("/api/alerts")
+    assert got.json()["chat_bridge"]["prefix"] == "!dc"
 
 
 def test_alerts_test_requires_channel(client, monkeypatch, tmp_path):
