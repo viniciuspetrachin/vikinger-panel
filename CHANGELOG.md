@@ -121,6 +121,16 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Discord alerts (sidebar):** primary **Discord** tab with webhook setup, event toggles, secret eye-toggle, and reliable Send test (uses form URL + Discord `wait=true`).
+- **Alert events:** player leave, mod installed (+ version), server starting/stopping/restarting, high load (≥80% CPU/RAM with hysteresis).
+- **Player name cache:** join/leave alerts prefer character names from `panel-data/players-seen.json`; waits briefly for the name on first sighting.
+- **Docs:** [Discord alerts guide](docs/discord-alerts.md) — webhook setup for beginners.
+
 ### Changed
 
+- Discord/Telegram alerts page moved out of Config into the main sidebar for easier discovery.
+- Event list is data-driven (`ALERT_EVENT_DEFS`) so new toggles are easy to add.
+
 ### Fixed
+
+- Send test could report success without delivering when the webhook was not saved yet.

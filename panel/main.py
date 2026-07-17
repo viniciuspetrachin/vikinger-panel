@@ -3932,6 +3932,16 @@ def api_server_action(action: str):
     if action in ("pause", "resume") and not container_running():
         raise HTTPException(400, "Container is not running")
 
+    alert_by_action = {
+        "start": "server_starting",
+        "stop": "server_stopping",
+        "restart": "server_restarting",
+        "recreate": "server_restarting",
+    }
+    alert_event = alert_by_action.get(action)
+    if alert_event:
+        dispatch_alert(alert_event, {})
+
     r = actions[action]()
     if r.returncode != 0:
         raise HTTPException(500, r.stderr or r.stdout or "Failed to execute action")
@@ -4078,6 +4088,8 @@ async def api_upload_mod(file: UploadFile = File(...)):
         installed = extract_dlls_from_zip(data, PLUGINS_DIR)
         if not installed:
             raise HTTPException(400, "No .dll found in the ZIP")
+        for dll in installed:
+            dispatch_alert("mod_added", {"mod": dll, "version": ""})
         return {"ok": True, "installed": installed}
 
     if filename.lower().endswith(".dll"):
@@ -4090,6 +4102,7 @@ async def api_upload_mod(file: UploadFile = File(...)):
                 f"No permission to write {dest.name}. "
                 f"Run: sudo {FIX_PLUGINS_SCRIPT}",
             ) from e
+        dispatch_alert("mod_added", {"mod": dest.name, "version": ""})
         return {"ok": True, "installed": [dest.name]}
 
     raise HTTPException(400, "Upload a .zip or .dll file")
@@ -4107,6 +4120,8 @@ async def api_install_mod_url(body: ModUrlInstall):
         raise HTTPException(400, "No .dll found in the package")
 
     ref = resolve_thunderstore_ref(body.url, download_url)
+    mod_label = ", ".join(installed)
+    version = ""
     if ref:
         owner, name, version = ref
         if not version:
@@ -4118,7 +4133,9 @@ async def api_install_mod_url(body: ModUrlInstall):
             version = info["latest_version"]
         source_url = normalized if THUNDERSTORE_PAGE_RE.match(normalized) else body.url.strip()
         register_mod_package(owner, name, version, installed, source_url)
+        mod_label = f"{owner}-{name}"
 
+    dispatch_alert("mod_added", {"mod": mod_label, "version": version or ""})
     return {"ok": True, "installed": installed}
 
 
@@ -5001,7 +5018,17 @@ ALERTS_SETTING_KEY = "alerts_config"
 SCHEDULE_SETTING_KEY = "schedule_config"
 
 DEFAULT_ALERTS_CONFIG = {
-    "events": {"server_down": False, "player_join": False, "backup_fail": False},
+    "events": {
+        "server_down": False,
+        "server_starting": False,
+        "server_stopping": False,
+        "server_restarting": False,
+        "server_high_load": False,
+        "player_join": False,
+        "player_leave": False,
+        "mod_added": False,
+        "backup_fail": False,
+    },
     "discord": {"enabled": False, "webhook_url": ""},
     "telegram": {"enabled": False, "bot_token": "", "chat_id": ""},
 }
@@ -5065,6 +5092,7 @@ def dispatch_alert(event_type: str, ctx: dict | None = None) -> None:
 
 # Scheduler wiring (callables reference existing panel operations).
 def _scheduled_restart():
+    dispatch_alert("server_restarting", {})
     return restart_valheim_container()
 
 
@@ -5081,13 +5109,69 @@ def _scheduled_mod_update():
 
 
 # ── Alert event detection (transition-based, opt-in) ─────────────────────────
-_alert_state: dict = {"container": None, "players": set(), "init": False}
+# Wait for the character name to appear in logs (or fall back to players-seen cache).
+JOIN_NAME_WAIT_SECONDS = 45.0
+
+_alert_state: dict = {
+    "container": None,
+    "players": set(),
+    "player_names": {},
+    "pending_joins": {},  # steam_id -> unix ts when join was first seen
+    "high_load": False,
+    "init": False,
+}
 
 
 def _alerts_active(cfg: dict) -> bool:
     events = cfg.get("events", {})
     channels = cfg.get("discord", {}).get("enabled") or cfg.get("telegram", {}).get("enabled")
     return bool(channels) and any(events.values())
+
+
+def _remember_player_names(players: list[dict]) -> dict[str, str]:
+    """Persist real character names into players-seen.json; return live map."""
+    names: dict[str, str] = {}
+    for p in players:
+        sid = str(p.get("steam_id") or "").strip()
+        if not sid:
+            continue
+        live = str(p.get("name") or "").strip() or sid
+        names[sid] = live
+        if not auto_messages.is_placeholder_player_name(sid, live):
+            try:
+                auto_messages.mark_player_seen(sid, live)
+            except Exception:
+                pass
+    return names
+
+
+def _alert_player_label(steam_id: str, live_names: dict[str, str] | None = None) -> str:
+    live = (live_names or {}).get(steam_id)
+    try:
+        return auto_messages.resolve_player_name(steam_id, live)
+    except Exception:
+        return live or steam_id
+
+
+def _flush_pending_join(
+    cfg: dict,
+    steam_id: str,
+    live_names: dict[str, str],
+    *,
+    force: bool = False,
+) -> bool:
+    """Dispatch a pending join when the name is known or wait timed out."""
+    pending = _alert_state.setdefault("pending_joins", {})
+    since = pending.get(steam_id)
+    if since is None:
+        return False
+    label = _alert_player_label(steam_id, live_names)
+    waited = time.time() - float(since)
+    if force or label != steam_id or waited >= JOIN_NAME_WAIT_SECONDS:
+        panel_alerts.dispatch(cfg, "player_join", {"player": label})
+        pending.pop(steam_id, None)
+        return True
+    return False
 
 
 def _check_and_dispatch_alerts(cfg: dict) -> None:
@@ -5102,16 +5186,79 @@ def _check_and_dispatch_alerts(cfg: dict) -> None:
             panel_alerts.dispatch(cfg, "server_up", {})
     prev["container"] = running
 
-    if events.get("player_join") and running:
+    watch_players = events.get("player_join") or events.get("player_leave")
+    pending = prev.setdefault("pending_joins", {})
+    if not running:
+        # Drop player snapshot on stop so a restart does not emit mass leave alerts.
+        # Flush pending joins with best-effort names before clearing.
+        if events.get("player_join"):
+            for sid in list(pending):
+                _flush_pending_join(cfg, sid, prev.get("player_names") or {}, force=True)
+        prev["players"] = set()
+        prev["player_names"] = {}
+        pending.clear()
+    elif watch_players:
         try:
             info = get_players_info()
-            current = {p["steam_id"] for p in info.get("players", []) if p.get("steam_id")}
+            players = info.get("players") or []
+            current = {str(p["steam_id"]) for p in players if p.get("steam_id")}
+            names = _remember_player_names(players)
         except Exception:
             current = set()
+            names = {}
+
         if prev["init"]:
-            for sid in current - prev["players"]:
-                panel_alerts.dispatch(cfg, "player_join", {"player": sid})
+            known_names = prev.get("player_names") or {}
+            if events.get("player_join"):
+                for sid in current - prev["players"]:
+                    label = _alert_player_label(sid, names)
+                    if label != sid:
+                        panel_alerts.dispatch(cfg, "player_join", {"player": label})
+                        pending.pop(sid, None)
+                    else:
+                        pending.setdefault(sid, time.time())
+                # Name may appear a few seconds after Got connection SteamID.
+                for sid in list(pending):
+                    if sid in current:
+                        _flush_pending_join(cfg, sid, names)
+                    else:
+                        # Left before we could name them — still announce the join.
+                        _flush_pending_join(cfg, sid, known_names, force=True)
+            if events.get("player_leave"):
+                for sid in prev["players"] - current:
+                    pending.pop(sid, None)
+                    panel_alerts.dispatch(
+                        cfg,
+                        "player_leave",
+                        {"player": _alert_player_label(sid, known_names)},
+                    )
+        known = prev.get("player_names") or {}
+        prev["player_names"] = {
+            sid: names.get(sid) or known.get(sid) or sid for sid in current
+        }
         prev["players"] = current
+
+    if events.get("server_high_load") and running:
+        try:
+            metrics = get_container_metrics_raw()
+            cpu = float(normalize_valheim_cpu(metrics.get("cpu_percent") or 0.0))
+            mem = float(metrics.get("memory_percent") or 0.0)
+        except Exception:
+            cpu = 0.0
+            mem = 0.0
+        over = max(cpu, mem) >= panel_alerts.HIGH_LOAD_THRESHOLD
+        cleared = max(cpu, mem) < panel_alerts.HIGH_LOAD_CLEAR_THRESHOLD
+        if over and not prev.get("high_load"):
+            kind = "CPU" if cpu >= mem else "RAM"
+            panel_alerts.dispatch(
+                cfg,
+                "server_high_load",
+                {"cpu_percent": cpu, "memory_percent": mem, "load_kind": kind},
+            )
+            prev["high_load"] = True
+        elif cleared:
+            prev["high_load"] = False
+
     prev["init"] = True
 
 
@@ -5207,6 +5354,12 @@ class AlertsConfigUpdate(BaseModel):
     telegram: Optional[dict] = None
 
 
+class AlertsTestRequest(BaseModel):
+    """Optional unsaved channel overrides for Send test (secrets from the form)."""
+    discord: Optional[dict] = None
+    telegram: Optional[dict] = None
+
+
 @app.put("/api/alerts")
 def api_put_alerts(body: AlertsConfigUpdate):
     cfg = read_alerts_config()
@@ -5228,13 +5381,43 @@ def api_put_alerts(body: AlertsConfigUpdate):
     return _alerts_config_public(cfg)
 
 
+def _merge_alerts_test_overrides(cfg: dict, body: AlertsTestRequest | None) -> dict:
+    """Overlay form values onto saved config so test works before Save."""
+    merged = json.loads(json.dumps(cfg))
+    if not body:
+        return merged
+    if body.discord:
+        disc = merged.setdefault("discord", {})
+        url = (body.discord.get("webhook_url") or "").strip()
+        if url:
+            disc["webhook_url"] = url
+    if body.telegram:
+        tg = merged.setdefault("telegram", {})
+        token = (body.telegram.get("bot_token") or "").strip()
+        chat_id = (body.telegram.get("chat_id") or "").strip()
+        if token:
+            tg["bot_token"] = token
+        if chat_id:
+            tg["chat_id"] = chat_id
+    return merged
+
+
 @app.post("/api/alerts/test")
-def api_test_alerts():
-    cfg = read_alerts_config()
+def api_test_alerts(body: AlertsTestRequest | None = None):
+    cfg = _merge_alerts_test_overrides(read_alerts_config(), body)
     try:
         result = panel_alerts.test_channels(cfg)
     except Exception as e:
         raise HTTPException(500, f"Alert test failed: {e}") from e
+
+    attempted = [v for v in result.values() if v is not None]
+    if not attempted:
+        raise HTTPException(
+            400,
+            "No channel configured. Paste a Discord webhook URL (or Telegram credentials) and try again.",
+        )
+    if not any(attempted):
+        raise HTTPException(502, "Failed to deliver the test notification. Check the webhook URL and try again.")
     return {"ok": True, "result": result}
 
 

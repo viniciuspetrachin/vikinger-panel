@@ -48,6 +48,7 @@ from your browser.
 | [**Getting started**](docs/getting-started.md) | Full walkthrough — Docker, `.env`, first boot, connect in-game |
 | [**Port forwarding**](docs/port-forwarding.md) | Router, firewall, VPS — let friends join from the internet |
 | [**Installing mods**](docs/installing-mods.md) | Thunderstore, BepInEx, what players need on their PC |
+| [**Discord alerts**](docs/discord-alerts.md) | Channel webhooks — joins, server lifecycle, mods, high load |
 | [**Troubleshooting**](docs/troubleshooting.md) | Permissions, ports, slow first boot, common errors |
 | [**FAQ**](docs/faq.md) | Quick answers (same topics as the in-panel Help tab) |
 
@@ -174,6 +175,7 @@ docker compose up -d
 | Area | What you can do |
 |------|-----------------|
 | **Overview** | Server status, online players, live console, quick controls |
+| **Discord** | Webhook alerts — player join/leave, server start/stop/restart, mods, backups, high load |
 | **Server** | Name, password, port, admin/ban/allow lists, extra args (`-crossplay`) |
 | **Worlds** | Create, switch, presets (Easy → Hardcore), `.fwl` editor, import worlds |
 | **Mods & Config** | Install via Thunderstore/URL/upload, enable/disable, edit BepInEx `.cfg`, game & mod updates |

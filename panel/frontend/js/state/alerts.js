@@ -1,21 +1,59 @@
-// Alerts config (Config › Alerts): Discord webhook + Telegram, event toggles.
+// Discord alerts page (primary sidebar › Discord).
+//
+// To add a new event toggle: append one entry to ALERT_EVENT_DEFS (+ i18n +
+// backend EVENT_TYPES / dispatch wiring). The UI renders from this list.
+// To add a channel later: extend CHANNELS in the HTML template the same way.
+
+/** @type {{ id: string, labelKey: string }[]} */
+export const ALERT_EVENT_DEFS = [
+  { id: "server_down", labelKey: "alerts.serverDown" },
+  { id: "server_starting", labelKey: "alerts.serverStarting" },
+  { id: "server_stopping", labelKey: "alerts.serverStopping" },
+  { id: "server_restarting", labelKey: "alerts.serverRestarting" },
+  { id: "server_high_load", labelKey: "alerts.serverHighLoad" },
+  { id: "player_join", labelKey: "alerts.playerJoin" },
+  { id: "player_leave", labelKey: "alerts.playerLeave" },
+  { id: "mod_added", labelKey: "alerts.modAdded" },
+  { id: "backup_fail", labelKey: "alerts.backupFail" },
+];
+
+const DEFAULT_EVENTS = Object.fromEntries(ALERT_EVENT_DEFS.map((e) => [e.id, false]));
 
 export const alerts = {
   alertsConfig: {
-    events: { server_down: false, player_join: false, backup_fail: false },
+    events: { ...DEFAULT_EVENTS },
     discord: { enabled: false, webhook_url: "" },
     telegram: { enabled: false, bot_token: "", chat_id: "" },
+  },
+  showDiscordWebhook: false,
+  showTelegramToken: false,
+  showTelegramChannel: false,
+
+  alertEventDefs() {
+    void this.localeVersion;
+    return ALERT_EVENT_DEFS.map((ev) => ({
+      ...ev,
+      label: this.t(ev.labelKey),
+    }));
+  },
+
+  _normalizeAlertsConfig(cfg) {
+    return {
+      events: { ...DEFAULT_EVENTS, ...(cfg.events || {}) },
+      discord: { enabled: false, webhook_url: "", ...(cfg.discord || {}) },
+      telegram: { enabled: false, bot_token: "", chat_id: "", ...(cfg.telegram || {}) },
+    };
   },
 
   async loadAlerts() {
     return this.withPageLoad("alerts", async () => {
       try {
         const cfg = await this.api("GET", "/api/alerts");
-        this.alertsConfig = {
-          events: { server_down: false, player_join: false, backup_fail: false, ...(cfg.events || {}) },
-          discord: { enabled: false, webhook_url: "", ...(cfg.discord || {}) },
-          telegram: { enabled: false, bot_token: "", chat_id: "", ...(cfg.telegram || {}) },
-        };
+        this.alertsConfig = this._normalizeAlertsConfig(cfg);
+        this.showDiscordWebhook = false;
+        this.showTelegramToken = false;
+        const tg = this.alertsConfig.telegram;
+        this.showTelegramChannel = Boolean(tg.enabled || tg.bot_token_set || tg.chat_id);
       } catch (e) {
         /* silent */
       }
@@ -31,11 +69,9 @@ export const alerts = {
           telegram: this.alertsConfig.telegram,
         };
         const cfg = await this.api("PUT", "/api/alerts", payload);
-        this.alertsConfig = {
-          events: { server_down: false, player_join: false, backup_fail: false, ...(cfg.events || {}) },
-          discord: { enabled: false, webhook_url: "", ...(cfg.discord || {}) },
-          telegram: { enabled: false, bot_token: "", chat_id: "", ...(cfg.telegram || {}) },
-        };
+        this.alertsConfig = this._normalizeAlertsConfig(cfg);
+        this.showDiscordWebhook = false;
+        this.showTelegramToken = false;
         this.toast(this.t("alerts.saved"));
       } catch (e) {
         this.toast(e.message, "error");
@@ -46,7 +82,19 @@ export const alerts = {
   async testAlerts() {
     return this.withBusy("testAlerts", async () => {
       try {
-        await this.api("POST", "/api/alerts/test");
+        const payload = {
+          discord: { webhook_url: this.alertsConfig.discord.webhook_url || "" },
+          telegram: {
+            bot_token: this.alertsConfig.telegram.bot_token || "",
+            chat_id: this.alertsConfig.telegram.chat_id || "",
+          },
+        };
+        const res = await this.api("POST", "/api/alerts/test", payload);
+        const result = res.result || {};
+        if (result.discord !== true && result.telegram !== true) {
+          this.toast(this.t("alerts.testFailed"), "error");
+          return;
+        }
         this.toast(this.t("alerts.tested"));
       } catch (e) {
         this.toast(e.message, "error");

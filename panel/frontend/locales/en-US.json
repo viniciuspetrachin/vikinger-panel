@@ -31,6 +31,7 @@
       "metrics": "Metrics",
       "config": "Config",
       "alerts": "Alerts",
+      "discord": "Discord",
       "schedule": "Schedule"
     },
     "sidebar": {
@@ -413,6 +414,23 @@
           {
             "q": "Is it safe to mount docker.sock in the panel?",
             "a": "The panel needs <code>docker.sock</code> to control the Valheim container. This grants Docker control to the panel container — keep the panel on a private network/behind a proxy with authentication in production."
+          }
+        ]
+      },
+      "discord": {
+        "label": "Discord alerts",
+        "items": [
+          {
+            "q": "How do I enable Discord notifications?",
+            "a": "Open the <b>Discord</b> tab in the sidebar. Create a webhook in Discord (channel → Integrations → Webhooks), paste the URL, enable Discord, choose events, then <b>Save</b> and <b>Send test</b>. Full guide: see the project docs <code>docs/discord-alerts.md</code>."
+          },
+          {
+            "q": "Why did a join alert show a Steam ID?",
+            "a": "Valheim logs the Steam ID first; the character name appears a few seconds later. The panel waits briefly and caches the name for the next join."
+          },
+          {
+            "q": "Which events can I turn on?",
+            "a": "Server down/up, start/stop/restart, 80% CPU/RAM load, player join/leave, new mod installed, and backup failure."
           }
         ]
       },
@@ -1539,11 +1557,20 @@
     }
   },
   "alerts": {
-    "title": "Alerts",
-    "subtitle": "Get notified about important server events.",
+    "title": "Discord",
+    "subtitle": "Get Discord notifications for important server events.",
     "events": "Events",
+    "webhookHint": "Paste a channel webhook URL from Discord › Integrations › Webhooks.",
+    "moreChannels": "More channels (Telegram…)",
+    "hideMoreChannels": "Hide extra channels",
     "serverDown": "Server goes down",
+    "serverStarting": "Server will start",
+    "serverStopping": "Server will shut down",
+    "serverRestarting": "Server will restart",
+    "serverHighLoad": "Server at 80% load (CPU/RAM)",
     "playerJoin": "Player joins",
+    "playerLeave": "Player leaves",
+    "modAdded": "New mod added",
     "backupFail": "Backup fails",
     "discord": "Discord",
     "telegram": "Telegram",
@@ -1551,9 +1578,12 @@
     "botTokenPlaceholder": "Telegram bot token",
     "chatIdPlaceholder": "Telegram chat ID",
     "secretSet": "•••••• (saved)",
+    "showSecret": "Show",
+    "hideSecret": "Hide",
     "test": "Send test",
     "saved": "Alerts saved",
-    "tested": "Test notification sent"
+    "tested": "Test notification sent",
+    "testFailed": "Test notification failed"
   },
   "schedule": {
     "title": "Schedule",

@@ -567,7 +567,7 @@ def test_mod_toggle_visible(page: Page, base_url: str) -> None:
 
 def test_alerts_save(page: Page, base_url: str) -> None:
     _boot(page, base_url)
-    open_config(page, "alerts")
+    open_primary(page, "alerts")
     with page.expect_response(lambda r: "/api/alerts" in r.url and r.request.method == "PUT", timeout=8000):
         page.get_by_role("button", name="Save", exact=True).click()
 

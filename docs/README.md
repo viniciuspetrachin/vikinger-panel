@@ -17,6 +17,7 @@ You do **not** need to know programming. Basic copy-paste in a terminal is enoug
 | [Getting started](getting-started.md) | Install Docker, download the panel, configure `.env`, start the server, connect in-game |
 | [Port forwarding](port-forwarding.md) | Let friends join from the internet (router, firewall, cloud VPS) |
 | [Installing mods](installing-mods.md) | BepInEx, Thunderstore, what players need on their PC |
+| [Discord alerts](discord-alerts.md) | Webhook setup — player join/leave, server start/stop, mods, high load |
 | [Troubleshooting](troubleshooting.md) | Common errors and fixes (permissions, ports, first boot) |
 | [FAQ](faq.md) | Quick answers — same topics as the in-panel **Help** tab |
 

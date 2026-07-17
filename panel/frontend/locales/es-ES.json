@@ -31,6 +31,7 @@
       "metrics": "Métricas",
       "config": "Configuración",
       "alerts": "Alertas",
+      "discord": "Discord",
       "schedule": "Programación"
     },
     "sidebar": {
@@ -412,6 +413,23 @@
           {
             "q": "¿Es seguro montar docker.sock en el panel?",
             "a": "El panel necesita <code>docker.sock</code> para controlar el contenedor Valheim. Esto otorga a Docker control sobre el contenedor del panel: mantenga el panel en una red privada/detrás de un proxy con autenticación en producción."
+          }
+        ]
+      },
+      "discord": {
+        "label": "Alertas de Discord",
+        "items": [
+          {
+            "q": "¿Cómo activo notificaciones de Discord?",
+            "a": "Abre la pestaña <b>Discord</b> en la barra lateral. Crea un webhook en Discord (canal → Integraciones → Webhooks), pega la URL, activa Discord, elige eventos, luego <b>Guardar</b> y <b>Enviar prueba</b>. Guía: <code>docs/discord-alerts.md</code>."
+          },
+          {
+            "q": "¿Por qué una alerta de entrada mostró un Steam ID?",
+            "a": "Valheim registra primero el Steam ID; el nombre del personaje aparece unos segundos después. El panel espera un poco y guarda el nombre en caché para la próxima entrada."
+          },
+          {
+            "q": "¿Qué eventos puedo activar?",
+            "a": "Servidor cae/sube, inicia/apaga/reinicia, 80% CPU/RAM, jugador entra/sale, mod nuevo e fallo de copia de seguridad."
           }
         ]
       },
@@ -1507,11 +1525,20 @@
     }
   },
   "alerts": {
-    "title": "Alertas",
-    "subtitle": "Recibe notificaciones de eventos importantes del servidor.",
+    "title": "Discord",
+    "subtitle": "Recibe notificaciones de Discord sobre eventos importantes del servidor.",
     "events": "Eventos",
+    "webhookHint": "Pega la URL del webhook en Discord › Integraciones › Webhooks.",
+    "moreChannels": "Más canales (Telegram…)",
+    "hideMoreChannels": "Ocultar canales extra",
     "serverDown": "El servidor cae",
+    "serverStarting": "El servidor se iniciará",
+    "serverStopping": "El servidor se apagará",
+    "serverRestarting": "El servidor se reiniciará",
+    "serverHighLoad": "Servidor al 80% de carga (CPU/RAM)",
     "playerJoin": "Un jugador entra",
+    "playerLeave": "Un jugador sale",
+    "modAdded": "Nuevo mod añadido",
     "backupFail": "Falla la copia",
     "discord": "Discord",
     "telegram": "Telegram",
@@ -1519,9 +1546,12 @@
     "botTokenPlaceholder": "Token del bot de Telegram",
     "chatIdPlaceholder": "Chat ID de Telegram",
     "secretSet": "•••••• (guardado)",
+    "showSecret": "Mostrar",
+    "hideSecret": "Ocultar",
     "test": "Enviar prueba",
     "saved": "Alertas guardadas",
-    "tested": "Notificación de prueba enviada"
+    "tested": "Notificación de prueba enviada",
+    "testFailed": "Falló la notificación de prueba"
   },
   "schedule": {
     "title": "Programación",

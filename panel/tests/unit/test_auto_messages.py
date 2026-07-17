@@ -133,6 +133,24 @@ def test_detect_joins_and_first(am_env):
     assert events[0]["is_first"] is True
 
 
+def test_resolve_player_name_prefers_live_then_cache(am_env):
+    sid = "76561198273697711"
+    assert auto_messages.resolve_player_name(sid, "Exforgant") == "Exforgant"
+    assert auto_messages.resolve_player_name(sid, sid, {sid: {"name": "Exforgant"}}) == "Exforgant"
+    assert auto_messages.resolve_player_name(sid, sid, {}) == sid
+    assert auto_messages.resolve_player_name(sid, None, {sid: {"name": "Exforgant"}}) == "Exforgant"
+
+
+def test_mark_player_seen_upgrades_placeholder_name(am_env):
+    sid = "76561198273697711"
+    auto_messages.mark_player_seen(sid, sid)
+    auto_messages.mark_player_seen(sid, "Exforgant")
+    assert auto_messages.read_players_seen()[sid]["name"] == "Exforgant"
+    # Placeholder must not clobber the real name.
+    auto_messages.mark_player_seen(sid, sid)
+    assert auto_messages.read_players_seen()[sid]["name"] == "Exforgant"
+
+
 def test_tick_sends_scheduled_and_join(am_env):
     now = datetime.now(timezone.utc)
     auto_messages.create_message({

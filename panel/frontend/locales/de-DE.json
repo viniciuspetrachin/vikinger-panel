@@ -31,6 +31,7 @@
       "metrics": "Metriken",
       "config": "Konfiguration",
       "alerts": "Benachrichtigungen",
+      "discord": "Discord",
       "schedule": "Zeitplan"
     },
     "sidebar": {
@@ -412,6 +413,23 @@
           {
             "q": "Ist es sicher, docker.sock im Panel zu montieren?",
             "a": "Das Panel benötigt <code>docker.sock</code> zur Steuerung des Valheim-Containers. Dadurch erhält Docker die Kontrolle über den Panel-Container – das Panel bleibt in einem privaten Netzwerk/hinter einem Proxy mit Authentifizierung in der Produktion."
+          }
+        ]
+      },
+      "discord": {
+        "label": "Discord-Benachrichtigungen",
+        "items": [
+          {
+            "q": "Wie aktiviere ich Discord-Benachrichtigungen?",
+            "a": "Öffne den Tab <b>Discord</b> in der Seitenleiste. Erstelle einen Webhook in Discord (Kanal → Integrationen → Webhooks), füge die URL ein, aktiviere Discord, wähle Ereignisse, dann <b>Speichern</b> und <b>Test senden</b>. Anleitung: <code>docs/discord-alerts.md</code>."
+          },
+          {
+            "q": "Warum zeigte eine Beitrittsmeldung eine Steam-ID?",
+            "a": "Valheim loggt zuerst die Steam-ID; der Charaktername erscheint etwas später. Das Panel wartet kurz und speichert den Namen für den nächsten Beitritt."
+          },
+          {
+            "q": "Welche Ereignisse kann ich aktivieren?",
+            "a": "Server offline/online, Start/Stopp/Neustart, 80% CPU/RAM, Spieler tritt bei/verlässt, neuer Mod, Backup-Fehler."
           }
         ]
       },
@@ -1507,11 +1525,20 @@
     }
   },
   "alerts": {
-    "title": "Benachrichtigungen",
-    "subtitle": "Werde über wichtige Serverereignisse informiert.",
+    "title": "Discord",
+    "subtitle": "Erhalte Discord-Benachrichtigungen zu wichtigen Serverereignissen.",
     "events": "Ereignisse",
+    "webhookHint": "Webhook-URL aus Discord › Integrationen › Webhooks einfügen.",
+    "moreChannels": "Weitere Kanäle (Telegram…)",
+    "hideMoreChannels": "Zusätzliche Kanäle ausblenden",
     "serverDown": "Server fällt aus",
+    "serverStarting": "Server wird gestartet",
+    "serverStopping": "Server wird heruntergefahren",
+    "serverRestarting": "Server wird neu gestartet",
+    "serverHighLoad": "Server bei 80% Last (CPU/RAM)",
     "playerJoin": "Spieler tritt bei",
+    "playerLeave": "Spieler verlässt",
+    "modAdded": "Neuer Mod hinzugefügt",
     "backupFail": "Backup schlägt fehl",
     "discord": "Discord",
     "telegram": "Telegram",
@@ -1519,9 +1546,12 @@
     "botTokenPlaceholder": "Telegram-Bot-Token",
     "chatIdPlaceholder": "Telegram-Chat-ID",
     "secretSet": "•••••• (gespeichert)",
+    "showSecret": "Anzeigen",
+    "hideSecret": "Verbergen",
     "test": "Test senden",
     "saved": "Benachrichtigungen gespeichert",
-    "tested": "Testbenachrichtigung gesendet"
+    "tested": "Testbenachrichtigung gesendet",
+    "testFailed": "Testbenachrichtigung fehlgeschlagen"
   },
   "schedule": {
     "title": "Zeitplan",

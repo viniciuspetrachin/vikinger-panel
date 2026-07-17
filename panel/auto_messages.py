@@ -318,6 +318,31 @@ def write_players_seen(registry: dict[str, dict]) -> dict[str, dict]:
     return registry
 
 
+def is_placeholder_player_name(steam_id: str, name: str | None) -> bool:
+    """True when ``name`` is missing or still just the Steam ID."""
+    sid = str(steam_id or "").strip()
+    live = str(name or "").strip()
+    return not live or not sid or live == sid
+
+
+def resolve_player_name(
+    steam_id: str,
+    live_name: str | None = None,
+    registry: dict[str, dict] | None = None,
+) -> str:
+    """Prefer live character name, then players-seen cache, then Steam ID."""
+    sid = str(steam_id or "").strip()
+    if not sid:
+        return str(live_name or "?").strip() or "?"
+    if not is_placeholder_player_name(sid, live_name):
+        return str(live_name).strip()
+    reg = registry if registry is not None else read_players_seen()
+    cached = str((reg.get(sid) or {}).get("name") or "").strip()
+    if cached and not is_placeholder_player_name(sid, cached):
+        return cached
+    return sid
+
+
 def mark_player_seen(steam_id: str, name: str, *, now: datetime | None = None) -> bool:
     """Record player sighting. Returns True if this is the first time."""
     now = now or _now_utc()

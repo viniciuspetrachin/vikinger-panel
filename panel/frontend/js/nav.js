@@ -1,8 +1,9 @@
 // Sidebar information architecture.
 //
-// Primary nav is a flat list of 8 destinations. "Config" is a hub whose
-// sub-sections (server, worlds, messages, alerts, schedule, files, audit,
+// Primary nav is a flat list of destinations. "Config" is a hub whose
+// sub-sections (server, worlds, messages, schedule, files, audit,
 // help, about, donation) are reached through an in-page subnav.
+// Discord alerts live as a primary sidebar item (easy to find / extend).
 
 const icons = {
   dashboard: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>',
@@ -19,14 +20,15 @@ const icons = {
   audit: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>',
   help: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
   messages: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>',
-  alerts: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>',
+  // Discord-style chat glyph for the alerts / Discord primary nav item.
+  discord: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M19.27 5.33C17.94 4.71 16.5 4.26 15 4a.1.1 0 00-.07.03c-.18.33-.39.76-.53 1.09a16.1 16.1 0 00-4.8 0c-.14-.34-.37-.76-.54-1.09-.02-.01-.04-.02-.07-.03-1.5.26-2.93.71-4.27 1.33-.01 0-.02.01-.03.02C2.87 9.08 2.13 12.72 2.5 16.33c0 .02.01.04.03.05a16.3 16.3 0 004.92 2.49c.03.01.06 0 .07-.02.38-.52.72-1.07 1.01-1.64.02-.04 0-.08-.04-.1-.54-.2-1.05-.45-1.54-.73-.04-.02-.04-.08-.01-.11.1-.08.21-.16.31-.24.02-.01.05-.01.07 0a11.8 11.8 0 0010.05 0c.02-.01.05-.01.07 0 .1.09.21.17.31.25.04.03.04.09-.01.11-.49.28-1 .53-1.54.73-.04.02-.05.06-.04.1.3.57.64 1.12 1.01 1.64.02.02.05.03.08.02a16.3 16.3 0 004.93-2.49c.02-.01.03-.03.03-.05.45-4.17-.74-7.78-3.13-11-.01-.01-.02-.02-.04-.02zM8.52 14.18c-.98 0-1.79-.9-1.79-2.01s.79-2.01 1.79-2.01 1.81.9 1.79 2.01c0 1.11-.81 2.01-1.79 2.01zm6.96 0c-.98 0-1.79-.9-1.79-2.01s.79-2.01 1.79-2.01 1.81.9 1.79 2.01c0 1.11-.81 2.01-1.79 2.01z"/></svg>',
   schedule: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
   donation: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>',
   about: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
 };
 
-// The 10 sub-sections reachable under Config.
-const CONFIG_PAGES = ["server", "worlds", "messages", "alerts", "schedule", "files", "audit", "help", "about", "donation"];
+// Sub-sections reachable under Config (alerts/Discord is primary nav).
+const CONFIG_PAGES = ["server", "worlds", "messages", "schedule", "files", "audit", "help", "about", "donation"];
 
 export const nav = {
   navPrimary: [
@@ -37,6 +39,7 @@ export const nav = {
     { id: "backups", labelKey: "nav.items.backups", icon: icons.backups },
     { id: "console", labelKey: "nav.items.console", icon: icons.console },
     { id: "metrics", labelKey: "nav.items.metrics", icon: icons.metrics },
+    { id: "alerts", labelKey: "nav.items.discord", icon: icons.discord },
     { id: "config", labelKey: "nav.items.config", icon: icons.config },
   ],
 
@@ -44,7 +47,6 @@ export const nav = {
     { id: "server", labelKey: "nav.items.server", icon: icons.server },
     { id: "worlds", labelKey: "nav.items.worlds", icon: icons.worlds },
     { id: "messages", labelKey: "nav.items.messages", icon: icons.messages },
-    { id: "alerts", labelKey: "nav.items.alerts", icon: icons.alerts },
     { id: "schedule", labelKey: "nav.items.schedule", icon: icons.schedule },
     { id: "files", labelKey: "nav.items.files", icon: icons.files },
     { id: "audit", labelKey: "nav.items.audit", icon: icons.audit },

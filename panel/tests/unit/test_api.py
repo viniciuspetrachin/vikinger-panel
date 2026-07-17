@@ -1938,12 +1938,39 @@ def test_map_endpoint(client):
 def test_alert_transition_detection(env_dir, monkeypatch):
     fired = []
     monkeypatch.setattr(main.panel_alerts, "dispatch", lambda cfg, ev, ctx=None: fired.append((ev, ctx)))
+    monkeypatch.setattr(main.auto_messages, "mark_player_seen", lambda *a, **k: False)
+    monkeypatch.setattr(main.auto_messages, "resolve_player_name", lambda sid, live=None, registry=None: live or sid)
     main._alert_state.clear()
-    main._alert_state.update({"container": None, "players": set(), "init": False})
-    cfg = {"events": {"server_down": True, "player_join": True, "backup_fail": False}}
+    main._alert_state.update({
+        "container": None,
+        "players": set(),
+        "player_names": {},
+        "pending_joins": {},
+        "high_load": False,
+        "init": False,
+    })
+    cfg = {
+        "events": {
+            "server_down": True,
+            "player_join": True,
+            "player_leave": True,
+            "server_high_load": True,
+            "backup_fail": False,
+        }
+    }
 
     # First pass primes state (no alert), container running with TestPlayer online.
     monkeypatch.setattr(main, "container_running", lambda: True)
+    monkeypatch.setattr(
+        main,
+        "get_players_info",
+        lambda: {"count": 1, "players": [{"steam_id": "11111111111111111", "name": "Old"}], "online": True},
+    )
+    monkeypatch.setattr(
+        main,
+        "get_container_metrics_raw",
+        lambda: {"cpu_percent": 10.0, "memory_percent": 20.0},
+    )
     main._check_and_dispatch_alerts(cfg)
     assert fired == []
 
@@ -1952,20 +1979,149 @@ def test_alert_transition_detection(env_dir, monkeypatch):
     main._check_and_dispatch_alerts(cfg)
     assert any(ev == "server_down" for ev, _ in fired)
 
-    # Back up + a new player -> server_up + player_join fire.
+    # Back up + a new player -> server_up + player_join (players reset on stop).
     fired.clear()
     monkeypatch.setattr(main, "container_running", lambda: True)
-    monkeypatch.setattr(main, "get_players_info", lambda: {"count": 1, "players": [{"steam_id": "99999999999999999", "name": "New"}], "online": True})
+    monkeypatch.setattr(
+        main,
+        "get_players_info",
+        lambda: {"count": 1, "players": [{"steam_id": "99999999999999999", "name": "New"}], "online": True},
+    )
     main._check_and_dispatch_alerts(cfg)
     events = {ev for ev, _ in fired}
     assert "server_up" in events
     assert "player_join" in events
+    assert "player_leave" not in events
+    join_ctx = next(ctx for ev, ctx in fired if ev == "player_join")
+    assert join_ctx["player"] == "New"
+
+    # Leave while server stays up.
+    fired.clear()
+    monkeypatch.setattr(
+        main,
+        "get_players_info",
+        lambda: {"count": 0, "players": [], "online": True},
+    )
+    main._check_and_dispatch_alerts(cfg)
+    assert any(ev == "player_leave" for ev, _ in fired)
+    leave_ctx = next(ctx for ev, ctx in fired if ev == "player_leave")
+    assert leave_ctx["player"] == "New"
+
+    # High load crossing 80% fires once, then clears under 70%.
+    fired.clear()
+    monkeypatch.setattr(
+        main,
+        "get_players_info",
+        lambda: {"count": 0, "players": [], "online": True},
+    )
+    monkeypatch.setattr(
+        main,
+        "get_container_metrics_raw",
+        lambda: {"cpu_percent": 85.0, "memory_percent": 40.0},
+    )
+    main._check_and_dispatch_alerts(cfg)
+    assert any(ev == "server_high_load" for ev, _ in fired)
+    fired.clear()
+    main._check_and_dispatch_alerts(cfg)
+    assert fired == []  # hysteresis: still high, no re-fire
+    monkeypatch.setattr(
+        main,
+        "get_container_metrics_raw",
+        lambda: {"cpu_percent": 50.0, "memory_percent": 40.0},
+    )
+    main._check_and_dispatch_alerts(cfg)
+    assert main._alert_state["high_load"] is False
+
+
+def test_alert_join_uses_name_cache_and_waits_for_reveal(env_dir, monkeypatch, tmp_path):
+    fired = []
+    monkeypatch.setattr(main.panel_alerts, "dispatch", lambda cfg, ev, ctx=None: fired.append((ev, ctx)))
+    seen_file = tmp_path / "players-seen.json"
+    monkeypatch.setattr(main.auto_messages, "PLAYERS_SEEN_FILE", seen_file)
+    # Cache already knows Exforgant.
+    sid = "76561198273697711"
+    main.auto_messages.mark_player_seen(sid, "Exforgant")
+
+    main._alert_state.clear()
+    main._alert_state.update({
+        "container": True,
+        "players": set(),
+        "player_names": {},
+        "pending_joins": {},
+        "high_load": False,
+        "init": True,
+    })
+    cfg = {"events": {"player_join": True}}
+    monkeypatch.setattr(main, "container_running", lambda: True)
+
+    # Live name still Steam ID — cache should win immediately.
+    monkeypatch.setattr(
+        main,
+        "get_players_info",
+        lambda: {"count": 1, "players": [{"steam_id": sid, "name": sid}], "online": True},
+    )
+    main._check_and_dispatch_alerts(cfg)
+    assert len(fired) == 1
+    assert fired[0] == ("player_join", {"player": "Exforgant"})
+
+    # Unknown player: wait for Character name before alerting.
+    fired.clear()
+    main._alert_state["players"] = {sid}
+    main._alert_state["pending_joins"] = {}
+    new_sid = "76561198000000000"
+    monkeypatch.setattr(
+        main,
+        "get_players_info",
+        lambda: {"count": 2, "players": [
+            {"steam_id": sid, "name": "Exforgant"},
+            {"steam_id": new_sid, "name": new_sid},
+        ], "online": True},
+    )
+    main._check_and_dispatch_alerts(cfg)
+    assert fired == []
+    assert new_sid in main._alert_state["pending_joins"]
+
+    # Name revealed on next poll.
+    monkeypatch.setattr(
+        main,
+        "get_players_info",
+        lambda: {"count": 2, "players": [
+            {"steam_id": sid, "name": "Exforgant"},
+            {"steam_id": new_sid, "name": "Bjorn"},
+        ], "online": True},
+    )
+    main._check_and_dispatch_alerts(cfg)
+    assert fired == [("player_join", {"player": "Bjorn"})]
+    assert main.auto_messages.read_players_seen()[new_sid]["name"] == "Bjorn"
 
 
 def test_alerts_active_gate():
     assert main._alerts_active({"events": {"server_down": True}, "discord": {"enabled": True}}) is True
     assert main._alerts_active({"events": {"server_down": True}, "discord": {"enabled": False}, "telegram": {"enabled": False}}) is False
     assert main._alerts_active({"events": {"server_down": False}, "discord": {"enabled": True}}) is False
+
+
+def test_alerts_test_requires_channel(client, monkeypatch, tmp_path):
+    monkeypatch.setenv("PANEL_DB_PATH", str(tmp_path / "panel.db"))
+    r = client.post("/api/alerts/test", json={})
+    assert r.status_code == 400
+
+
+def test_alerts_test_accepts_unsaved_webhook(client, monkeypatch, tmp_path):
+    monkeypatch.setenv("PANEL_DB_PATH", str(tmp_path / "panel.db"))
+
+    class FakeHttp:
+        def post(self, url, json=None, timeout=None):
+            class R:
+                status_code = 200
+            return R()
+
+    monkeypatch.setattr(main.panel_alerts, "_get_http", lambda http=None: FakeHttp())
+    r = client.post("/api/alerts/test", json={
+        "discord": {"webhook_url": "https://discord.test/hook"},
+    })
+    assert r.status_code == 200
+    assert r.json()["result"]["discord"] is True
 
 
 def test_metrics_rates(client, monkeypatch):

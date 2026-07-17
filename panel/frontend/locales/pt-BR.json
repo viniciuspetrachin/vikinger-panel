@@ -31,6 +31,7 @@
       "metrics": "Métricas",
       "config": "Configurações",
       "alerts": "Alertas",
+      "discord": "Discord",
       "schedule": "Agendamento"
     },
     "sidebar": {
@@ -413,6 +414,23 @@
           {
             "q": "É seguro montar docker.sock no painel?",
             "a": "O painel precisa de <code>docker.sock</code> para controlar o contêiner Valheim. Isso concede controle do Docker ao contêiner do painel — mantenha o painel em uma rede privada/atrás de um proxy com autenticação em produção."
+          }
+        ]
+      },
+      "discord": {
+        "label": "Alertas Discord",
+        "items": [
+          {
+            "q": "Como ativo notificações no Discord?",
+            "a": "Abra a aba <b>Discord</b> na barra lateral. Crie um webhook no Discord (canal → Integrações → Webhooks), cole a URL, ative o Discord, escolha os eventos, depois <b>Salvar</b> e <b>Enviar teste</b>. Guia completo: <code>docs/discord-alerts.md</code>."
+          },
+          {
+            "q": "Por que o alerta de entrada mostrou um Steam ID?",
+            "a": "O Valheim registra o Steam ID primeiro; o nome do personagem aparece alguns segundos depois. O painel espera um pouco e guarda o nome em cache para a próxima entrada."
+          },
+          {
+            "q": "Quais eventos posso ativar?",
+            "a": "Servidor cai/sobe, inicia/desliga/reinicia, 80% de CPU/RAM, jogador entra/sai, mod novo instalado e falha de backup."
           }
         ]
       },
@@ -1539,11 +1557,20 @@
     }
   },
   "alerts": {
-    "title": "Alertas",
-    "subtitle": "Seja notificado sobre eventos importantes do servidor.",
+    "title": "Discord",
+    "subtitle": "Receba notificações no Discord sobre eventos importantes do servidor.",
     "events": "Eventos",
+    "webhookHint": "Cole a URL do webhook em Discord › Integrações › Webhooks.",
+    "moreChannels": "Mais canais (Telegram…)",
+    "hideMoreChannels": "Ocultar canais extras",
     "serverDown": "Servidor cai",
+    "serverStarting": "Servidor será iniciado",
+    "serverStopping": "Servidor será desligado",
+    "serverRestarting": "Servidor será reiniciado",
+    "serverHighLoad": "Servidor com 80% de carga (CPU/RAM)",
     "playerJoin": "Jogador entra",
+    "playerLeave": "Jogador sai",
+    "modAdded": "Mod novo adicionado",
     "backupFail": "Backup falha",
     "discord": "Discord",
     "telegram": "Telegram",
@@ -1551,9 +1578,12 @@
     "botTokenPlaceholder": "Token do bot do Telegram",
     "chatIdPlaceholder": "Chat ID do Telegram",
     "secretSet": "•••••• (salvo)",
+    "showSecret": "Mostrar",
+    "hideSecret": "Ocultar",
     "test": "Enviar teste",
     "saved": "Alertas salvos",
-    "tested": "Notificação de teste enviada"
+    "tested": "Notificação de teste enviada",
+    "testFailed": "Falha ao enviar notificação de teste"
   },
   "schedule": {
     "title": "Agendamento",

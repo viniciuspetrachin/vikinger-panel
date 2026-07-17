@@ -32,11 +32,34 @@ def test_format_event_has_title_and_message(event):
     out = alerts.format_event(event, {})
     assert "title" in out and "message" in out
     assert out["title"] and out["message"]
+    assert "color" in out
 
 
 def test_format_event_player_join():
     out = alerts.format_event("player_join", {"player": "Ragnar"})
     assert "Ragnar" in out["message"]
+
+
+def test_format_event_player_leave():
+    out = alerts.format_event("player_leave", {"player": "Bjorn"})
+    assert "Bjorn" in out["message"]
+
+
+def test_format_event_mod_added():
+    out = alerts.format_event("mod_added", {"mod": "CoolMod", "version": "1.2.3"})
+    assert "CoolMod" in out["message"]
+    assert "1.2.3" in out["message"]
+
+
+def test_format_event_server_lifecycle():
+    assert "start" in alerts.format_event("server_starting", {})["message"].lower()
+    assert "shut" in alerts.format_event("server_stopping", {})["message"].lower()
+    assert "restart" in alerts.format_event("server_restarting", {})["message"].lower()
+
+
+def test_format_event_high_load():
+    out = alerts.format_event("server_high_load", {"cpu_percent": 85, "memory_percent": 40})
+    assert "85" in out["message"]
 
 
 def test_format_event_backup_fail_error():
@@ -59,8 +82,17 @@ def test_format_event_unknown():
 def test_send_discord_success():
     http = FakeHttp(status_code=204)
     assert alerts.send_discord("https://hook", "T", "M", http=http) is True
-    assert http.calls[0]["url"] == "https://hook"
+    assert "wait=true" in http.calls[0]["url"]
     assert http.calls[0]["json"]["embeds"][0]["title"] == "T"
+    assert http.calls[0]["json"]["username"] == "Vikinger Panel"
+
+
+def test_send_discord_preserves_existing_query():
+    http = FakeHttp(status_code=200)
+    alerts.send_discord("https://hook?foo=1", "T", "M", http=http, color=0x123456)
+    assert "foo=1" in http.calls[0]["url"]
+    assert "wait=true" in http.calls[0]["url"]
+    assert http.calls[0]["json"]["embeds"][0]["color"] == 0x123456
 
 
 def test_send_discord_http_error_status():
@@ -126,6 +158,7 @@ def test_dispatch_channel_disabled():
     config = {
         "discord": {"enabled": False, "webhook_url": "https://hook"},
         "telegram": {"enabled": True, "bot_token": "t", "chat_id": "c"},
+        "events": {"server_up": True},
     }
     http = FakeHttp(status_code=200)
     result = alerts.dispatch(config, "server_up", {}, http=http)
@@ -133,11 +166,21 @@ def test_dispatch_channel_disabled():
     assert result["telegram"] is True
 
 
-def test_dispatch_event_enabled_by_default_when_absent():
+def test_dispatch_server_up_paired_with_server_down():
+    config = {
+        "discord": {"enabled": True, "webhook_url": "https://hook"},
+        "events": {"server_down": True},
+    }
+    http = FakeHttp(status_code=204)
+    result = alerts.dispatch(config, "server_up", {}, http=http)
+    assert result["discord"] is True
+
+
+def test_dispatch_event_disabled_when_absent():
     config = {"discord": {"enabled": True, "webhook_url": "https://hook"}}
     http = FakeHttp(status_code=204)
     result = alerts.dispatch(config, "server_down", {}, http=http)
-    assert result["discord"] is True
+    assert result == {"discord": None, "telegram": None}
 
 
 def test_test_channels():

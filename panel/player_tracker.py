@@ -107,9 +107,18 @@ def update_sessions(
                 continue
             name = p.get("name")
             row = conn.execute(
-                "SELECT first_seen, last_seen FROM player_sessions WHERE steam_id = ?",
+                "SELECT first_seen, last_seen, name FROM player_sessions WHERE steam_id = ?",
                 (steam_id,),
             ).fetchone()
+            # Don't clobber a known character name with a Steam-ID placeholder.
+            if row is not None:
+                prev_name = row["name"]
+                if (
+                    (not name or name == steam_id)
+                    and prev_name
+                    and prev_name != steam_id
+                ):
+                    name = prev_name
             if row is None:
                 conn.execute(
                     "INSERT INTO player_sessions (steam_id, name, first_seen, last_seen) "

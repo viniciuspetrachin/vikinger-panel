@@ -110,6 +110,22 @@ Click **Restore to here** on a backup row. Use **Undo last restore** to roll bac
 
 ---
 
+## Discord alerts
+
+**How do I get Discord notifications?**  
+Open the **Discord** tab in the sidebar, paste a channel webhook URL, enable Discord, pick events, then **Save** and **Send test**. Full guide: [Discord alerts](discord-alerts.md).
+
+**Where do I create a webhook?**  
+Discord → channel settings → **Integrations** → **Webhooks** → **New Webhook** → copy the URL. Keep it secret.
+
+**Why did a join alert show a Steam ID instead of a name?**  
+Valheim reveals the character name a few seconds after connect. The panel waits briefly and caches Steam ID → name for the next join.
+
+**Which events can I enable?**  
+Server down/up, start/stop/restart, 80% CPU/RAM load, player join/leave, new mod installed, backup failure.
+
+---
+
 ## Resources & performance
 
 **How much RAM does the server need?**  

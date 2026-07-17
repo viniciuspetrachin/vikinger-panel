@@ -16,6 +16,7 @@ PRIMARY_IDS = [
     "backups",
     "console",
     "metrics",
+    "alerts",
 ]
 
 # Sub-seções sob o hub Config (acessadas via subnav).
@@ -23,7 +24,6 @@ CONFIG_IDS = [
     "server",
     "worlds",
     "messages",
-    "alerts",
     "schedule",
     "files",
     "audit",
@@ -247,10 +247,10 @@ def test_messages_tab_content(page: Page, base_url: str) -> None:
 def test_alerts_page(page: Page, base_url: str) -> None:
     page.goto(base_url)
     page.wait_for_selector("[x-cloak]", state="detached")
-    goto_config(page, "alerts")
+    goto_primary(page, "alerts")
 
-    expect(page.get_by_role("heading", name="Alerts", exact=True)).to_be_visible()
-    expect(page.get_by_text("Discord")).to_be_visible()
+    expect(page.get_by_role("heading", name="Discord", exact=True)).to_be_visible()
+    expect(page.get_by_text("Events")).to_be_visible()
     assert_no_error_toast(page)
 
 
