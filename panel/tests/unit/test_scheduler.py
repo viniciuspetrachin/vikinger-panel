@@ -49,6 +49,16 @@ def test_describe_cron():
     assert scheduler.describe_cron("bad") == "invalid schedule"
 
 
+def test_next_cron_fire_returns_future_timestamp():
+    if not scheduler._has_apscheduler():
+        pytest.skip("apscheduler not installed")
+    now = __import__("time").time()
+    nxt = scheduler.next_cron_fire("*/5 * * * *", after=now)
+    assert nxt is not None
+    assert nxt > now
+    assert scheduler.next_cron_fire("not a cron") is None
+
+
 # --- PanelScheduler ---------------------------------------------------------
 
 def test_configure_and_status():

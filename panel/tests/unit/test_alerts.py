@@ -85,6 +85,76 @@ def test_extract_prefixed_chat_default_and_custom():
     assert custom[0]["text"] == "hi there"
 
 
+def test_extract_player_deaths():
+    logs = (
+        "Got connection SteamID 111\n"
+        "Got character ZDOID from Ragnar : -123:1\n"
+        "Got character ZDOID from Ragnar : 0:0\n"
+    )
+    hits = alerts.extract_player_deaths(logs)
+    assert len(hits) == 1
+    assert hits[0]["player"] == "Ragnar"
+
+
+def test_extract_pvp_kills_patterns():
+    logs = (
+        "Ragnar killed by Bjorn\n"
+        "Bjorn killed Ragnar\n"
+        "Olaf was slain by Erik\n"
+    )
+    hits = alerts.extract_pvp_kills(logs)
+    assert len(hits) == 3
+    assert hits[0]["victim"] == "Ragnar"
+    assert hits[0]["killer"] == "Bjorn"
+    assert hits[1]["killer"] == "Bjorn"
+    assert hits[1]["victim"] == "Ragnar"
+    assert hits[2]["victim"] == "Olaf"
+    assert hits[2]["killer"] == "Erik"
+
+
+def test_parse_global_boss_keys_and_labels():
+    output = "Global keys:\ndefeated_eikthyr\ndefeated_gdking\nfoo"
+    keys = alerts.parse_global_boss_keys(output)
+    assert keys == {"defeated_eikthyr", "defeated_gdking"}
+    assert alerts.boss_label_for_key("defeated_eikthyr") == "Eikthyr"
+    assert alerts.boss_label_for_key("defeated_unknown") == "Unknown"
+
+
+def test_format_event_player_death_pvp_boss():
+    death = alerts.format_event("player_death", {"player": "Ragnar"})
+    assert "Ragnar" in death["message"]
+    pvp = alerts.format_event("player_pvp_kill", {"killer": "Bjorn", "victim": "Ragnar"})
+    assert "Bjorn" in pvp["message"]
+    assert "Ragnar" in pvp["message"]
+    boss = alerts.format_event("boss_defeated", {"boss": "Eikthyr"})
+    assert "Eikthyr" in boss["message"]
+
+
+def test_extract_random_events_and_labels():
+    logs = "Random event set: army_theelder\nOther noise\nRandom event set: army_eikthyr"
+    hits = alerts.extract_random_events(logs)
+    assert len(hits) == 2
+    assert hits[0]["event"] == "army_theelder"
+    assert alerts.raid_label_for_key("army_theelder") == "The Elder army raid"
+
+
+def test_format_event_moderation_first_join_raid_scheduled():
+    kick = alerts.format_event("player_kick", {"player": "Ragnar"})
+    assert "Ragnar" in kick["message"]
+    ban = alerts.format_event("player_ban", {"player": "Bjorn"})
+    assert "Bjorn" in ban["message"]
+    first = alerts.format_event("player_first_join", {"player": "Olaf"})
+    assert "first time" in first["message"].lower()
+    raid = alerts.format_event("raid_started", {"raid": "The Elder army raid"})
+    assert "The Elder army raid" in raid["message"]
+    backup_warn = alerts.format_event(
+        "backup_scheduled_warning", {"job": "world_backup", "minutes": 5}
+    )
+    assert "5" in backup_warn["message"]
+    restart_warn = alerts.format_event("restart_scheduled_warning", {"minutes": 3})
+    assert "3" in restart_warn["message"]
+
+
 def test_format_event_server_lifecycle():
     assert "start" in alerts.format_event("server_starting", {})["message"].lower()
     assert "shut" in alerts.format_event("server_stopping", {})["message"].lower()

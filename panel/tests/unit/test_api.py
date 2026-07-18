@@ -329,6 +329,26 @@ def test_player_action_kick(rcon_ready, client):
     assert r.json()["synced"] is None
 
 
+def test_player_action_kick_dispatches_alert(rcon_ready, client, monkeypatch):
+    fired = []
+    monkeypatch.setattr(main, "dispatch_alert", lambda ev, ctx=None: fired.append((ev, ctx)))
+    monkeypatch.setattr(main, "_alert_player_label", lambda sid: "Ragnar")
+    sid = "76561198000000000"
+    r = client.post(f"/api/players/{sid}/action", json={"action": "kick"})
+    assert r.status_code == 200
+    assert fired == [("player_kick", {"player": "Ragnar"})]
+
+
+def test_player_action_ban_dispatches_alert(rcon_ready, client, monkeypatch):
+    fired = []
+    monkeypatch.setattr(main, "dispatch_alert", lambda ev, ctx=None: fired.append((ev, ctx)))
+    monkeypatch.setattr(main, "_alert_player_label", lambda sid: "Bjorn")
+    sid = "76561198000000000"
+    r = client.post(f"/api/players/{sid}/action", json={"action": "ban"})
+    assert r.status_code == 200
+    assert fired == [("player_ban", {"player": "Bjorn"})]
+
+
 def test_player_action_ban_syncs_list(rcon_ready, client, env_dir):
     sid = "76561198000000000"
     r = client.post(f"/api/players/{sid}/action", json={"action": "ban"})
@@ -2332,6 +2352,219 @@ def test_alert_chat_bridge_dispatches_prefixed_message(env_dir, monkeypatch):
     # Dedupes on second poll.
     fired.clear()
     main._check_and_dispatch_alerts(cfg)
+    assert fired == []
+
+
+def _reset_alert_state(**overrides):
+    state = {
+        "container": True,
+        "players": set(),
+        "player_names": {},
+        "pending_joins": {},
+        "high_load": False,
+        "init": True,
+        "pending_ready": None,
+        "pending_ready_since": None,
+        "chat_seen": set(),
+        "game_log_seen": set(),
+        "global_keys": set(),
+        "global_keys_init": False,
+        "last_global_keys_poll": 0.0,
+        "scheduled_warnings": set(),
+        "pending_first_joins": set(),
+    }
+    state.update(overrides)
+    main._alert_state.clear()
+    main._alert_state.update(state)
+
+
+def test_alert_player_death_dispatched(env_dir, monkeypatch):
+    fired = []
+    monkeypatch.setattr(main.panel_alerts, "dispatch", lambda cfg, ev, ctx=None: fired.append((ev, ctx)))
+    _reset_alert_state()
+    cfg = {"events": {"player_death": True}, "discord": {"enabled": True}}
+    monkeypatch.setattr(main, "container_running", lambda: True)
+    monkeypatch.setattr(
+        main,
+        "get_logs",
+        lambda lines=100: "Got character ZDOID from Ragnar : 0:0\n",
+    )
+    monkeypatch.setattr(main, "bepinex_log", lambda lines=80: "")
+    main._check_and_dispatch_alerts(cfg)
+    assert ("player_death", {"player": "Ragnar"}) in fired
+
+
+def test_alert_pvp_kill_suppresses_duplicate_death(env_dir, monkeypatch):
+    fired = []
+    monkeypatch.setattr(main.panel_alerts, "dispatch", lambda cfg, ev, ctx=None: fired.append((ev, ctx)))
+    _reset_alert_state()
+    cfg = {"events": {"player_death": True, "player_pvp_kill": True}, "discord": {"enabled": True}}
+    monkeypatch.setattr(main, "container_running", lambda: True)
+    monkeypatch.setattr(
+        main,
+        "get_logs",
+        lambda lines=100: (
+            "Ragnar killed by Bjorn\n"
+            "Got character ZDOID from Ragnar : 0:0\n"
+        ),
+    )
+    monkeypatch.setattr(main, "bepinex_log", lambda lines=80: "")
+    main._check_and_dispatch_alerts(cfg)
+    events = [ev for ev, _ in fired]
+    assert "player_pvp_kill" in events
+    assert "player_death" not in events
+
+
+def test_alert_high_load_suppressed_during_restart(env_dir, monkeypatch):
+    fired = []
+    monkeypatch.setattr(main.panel_alerts, "dispatch", lambda cfg, ev, ctx=None: fired.append((ev, ctx)))
+    _reset_alert_state(pending_ready="restart", pending_ready_since=__import__("time").time())
+    cfg = {"events": {"server_high_load": True}, "discord": {"enabled": True}}
+    monkeypatch.setattr(main, "container_running", lambda: True)
+    monkeypatch.setattr(
+        main,
+        "get_players_info",
+        lambda: {"count": 0, "players": [], "online": False},
+    )
+    monkeypatch.setattr(
+        main,
+        "get_container_metrics_raw",
+        lambda: {"cpu_percent": 85.0, "memory_percent": 40.0},
+    )
+    monkeypatch.setattr(main, "get_logs", lambda lines=100: "")
+    monkeypatch.setattr(main, "bepinex_log", lambda lines=80: "")
+    main._check_and_dispatch_alerts(cfg)
+    assert not any(ev == "server_high_load" for ev, _ in fired)
+
+
+def test_alert_boss_defeated_seeds_then_alerts(env_dir, monkeypatch):
+    fired = []
+    monkeypatch.setattr(main.panel_alerts, "dispatch", lambda cfg, ev, ctx=None: fired.append((ev, ctx)))
+    _reset_alert_state()
+    cfg = {"events": {"boss_defeated": True}, "discord": {"enabled": True}}
+    monkeypatch.setattr(main, "container_running", lambda: True)
+    monkeypatch.setattr(main, "_rcon_available_for_alerts", lambda: True)
+    monkeypatch.setattr(main, "get_logs", lambda lines=100: "")
+    monkeypatch.setattr(main, "bepinex_log", lambda lines=80: "")
+    monkeypatch.setattr(
+        main,
+        "get_players_info",
+        lambda: {"count": 0, "players": [], "online": False},
+    )
+    monkeypatch.setattr(
+        main,
+        "get_container_metrics_raw",
+        lambda: {"cpu_percent": 10.0, "memory_percent": 20.0},
+    )
+
+    outputs = iter(["defeated_eikthyr", "defeated_eikthyr\ndefeated_gdking"])
+
+    def fake_rcon(cmd):
+        assert cmd == "globalKeys"
+        return next(outputs)
+
+    monkeypatch.setattr(main, "_run_rcon", fake_rcon)
+    main._check_and_dispatch_alerts(cfg)
+    assert fired == []
+    assert main._alert_state["global_keys_init"] is True
+
+    fired.clear()
+    main._alert_state["last_global_keys_poll"] = 0.0
+    main._check_and_dispatch_alerts(cfg)
+    assert len(fired) == 1
+    assert fired[0][0] == "boss_defeated"
+    assert fired[0][1]["boss"] == "The Elder"
+
+
+def test_alert_first_join_only_for_new_players(env_dir, monkeypatch, tmp_path):
+    fired = []
+    monkeypatch.setattr(main.panel_alerts, "dispatch", lambda cfg, ev, ctx=None: fired.append((ev, ctx)))
+    seen_file = tmp_path / "players-seen.json"
+    monkeypatch.setattr(main.auto_messages, "PLAYERS_SEEN_FILE", seen_file)
+    known_sid = "76561198273697711"
+    main.auto_messages.mark_player_seen(known_sid, "Exforgant")
+    new_sid = "76561198000000000"
+
+    _reset_alert_state(players={known_sid})
+    cfg = {"events": {"player_first_join": True, "player_join": False}, "discord": {"enabled": True}}
+    monkeypatch.setattr(main, "container_running", lambda: True)
+    monkeypatch.setattr(
+        main,
+        "get_players_info",
+        lambda: {"count": 2, "players": [
+            {"steam_id": known_sid, "name": "Exforgant"},
+            {"steam_id": new_sid, "name": "Bjorn"},
+        ], "online": True},
+    )
+    main._check_and_dispatch_alerts(cfg)
+    assert fired == [("player_first_join", {"player": "Bjorn"})]
+
+
+def test_alert_raid_started_from_logs(env_dir, monkeypatch):
+    fired = []
+    monkeypatch.setattr(main.panel_alerts, "dispatch", lambda cfg, ev, ctx=None: fired.append((ev, ctx)))
+    _reset_alert_state()
+    cfg = {"events": {"raid_started": True}, "discord": {"enabled": True}}
+    monkeypatch.setattr(main, "container_running", lambda: True)
+    monkeypatch.setattr(
+        main,
+        "get_logs",
+        lambda lines=100: "Random event set: army_theelder\n",
+    )
+    monkeypatch.setattr(main, "bepinex_log", lambda lines=80: "")
+    monkeypatch.setattr(
+        main,
+        "get_players_info",
+        lambda: {"count": 0, "players": [], "online": False},
+    )
+    monkeypatch.setattr(
+        main,
+        "get_container_metrics_raw",
+        lambda: {"cpu_percent": 10.0, "memory_percent": 20.0},
+    )
+    main._check_and_dispatch_alerts(cfg)
+    assert len(fired) == 1
+    assert fired[0][0] == "raid_started"
+    assert "The Elder" in fired[0][1]["raid"]
+
+
+def test_alert_scheduled_backup_warning(env_dir, monkeypatch):
+    fired = []
+    monkeypatch.setattr(main.panel_alerts, "dispatch", lambda cfg, ev, ctx=None: fired.append((ev, ctx)))
+    _reset_alert_state()
+    cfg = {"events": {"backup_scheduled_warning": True}, "discord": {"enabled": True}}
+    now = __import__("time").time()
+    next_run = now + 4 * 60
+    monkeypatch.setattr(main, "read_schedule_config", lambda: {
+        "backup": {"enabled": True, "cron": "0 4 * * *"},
+        "restart": {"enabled": False, "cron": "0 5 * * *"},
+        "mod_update": {"enabled": False, "cron": "0 3 * * 0"},
+    })
+    monkeypatch.setattr(
+        main.panel_scheduler_instance,
+        "get_status",
+        lambda: {"backup": {"next_run": next_run}, "restart": {}, "mod_update": {}},
+    )
+    monkeypatch.setattr(main, "container_running", lambda: True)
+    monkeypatch.setattr(main, "get_logs", lambda lines=100: "")
+    monkeypatch.setattr(main, "bepinex_log", lambda lines=80: "")
+    monkeypatch.setattr(
+        main,
+        "get_players_info",
+        lambda: {"count": 0, "players": [], "online": False},
+    )
+    monkeypatch.setattr(
+        main,
+        "get_container_metrics_raw",
+        lambda: {"cpu_percent": 10.0, "memory_percent": 20.0},
+    )
+    main._check_scheduled_job_warnings(cfg)
+    assert len(fired) == 1
+    assert fired[0][0] == "backup_scheduled_warning"
+    assert fired[0][1]["minutes"] == 4
+
+    fired.clear()
+    main._check_scheduled_job_warnings(cfg)
     assert fired == []
 
 
