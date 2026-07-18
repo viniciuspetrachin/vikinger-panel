@@ -1,6 +1,6 @@
 {
   "name": "vikinger-panel-frontend",
-  "version": "2.1.14",
+  "version": "2.1.15",
   "private": true,
   "description": "Frontend build (Tailwind + esbuild) do Vikinger Panel",
   "type": "module",

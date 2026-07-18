@@ -9,7 +9,7 @@ from pathlib import Path
 
 from changelog import load_changelog_json
 
-__version__ = "2.1.14"
+__version__ = "2.1.15"
 
 DEFAULT_LOCALE = "en-US"
 SUPPORTED_LOCALES = ("en-US", "pt-BR", "de-DE", "ru-RU", "es-ES")
