@@ -56,9 +56,18 @@ You can click **Send test** even before saving; the panel sends the URL currentl
 | **Server will start** | You (or a schedule) start the server |
 | **Server will shut down** | You stop the server |
 | **Server will restart** | Restart or recreate from the panel / nightly schedule; when the world is ready, **Server is online** also fires |
-| **Server at 80% load** | CPU or RAM crosses 80% (waits until it drops below 70% before alerting again) |
+| **Server at 80% load** | CPU or RAM crosses 80% (waits until it drops below 70% before alerting again). **Suppressed** while the server is starting or restarting (high load is expected then). |
 | **Player joins** | A Steam ID connects (uses the character name when known) |
 | **Player leaves** | A player disconnects |
+| **First-time player joins** | A Steam ID connects for the first time (tracked in `panel-data/players-seen.json`) |
+| **Player kicked via panel** | You kick a player from the Players tab (RCON `kick`) |
+| **Player banned via panel** | You ban a player from the Players tab (RCON `banSteamId`) |
+| **Player died** | A character dies (`Got character ZDOID from Name : 0:0` in server logs) |
+| **Player killed player (PvP)** | Kill-feed line in logs (e.g. `Ragnar killed by Bjorn`) — requires a mod that writes PvP kills to logs |
+| **Boss defeated** | A new `defeated_*` global key appears (polled via RCON `globalKeys` every ~60s) |
+| **Raid/event started** | A random event starts (`Random event set: army_theelder` in server logs) |
+| **Scheduled backup in ~5 min** | About 5 minutes before a panel-scheduled backup or container `BACKUPS_CRON` run |
+| **Scheduled restart in ~5 min** | About 5 minutes before a panel-scheduled restart |
 | **Player chat with prefix** | In-game chat line with your prefix (see chat bridge) |
 | **New mod added** | A mod is installed via Thunderstore URL or upload |
 | **Mod updated** | A linked Thunderstore mod is updated |
@@ -109,6 +118,49 @@ The panel:
 3. On the **next join**, uses the cached name immediately (e.g. `Exforgant joined the server.`)
 
 Leave alerts use the same cache.
+
+### Player death
+
+Vanilla Valheim logs deaths as:
+
+```
+Got character ZDOID from CharacterName : 0:0
+```
+
+The panel scans Docker and BepInEx logs every 15 seconds.
+
+### PvP kills
+
+Vanilla logs do **not** record who killed whom — only that the character died. Enable **Player killed player (PvP)** when you use a mod that writes kill-feed lines to the logs (for example Valheim PvP Tweaks). Supported patterns include:
+
+- `Victim killed by Killer`
+- `Killer killed Victim`
+- `Victim was slain by Killer`
+
+If both **Player died** and **PvP kill** are enabled, a PvP kill suppresses the duplicate death alert for the same victim in the same scan.
+
+### Boss defeated
+
+Requires **Modded (BepInEx)** mode with the bundled **ValheimRcon** mod enabled. The panel polls RCON `globalKeys` about once per minute and notifies when a new `defeated_*` key appears (Eikthyr, The Elder, Bonemass, etc.).
+
+The first poll after enabling the toggle **seeds** existing keys silently — bosses already defeated on your world are not re-announced.
+
+### Raid / random event started
+
+Vanilla Valheim logs random events as:
+
+```
+Random event set: army_theelder
+```
+
+The panel scans Docker and BepInEx logs every 15 seconds. Common events include Eikthyr, The Elder, Bonemass, and Moder army raids.
+
+### Scheduled backup / restart warning
+
+When **Scheduled backup in ~5 min** or **Scheduled restart in ~5 min** is enabled, the panel warns once about **5 minutes** before:
+
+- A **panel schedule** job (Schedule tab) for backup or restart
+- A **container world backup** via `BACKUPS_CRON` (for the backup warning only)
 
 ---
 
