@@ -1,12 +1,25 @@
 // Servidor: .env básico + listas de jogadores + capacidade (RAM e jogadores).
 
+import {
+  VALHEIM_NAMED_COLORS,
+  buildColoredServerName,
+  emptyColorPart,
+  findHexPartIndex,
+  normalizeColorValue,
+  parseColoredServerName,
+  previewColoredServerName,
+  validateColoredServerName,
+} from "../server_name_colors.js";
+
 const ENV_FIELD_KEYS = ["SERVER_ARGS"];
 const LIST_KEYS = ["admin", "banned", "permitted"];
 const DEFAULT_SERVER_NAME_META = {
   branding_enabled: true,
-  suffix: " - Powered by Vikinger Panel",
+  suffix: " - Powered by VKP",
   effective_name: "",
 };
+
+const EMPTY_COLOR_PARTS = () => [emptyColorPart()];
 
 export const server = {
   envValues: {},
@@ -15,6 +28,7 @@ export const server = {
   showServerPass: false,
   selectedWorld: "",
   serverNameBase: "",
+  serverNameColorParts: EMPTY_COLOR_PARTS(),
   showServerNameBranding: false,
   serverNameMeta: { ...DEFAULT_SERVER_NAME_META },
   capacity: {
@@ -67,6 +81,76 @@ export const server = {
     }
   },
 
+  getValheimNamedColors() {
+    return VALHEIM_NAMED_COLORS;
+  },
+
+  syncColorPartsFromBase() {
+    this.serverNameColorParts = parseColoredServerName(this.serverNameBase || "");
+  },
+
+  onServerNameColorPartsChange() {
+    const hexIdx = findHexPartIndex(this.serverNameColorParts);
+    if (hexIdx >= 0) {
+      this.serverNameColorParts.forEach((part, i) => {
+        if (i !== hexIdx) part.color = "";
+      });
+    }
+    const validation = validateColoredServerName(this.serverNameColorParts);
+    if (!validation.ok) return;
+    this.serverNameBase = buildColoredServerName(this.serverNameColorParts);
+  },
+
+  addServerNameColorPart(afterIdx = null) {
+    const insertAt = afterIdx == null ? this.serverNameColorParts.length : afterIdx + 1;
+    this.serverNameColorParts.splice(insertAt, 0, emptyColorPart());
+    this.onServerNameColorPartsChange();
+  },
+
+  removeServerNameColorPart(idx) {
+    if (this.serverNameColorParts.length <= 1) return;
+    this.serverNameColorParts.splice(idx, 1);
+    this.onServerNameColorPartsChange();
+  },
+
+  serverNamePartLabel(idx) {
+    return this.t("server.serverNameColors.fragment", { n: idx + 1 });
+  },
+
+  serverNamePartColorDisabled(idx) {
+    const hexIdx = findHexPartIndex(this.serverNameColorParts);
+    return hexIdx >= 0 && idx !== hexIdx;
+  },
+
+  serverNameDistinctColors() {
+    return [...new Set(
+      this.serverNameColorParts
+        .map((p) => normalizeColorValue(p.color))
+        .filter(Boolean),
+    )];
+  },
+
+  serverNameColorPreviewHtml() {
+    return previewColoredServerName(this.serverNameColorParts);
+  },
+
+  serverNameColorValidation() {
+    return validateColoredServerName(this.serverNameColorParts);
+  },
+
+  serverNameAdvancedPreviewHtml() {
+    const raw = (this.envValues.SERVER_NAME || "").trim();
+    if (!raw) return '<span class="text-gray-600">—</span>';
+    const suffix = this.serverNameMeta.suffix || DEFAULT_SERVER_NAME_META.suffix;
+    let base = raw;
+    let showSuffix = "";
+    if (this.serverNameMeta.branding_enabled && raw.endsWith(suffix)) {
+      base = raw.slice(0, -suffix.length).trimEnd();
+      showSuffix = suffix;
+    }
+    return previewColoredServerName(parseColoredServerName(base), { suffix: showSuffix });
+  },
+
   onServerNameBrandingToggle() {
     const suffix = this.serverNameMeta.suffix || DEFAULT_SERVER_NAME_META.suffix;
     if (this.showServerNameBranding) {
@@ -107,6 +191,7 @@ export const server = {
     this.serverNameMeta = data.server_name_meta || { ...DEFAULT_SERVER_NAME_META };
     const values = data.values || {};
     this.serverNameBase = (values.SERVER_NAME || "").trim();
+    this.syncColorPartsFromBase();
     Object.assign(this.envValues, values);
     const suffix = this.serverNameMeta.suffix || DEFAULT_SERVER_NAME_META.suffix;
     if (this.serverNameMeta.branding_enabled) {
@@ -232,6 +317,11 @@ export const server = {
   listEditorRedo(key) { window.PanelEditor?.get(`list-${key}`)?.redo(); },
 
   async saveEnv(restart = false) {
+    const colorCheck = this.serverNameColorValidation();
+    if (!colorCheck.ok) {
+      this.toast(this.t(`server.serverNameColors.errors.${colorCheck.code}`), "error");
+      return;
+    }
     return this.withBusy(restart ? "saveEnvRestart" : "saveEnv", async () => {
       try {
         const data = await this.api("PUT", "/api/config/env", { values: this.buildEnvPayload() });

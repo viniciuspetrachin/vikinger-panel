@@ -1,5 +1,7 @@
 """Tests for server name branding suffix."""
 
+import pytest
+
 from server_name_branding import (
     SERVER_NAME_SUFFIX,
     apply_env_save,
@@ -54,6 +56,21 @@ def test_prepare_env_for_api_when_branding_off():
     payload = prepare_env_for_api(env)
     assert payload["values"]["SERVER_NAME"] == "Plain"
     assert payload["server_name_meta"]["branding_enabled"] is False
+
+
+def test_strip_legacy_branding_suffix():
+    assert strip_server_name_branding("MYVALHEIM - Powered by Vikinger Panel") == "MYVALHEIM"
+
+
+def test_apply_env_save_colored_name():
+    result = apply_env_save({"SERVER_NAME": "<color=red>Hot</color><color=blue>Server</color>"})
+    assert result["SERVER_NAME"].startswith("<color=red>Hot</color>")
+    assert result["SERVER_NAME"].endswith(" - Powered by VKP")
+
+
+def test_apply_env_save_hex_two_colors_fails():
+    with pytest.raises(ValueError, match="Hex color"):
+        apply_env_save({"SERVER_NAME": "<color=#FF0000>A</color><color=#0000FF>B</color>"})
 
 
 def test_effective_server_name():

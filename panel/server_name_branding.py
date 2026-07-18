@@ -1,16 +1,18 @@
-"""Invisible server name branding suffix for Vikinger Panel."""
+"""Invisible server name branding suffix for VKP (Vikinger Panel)."""
 
 from __future__ import annotations
 
-SERVER_NAME_SUFFIX = " - Powered by Vikinger Panel"
+SERVER_NAME_SUFFIX = " - Powered by VKP"
+LEGACY_SERVER_NAME_SUFFIX = " - Powered by Vikinger Panel"
 SERVER_NAME_BRANDING_KEY = "SERVER_NAME_BRANDING"
 SERVER_NAME_MAX_LEN = 200
 
 
 def strip_server_name_branding(name: str) -> str:
     text = (name or "").strip()
-    if text.endswith(SERVER_NAME_SUFFIX):
-        return text[: -len(SERVER_NAME_SUFFIX)].rstrip()
+    for suffix in (SERVER_NAME_SUFFIX, LEGACY_SERVER_NAME_SUFFIX):
+        if text.endswith(suffix):
+            return text[: -len(suffix)].rstrip()
     return text
 
 
@@ -70,6 +72,10 @@ def apply_env_save(values: dict[str, str]) -> dict[str, str]:
     base = strip_server_name_branding(raw_name)
     if len(base) > SERVER_NAME_MAX_LEN:
         raise ValueError(f"Server name too long (max {SERVER_NAME_MAX_LEN} characters)")
+
+    from server_name_colors import validate_colored_server_name
+
+    validate_colored_server_name(base)
 
     if (out.get(SERVER_NAME_BRANDING_KEY) or "").strip().lower() == "off":
         out["SERVER_NAME"] = base

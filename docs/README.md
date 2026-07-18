@@ -28,8 +28,8 @@ You do **not** need to know programming. Basic copy-paste in a terminal is enoug
 - [Report a bug](https://github.com/viniciuspetrachin/vikinger-panel/issues)
 - [Support the project](https://github.com/sponsors/viniciuspetrachin/dashboard)
 
-## What is Vikinger Panel?
+## What is VKP (Vikinger Panel)?
 
-A **free web panel** that runs next to your Valheim server in Docker. You manage worlds, passwords, mods, backups, and player lists from **http://localhost:8080** instead of SSH and text files.
+**VKP** is the short name for **Vikinger Panel** — a free web panel that runs next to your Valheim server in Docker. You manage worlds, passwords, mods, backups, and player lists from **http://localhost:8080** instead of SSH and text files.
 
 Built for **self-hosters** — home labs, friend groups, and small communities — under the [Polyform Shield](../LICENSE) license.

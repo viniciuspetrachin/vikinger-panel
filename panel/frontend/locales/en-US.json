@@ -2,7 +2,7 @@
   "meta": {
     "locale": "en-US",
     "appTitle": "Vikinger Panel",
-    "appSubtitle": "Valheim Server Manager"
+    "appSubtitle": "VKP — Valheim Server Manager (Vikinger Panel)"
   },
   "nav": {
     "sections": {
@@ -1017,6 +1017,25 @@
         "hint": "E.g. -crossplay to enable crossplay."
       }
     },
+    "serverNameColors": {
+      "preview": "Preview",
+      "fragment": "Fragment {n}",
+      "addPart": "Add fragment after this one",
+      "removePart": "Remove fragment",
+      "color": "Color",
+      "noColor": "Default (no tag)",
+      "hexGold": "Gold (#FFD700)",
+      "hexOrange": "Orange (#FF6600)",
+      "hexGreen": "Green (#00FF00)",
+      "hexWhite": "White (#FFFFFF)",
+      "hexHint": "Hex allows color on one fragment only — other fragments use the default.",
+      "colorsUsed": "{count}/2 colors used",
+      "hint": "Split the name into fragments (+/−). “Default” does not count — up to 2 different colors total, or one hex color. Tags are applied automatically.",
+      "errors": {
+        "hexSingleOnly": "Hex color allows only one colored part.",
+        "maxTwoColors": "At most two different named colors are supported."
+      }
+    },
     "capacity": {
       "title": "Server capacity",
       "subtitle": "Container RAM limit and maximum player count.",
@@ -1391,7 +1410,7 @@
     }
   },
   "about": {
-    "subtitle": "Web manager for a dockerized Valheim server",
+    "subtitle": "VKP — web manager for a dockerized Valheim server (Vikinger Panel)",
     "fields": {
       "version": "Version",
       "build": "Build",
@@ -1421,6 +1440,7 @@
     },
     "serverName": {
       "advanced": "Edit full server name",
+      "advancedHint": "Raw SERVER_NAME as sent to Valheim, including color tags and the optional “Powered by VKP” suffix (Vikinger Panel branding).",
       "save": "Save server name"
     },
     "credits": {

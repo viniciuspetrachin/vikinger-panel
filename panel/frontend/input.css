@@ -857,7 +857,14 @@
     border-radius: 0.5rem;
     background: rgb(var(--v-900) / 0.65);
   }
-  .map-mod-cta p { margin: 0; font-size: 0.75rem; color: rgb(var(--g-400)); max-width: 28rem; }
+  .server-name-preview {
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+    word-break: break-word;
+    text-shadow: 0 1px 2px rgb(0 0 0 / 0.45);
+  }
+  .server-name-part-row + .server-name-part-row { margin-top: 0; }
   .map-mod-cta-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
 }
 

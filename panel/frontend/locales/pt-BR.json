@@ -2,7 +2,7 @@
   "meta": {
     "locale": "pt-BR",
     "appTitle": "Vikinger Panel",
-    "appSubtitle": "Gerenciador de Servidor Valheim"
+    "appSubtitle": "VKP — Gerenciador Valheim (Vikinger Panel)"
   },
   "nav": {
     "sections": {
@@ -1017,6 +1017,25 @@
         "hint": "Por exemplo -crossplay para ativar o jogo cruzado."
       }
     },
+    "serverNameColors": {
+      "preview": "Pré-visualização",
+      "fragment": "Fragmento {n}",
+      "addPart": "Adicionar fragmento abaixo",
+      "removePart": "Remover fragmento",
+      "color": "Cor",
+      "noColor": "Padrão (sem tag)",
+      "hexGold": "Dourado (#FFD700)",
+      "hexOrange": "Laranja (#FF6600)",
+      "hexGreen": "Verde (#00FF00)",
+      "hexWhite": "Branco (#FFFFFF)",
+      "hexHint": "Hex permite cor em um fragmento só — os outros usam o padrão.",
+      "colorsUsed": "{count}/2 cores usadas",
+      "hint": "Divida o nome em fragmentos (+/−). “Padrão” não conta — até 2 cores diferentes no total, ou uma cor hex. As tags são aplicadas automaticamente.",
+      "errors": {
+        "hexSingleOnly": "Cor hexadecimal permite apenas uma parte colorida.",
+        "maxTwoColors": "No máximo duas cores nomeadas diferentes."
+      }
+    },
     "capacity": {
       "title": "Capacidade do servidor",
       "subtitle": "Limite de RAM do contêiner e contagem máxima de jogadores.",
@@ -1391,7 +1410,7 @@
     }
   },
   "about": {
-    "subtitle": "Gerenciador web para um servidor Valheim dockerizado",
+    "subtitle": "VKP — gerenciador web para servidor Valheim em Docker (Vikinger Panel)",
     "fields": {
       "version": "Versão",
       "build": "Construir",
@@ -1421,6 +1440,7 @@
     },
     "serverName": {
       "advanced": "Editar nome completo do servidor",
+      "advancedHint": "SERVER_NAME bruto enviado ao Valheim, incluindo tags de cor e o sufixo opcional “Powered by VKP” (marca do Vikinger Panel).",
       "save": "Salvar nome"
     },
     "credits": {

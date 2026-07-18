@@ -231,7 +231,7 @@ def test_put_env(client):
     r = client.put("/api/config/env", json={"values": {"SERVER_NAME": "Novo"}})
     assert r.status_code == 200
     assert r.json()["values"]["SERVER_NAME"] == "Novo"
-    assert r.json()["server_name_meta"]["effective_name"] == "Novo - Powered by Vikinger Panel"
+    assert r.json()["server_name_meta"]["effective_name"] == "Novo - Powered by VKP"
 
 
 def test_put_env_branding_opt_out(client):
