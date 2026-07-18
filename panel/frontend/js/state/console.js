@@ -107,7 +107,7 @@ export const console = {
     if (this.page === "dashboard" && typeof this.loadDashLogs === "function") {
       await this.loadDashLogs();
       setTimeout(() => this.loadDashLogs(), 600);
-    } else if (this.page === "logs" && typeof this.loadLogs === "function") {
+    } else if (this.page === "console" && typeof this.loadLogs === "function") {
       await this.loadLogs();
       setTimeout(() => this.loadLogs(), 600);
     }

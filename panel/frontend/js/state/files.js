@@ -21,13 +21,14 @@ const BEPINEX_PROTECTED_CFG = new Set(["BepInEx.cfg", "org.tristan.rcon.cfg"]);
 const LIST_FILES = new Set(["adminlist.txt", "bannedlist.txt", "permittedlist.txt"]);
 
 const FILE_SCOPE_IDS = ["config", "data"];
-const FILE_TYPE_FILTER_IDS = ["", "config", "dll", "plugin", "world", "list", "backup", "log"];
+const FILE_TYPE_FILTER_IDS = ["", "config", "dll", "plugin", "world", "json", "list", "backup", "log"];
 const FILE_TYPE_FILTER_KEYS = {
   "": "all",
   config: "config",
   dll: "dll",
   plugin: "plugin",
   world: "world",
+  json: "json",
   list: "list",
   backup: "backup",
   log: "log",
@@ -51,6 +52,9 @@ export const files = {
   cfgExpandedSections: {},
   fileTreeLazy: false,
   fileFolderLoading: {},
+  deleteFileModalOpen: false,
+  deleteFileInfo: null,
+  deleteFileLoading: false,
 
   getFileScopes() {
     void this.localeVersion;
@@ -109,13 +113,32 @@ export const files = {
     const name = (item.name || "").toLowerCase();
     const ext = name.includes(".") ? name.slice(name.lastIndexOf(".")) : "";
     if (this.isBepinexPluginCfg(item.path)) return "config";
+    if (ext === ".json") return "json";
+    if (path.includes("/plugins/") && ext === ".dll") return "plugin";
     if (ext === ".dll") return "dll";
     if (path.includes("/plugins/")) return "plugin";
-    if (ext === ".fwl" || ext === ".db" || path.includes("worlds_local/")) return "world";
+    const isWorldBackup =
+      name.includes("_backup") || name.endsWith(".bak") || path.includes("/backups/");
+    if ((ext === ".fwl" || ext === ".db" || path.includes("worlds_local/")) && !isWorldBackup) {
+      return "world";
+    }
+    if (isWorldBackup || (ext === ".zip" && path.includes("backups/"))) return "backup";
     if (LIST_FILES.has(name)) return "list";
-    if (ext === ".zip" && path.includes("backups/")) return "backup";
     if (ext === ".log") return "log";
+    if (CONFIG_EXTS.has(ext)) return "config";
     return null;
+  },
+
+  isJsonFile(path) {
+    return (path || "").toLowerCase().endsWith(".json");
+  },
+
+  formatJsonContent(text) {
+    try {
+      return JSON.stringify(JSON.parse(text), null, 2);
+    } catch {
+      return text;
+    }
   },
 
   isBepinexPluginCfg(path) {
@@ -329,7 +352,7 @@ export const files = {
       try {
         const data = await this.api("GET", `/api/files/read?path=${encodeURIComponent(path)}`);
         this.editPath = path;
-        this.editContent = data.content;
+        this.editContent = this.isJsonFile(path) ? this.formatJsonContent(data.content) : data.content;
         this.cfgDocument = null;
         this.cfgStructured = false;
         this.cfgEditorMode = "raw";
@@ -356,7 +379,8 @@ export const files = {
         }
         await this.$nextTick();
         if (this.cfgEditorMode === "raw") {
-          await this.mountFileEditor(data.content);
+          const editorContent = this.isJsonFile(path) ? this.editContent : data.content;
+          await this.mountFileEditor(editorContent);
         } else {
           window.PanelEditor?.destroy("file");
           const el = document.getElementById("file-editor-host");
@@ -582,6 +606,67 @@ export const files = {
     this.fileEditorDraftPending = false;
   },
 
+  beautifyJsonFile() {
+    const editor = window.PanelEditor?.get("file");
+    const raw = editor ? editor.getContent() : this.editContent;
+    try {
+      const formatted = JSON.stringify(JSON.parse(raw), null, 2);
+      if (editor) {
+        editor.setContent(formatted);
+      } else {
+        this.editContent = formatted;
+      }
+      this.fileEditorDirty = true;
+    } catch {
+      this.toast(this.t("files.json.invalid"), "error");
+    }
+  },
+
+  async openDeleteFileModal() {
+    if (!this.editPath) return;
+    this.deleteFileModalOpen = true;
+    this.deleteFileLoading = true;
+    this.deleteFileInfo = null;
+    try {
+      this.deleteFileInfo = await this.api(
+        "GET",
+        `/api/files/delete-info?path=${encodeURIComponent(this.editPath)}`,
+      );
+    } catch (e) {
+      this.toast(e.message, "error");
+      this.closeDeleteFileModal();
+    } finally {
+      this.deleteFileLoading = false;
+    }
+  },
+
+  closeDeleteFileModal() {
+    this.deleteFileModalOpen = false;
+    this.deleteFileInfo = null;
+    this.deleteFileLoading = false;
+  },
+
+  async confirmDeleteFile() {
+    if (!this.editPath) return;
+    const path = this.editPath;
+    return this.withBusy("deleteFile", async () => {
+      try {
+        await this.api("DELETE", `/api/files/delete?path=${encodeURIComponent(path)}`);
+        this.toast(this.t("common.toasts.fileDeleted"));
+        this.editPath = "";
+        this.editContent = "";
+        this.fileEditorDirty = false;
+        this.cfgDocument = null;
+        this.cfgStructured = false;
+        window.PanelEditor?.destroy("file");
+        this.closeDeleteFileModal();
+        await this._fetchFileTree();
+      } catch (e) {
+        this.toast(e.message, "error");
+      }
+    });
+  },
+
   async saveFile() {
     return this.withBusy("saveFile", async () => {
       try {
@@ -600,7 +685,15 @@ export const files = {
           return;
         }
         const editor = window.PanelEditor?.get("file");
-        const content = editor ? editor.getContent() : this.editContent;
+        let content = editor ? editor.getContent() : this.editContent;
+        if (this.isJsonFile(this.editPath)) {
+          try {
+            content = JSON.stringify(JSON.parse(content), null, 2);
+          } catch {
+            this.toast(this.t("files.json.invalid"), "error");
+            return;
+          }
+        }
         await this.api("PUT", `/api/files/write?path=${encodeURIComponent(this.editPath)}`, { content });
         this.editContent = content;
         editor?.setContent(content, { markSaved: true });

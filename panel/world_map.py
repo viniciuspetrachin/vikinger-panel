@@ -185,12 +185,63 @@ def _read_7bit_int(data: bytes, offset: int) -> tuple[int, int]:
             raise ValueError("7-bit int too long")
 
 
+def _write_7bit_int(value: int) -> bytes:
+    """Write a .NET BinaryWriter 7-bit encoded integer."""
+    if value < 0:
+        raise ValueError("7-bit int must be non-negative")
+    out = bytearray()
+    while True:
+        byte = value & 0x7F
+        value >>= 7
+        if value:
+            out.append(byte | 0x80)
+        else:
+            out.append(byte)
+            break
+    return bytes(out)
+
+
 def _read_zpackage_string(data: bytes, offset: int) -> tuple[str, int]:
     length, offset = _read_7bit_int(data, offset)
     if length < 0 or offset + length > len(data):
         raise ValueError("truncated string")
     text = data[offset : offset + length].decode("utf-8", errors="replace")
     return text, offset + length
+
+
+def _write_zpackage_string(text: str) -> bytes:
+    raw = (text or "").encode("utf-8")
+    return _write_7bit_int(len(raw)) + raw
+
+
+def invalidate_png_cache(world_name: Optional[str] = None) -> None:
+    """Drop cached map PNGs (all worlds, or only those matching ``world_name``)."""
+    with _PNG_CACHE_LOCK:
+        if world_name is None:
+            _PNG_CACHE.clear()
+            return
+        for key in list(_PNG_CACHE):
+            if key and key[0] == world_name:
+                _PNG_CACHE.pop(key, None)
+
+
+def serversidemap_dll_installed(*plugins_dirs: Any) -> bool:
+    """True when a ServerSideMap DLL is present under any plugins directory."""
+    for raw in plugins_dirs:
+        if not raw:
+            continue
+        root = Path(raw)
+        if not root.is_dir():
+            continue
+        for dll in root.glob("*.dll"):
+            if "serversidemap" in dll.name.lower():
+                return True
+        disabled = root / "disabled"
+        if disabled.is_dir():
+            for dll in disabled.glob("*.dll"):
+                if "serversidemap" in dll.name.lower():
+                    return True
+    return False
 
 
 def pin_display_name(raw: str) -> str:
@@ -239,7 +290,7 @@ def parse_serversidemap(
         if pin_count < 0 or pin_count > 50_000:
             return None
         pins: list[dict] = []
-        for _ in range(pin_count):
+        for pin_index in range(pin_count):
             name, offset = _read_zpackage_string(raw, offset)
             if offset + 17 > len(raw):
                 break
@@ -249,11 +300,11 @@ def parse_serversidemap(
             offset += 4
             checked = raw[offset] != 0
             offset += 1
-            if not (_plausible_coord(x) and _plausible_coord(z)):
-                continue
+            # Keep every structurally valid pin so ``index`` matches the file.
             type_name = PIN_TYPE_NAMES.get(pin_type, "pin")
             pins.append(
                 {
+                    "index": pin_index,
                     "type": type_name,
                     "pin_type": pin_type,
                     "tag": name,
@@ -263,6 +314,7 @@ def parse_serversidemap(
                     "z": round(z, 2),
                     "checked": bool(checked),
                     "source": "serversidemap",
+                    "on_map": _plausible_coord(x) and _plausible_coord(z),
                 }
             )
         explored_count = sum(1 for b in explored if b)
@@ -278,6 +330,90 @@ def parse_serversidemap(
         return result
     except Exception:
         return None
+
+
+def write_serversidemap(
+    path: Any,
+    *,
+    version: int,
+    map_size: int,
+    explored: bytes,
+    pins: list[dict],
+) -> None:
+    """Rewrite a ServerSideMap ``.explored`` file (atomic replace)."""
+    expected = map_size * map_size
+    if len(explored) != expected:
+        raise ValueError(f"explored length {len(explored)} != {expected}")
+    if version < 1 or map_size < 8 or map_size > 8192:
+        raise ValueError("invalid ServerSideMap header")
+    if len(pins) > 50_000:
+        raise ValueError("too many pins")
+
+    blob = bytearray()
+    blob += struct.pack("<ii", int(version), int(map_size))
+    blob += explored
+    blob += struct.pack("<i", len(pins))
+    for pin in pins:
+        name = pin.get("tag")
+        if name is None:
+            name = pin.get("name") or ""
+        blob += _write_zpackage_string(str(name))
+        blob += struct.pack(
+            "<fff",
+            float(pin.get("x", 0.0)),
+            float(pin.get("y", 0.0)),
+            float(pin.get("z", 0.0)),
+        )
+        blob += struct.pack("<i", int(pin.get("pin_type", 0)))
+        blob += struct.pack("<?", bool(pin.get("checked", False)))
+
+    dest = Path(path)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_suffix(dest.suffix + ".tmp")
+    tmp.write_bytes(bytes(blob))
+    tmp.replace(dest)
+
+
+def delete_serversidemap_pin(
+    worlds_dir: Any,
+    world_name: str,
+    pin_index: int,
+) -> dict:
+    """Remove one pin from the world's ServerSideMap file.
+
+    Returns ``{version, map_size, pins, explored_count, explored_total}`` after
+    the rewrite. Raises ``FileNotFoundError`` when the file is missing/unreadable,
+    ``IndexError`` for a bad index.
+    """
+    path = serversidemap_path(worlds_dir, world_name)
+    parsed = parse_serversidemap(path, include_explored=True)
+    if not parsed or "explored" not in parsed:
+        raise FileNotFoundError(f"ServerSideMap data not found for {world_name}")
+    pins = list(parsed["pins"])
+    if pin_index < 0 or pin_index >= len(pins):
+        raise IndexError(f"pin index {pin_index} out of range")
+
+    bak = path.with_suffix(path.suffix + ".bak")
+    try:
+        bak.write_bytes(path.read_bytes())
+    except Exception:
+        pass
+
+    del pins[pin_index]
+    write_serversidemap(
+        path,
+        version=int(parsed["version"]),
+        map_size=int(parsed["map_size"]),
+        explored=parsed["explored"],
+        pins=pins,
+    )
+    invalidate_png_cache(world_name)
+
+    # Re-parse so returned pin indices match the rewritten file.
+    refreshed = parse_serversidemap(path)
+    if not refreshed:
+        raise ValueError("failed to re-read ServerSideMap after delete")
+    return refreshed
 
 
 def _png_chunk(tag: bytes, data: bytes) -> bytes:
@@ -516,7 +652,7 @@ def build_fog_png(
     world_name: str,
     worlds_dir: Any,
     *,
-    out_size: int = 512,
+    out_size: int = 1024,
     reveal_all: bool = False,
     seed: Optional[str] = None,
 ) -> bytes:
@@ -583,7 +719,13 @@ def build_fog_png(
     return png
 
 
-def build_map(world_name: str, worlds_dir: Any, data_dir: Any = None) -> dict:
+def build_map(
+    world_name: str,
+    worlds_dir: Any,
+    data_dir: Any = None,
+    *,
+    plugins_dirs: Any = None,
+) -> dict:
     """Build a map payload for ``world_name``.
 
     Looks for ``.fwl``, ``.db`` and optional ServerSideMap ``.explored`` under
@@ -601,7 +743,17 @@ def build_map(world_name: str, worlds_dir: Any, data_dir: Any = None) -> dict:
         "total": 0,
         "image_url": f"/api/map/{world_name}/fog.png",
     }
-    mod_info = {"serversidemap": False}
+    dll_dirs: list[Any] = []
+    if plugins_dirs is None:
+        dll_dirs = []
+    elif isinstance(plugins_dirs, (str, Path)):
+        dll_dirs = [plugins_dirs]
+    else:
+        dll_dirs = list(plugins_dirs)
+    mod_info = {
+        "serversidemap": False,
+        "serversidemap_dll": serversidemap_dll_installed(*dll_dirs),
+    }
 
     if worlds is not None:
         fwl_path = worlds / f"{world_name}.fwl"
@@ -616,7 +768,7 @@ def build_map(world_name: str, worlds_dir: Any, data_dir: Any = None) -> dict:
         if ssm:
             mod_info["serversidemap"] = True
             # Prefer ServerSideMap pins; keep any portal hits that aren't near a pin.
-            pin_markers = ssm["pins"]
+            pin_markers = [p for p in ssm["pins"] if p.get("on_map", True)]
             markers = _merge_markers(pin_markers, markers)
             explored_info = {
                 "available": True,

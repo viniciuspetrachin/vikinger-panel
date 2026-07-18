@@ -155,6 +155,16 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Files tab:** delete files from the editor with a confirmation modal; BepInEx plugin configs show whether an active `.dll` depends on them and whether the server will recreate the file on next load.
+- **Files tab:** new **JSON** filter chip; JSON files open pre-formatted with a **Format JSON** action and validation on save.
+- **Map:** ServerSideMap shared pins use Valheim-style sprites (`mapIcons.png`), fog is clipped to the world circle, and pins can be focused or deleted from the UI (`DELETE /api/map/{world}/pins/{index}`).
+- **Map:** install hint linking to ServerSideMap on Thunderstore when the mod DLL is missing.
+
 ### Changed
 
+- **Files tab:** **Plugins** filter now lists `.dll` files under `plugins/`; **Worlds** filter hides backup worlds (`*_backup*`, `.bak`, `backups/`).
+- **Map:** higher max zoom, improved marker layout, and `serversidemap_dll` flag when the mod is installed but data is not present yet.
+
 ### Fixed
+
+- **Console / Logs:** log viewer no longer stays blank when output is empty or whitespace-only; refresh after RCON commands targets the Console page again; log polling no longer blocks on unrelated busy actions.

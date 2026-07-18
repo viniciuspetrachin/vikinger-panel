@@ -167,9 +167,11 @@ def test_parse_serversidemap_pins(tmp_path):
     assert parsed["map_size"] == 8
     assert parsed["explored_count"] == 2
     assert len(parsed["pins"]) == 2
+    assert parsed["pins"][0]["index"] == 0
     assert parsed["pins"][0]["type"] == "icon1"
     assert parsed["pins"][0]["name"] == "casa"
     assert parsed["pins"][0]["source"] == "serversidemap"
+    assert parsed["pins"][1]["index"] == 1
     assert parsed["pins"][1]["type"] == "boss"
     assert parsed["pins"][1]["name"] == "Eikthyr"
     assert parsed["pins"][1]["checked"] is True
@@ -259,3 +261,58 @@ def test_pin_display_name():
     assert wm.pin_display_name("$enemy_gdking") == "The Elder"
     assert wm.pin_display_name("casa") == "casa"
     assert wm.pin_display_name("") == "Pin"
+
+
+def test_write_and_delete_serversidemap_pin(tmp_path):
+    path = tmp_path / f"W{wm.SERVERSIDEMAP_SUFFIX}"
+    original = _make_serversidemap(
+        map_size=8,
+        explored_cells=[(1, 1), (2, 2), (3, 3)],
+        pins=[
+            ("a", 10.0, 0.0, 20.0, 1, False),
+            ("b", 30.0, 1.0, 40.0, 9, True),
+            ("c", -5.0, 0.0, 7.0, 3, False),
+        ],
+    )
+    path.write_bytes(original)
+    before = wm.parse_serversidemap(path, include_explored=True)
+    assert before is not None
+    fog = before["explored"]
+
+    refreshed = wm.delete_serversidemap_pin(tmp_path, "W", 1)
+    assert len(refreshed["pins"]) == 2
+    assert [p["tag"] for p in refreshed["pins"]] == ["a", "c"]
+    assert [p["index"] for p in refreshed["pins"]] == [0, 1]
+
+    after = wm.parse_serversidemap(path, include_explored=True)
+    assert after is not None
+    assert after["explored"] == fog
+    assert after["explored_count"] == 3
+    assert path.with_suffix(path.suffix + ".bak").read_bytes() == original
+
+
+def test_delete_serversidemap_pin_errors(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        wm.delete_serversidemap_pin(tmp_path, "Missing", 0)
+    path = tmp_path / f"W{wm.SERVERSIDEMAP_SUFFIX}"
+    path.write_bytes(_make_serversidemap(pins=[("only", 1.0, 0.0, 2.0, 1, False)]))
+    with pytest.raises(IndexError):
+        wm.delete_serversidemap_pin(tmp_path, "W", 5)
+
+
+def test_serversidemap_dll_installed(tmp_path):
+    plugins = tmp_path / "plugins"
+    plugins.mkdir()
+    assert wm.serversidemap_dll_installed(plugins) is False
+    (plugins / "ServerSideMap.dll").write_bytes(b"x")
+    assert wm.serversidemap_dll_installed(plugins) is True
+    assert wm.serversidemap_dll_installed(tmp_path / "missing") is False
+
+
+def test_build_map_serversidemap_dll_flag(tmp_path):
+    plugins = tmp_path / "plugins"
+    plugins.mkdir()
+    (plugins / "ServerSideMap.dll").write_bytes(b"x")
+    result = wm.build_map("Ghost", tmp_path, plugins_dirs=[plugins])
+    assert result["mod"]["serversidemap"] is False
+    assert result["mod"]["serversidemap_dll"] is True

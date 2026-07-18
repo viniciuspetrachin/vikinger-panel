@@ -275,6 +275,26 @@ def list_installed_dll_stems(plugins_dir: Path, disabled_dir: Path) -> set[str]:
     return stems
 
 
+def find_plugin_for_cfg(
+    cfg_name: str,
+    cfg_dir: Path,
+    plugins_dir: Path,
+    disabled_dir: Path,
+) -> Optional[dict]:
+    """Return the plugin (.dll) linked to a BepInEx cfg file, if any."""
+    index = build_cfg_index(cfg_dir)
+    entry = next((e for e in index if e.name == cfg_name), None)
+    if not entry:
+        return None
+    for enabled, base in ((True, plugins_dir), (False, disabled_dir)):
+        if not base.exists():
+            continue
+        for dll in sorted(base.glob("*.dll")):
+            if match_dll_to_cfg(dll.stem, [entry]):
+                return {"name": dll.name, "enabled": enabled}
+    return None
+
+
 def find_orphaned_configs(
     cfg_dir: Path,
     plugins_dir: Path,

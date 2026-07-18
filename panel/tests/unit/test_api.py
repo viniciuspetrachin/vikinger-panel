@@ -1384,6 +1384,26 @@ def test_file_delete_valid(client):
     assert r.status_code == 200
 
 
+def test_file_delete_info(client, env_dir):
+    plugins = env_dir["plugins"]
+    (plugins / "some.mod.dll").write_bytes(b"MZ")
+    r = client.get("/api/files/delete-info?path=config/bepinex/some.mod.cfg")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["is_bepinex_cfg"] is True
+    assert data["plugin"]["name"] == "some.mod.dll"
+    assert data["plugin"]["enabled"] is True
+    assert data["will_recreate_cfg"] is True
+
+
+def test_file_delete_info_orphan_cfg(client):
+    r = client.get("/api/files/delete-info?path=config/bepinex/some.mod.cfg")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["plugin"] is None
+    assert data["will_recreate_cfg"] is False
+
+
 def test_file_delete_protected(client):
     r = client.delete("/api/files/delete?path=.env")
     assert r.status_code == 403
@@ -2011,6 +2031,7 @@ def test_map_endpoint(client):
     assert "markers" in body and "bounds" in body
     assert "explored" in body and "mod" in body
     assert body["mod"]["serversidemap"] is False
+    assert body["mod"]["serversidemap_dll"] is False
     assert body["explored"]["image_url"] == "/api/map/TestWorld/fog.png"
     fog = client.get("/api/map/TestWorld/fog.png")
     assert fog.status_code == 200
@@ -2020,6 +2041,54 @@ def test_map_endpoint(client):
     assert revealed.status_code == 200
     assert revealed.content.startswith(b"\x89PNG")
     assert revealed.content != fog.content
+
+
+def test_map_delete_pin(client, env_dir, monkeypatch):
+    import struct
+
+    import world_map as wm
+
+    def _write_7bit(value: int) -> bytes:
+        out = bytearray()
+        while True:
+            byte = value & 0x7F
+            value >>= 7
+            if value:
+                out.append(byte | 0x80)
+            else:
+                out.append(byte)
+                break
+        return bytes(out)
+
+    def _zstring(text: str) -> bytes:
+        raw = text.encode("utf-8")
+        return _write_7bit(len(raw)) + raw
+
+    map_size = 8
+    explored = bytes(map_size * map_size)
+    blob = struct.pack("<ii", 3, map_size) + explored + struct.pack("<i", 2)
+    for name, x, z, ptype in (("keep", 10.0, 20.0, 1), ("drop", 30.0, 40.0, 9)):
+        blob += _zstring(name)
+        blob += struct.pack("<fff", x, 0.0, z)
+        blob += struct.pack("<i", ptype)
+        blob += struct.pack("<?", False)
+    path = env_dir["worlds"] / f"TestWorld{wm.SERVERSIDEMAP_SUFFIX}"
+    path.write_bytes(blob)
+
+    monkeypatch.setattr(main, "container_running", lambda: True)
+    missing = client.delete("/api/map/TestWorld/pins/99")
+    assert missing.status_code == 404
+
+    r = client.delete("/api/map/TestWorld/pins/1")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is True
+    assert body["needs_restart"] is True
+    assert body["mod"]["serversidemap"] is True
+    tags = [m.get("tag") for m in body["markers"] if m.get("source") == "serversidemap"]
+    assert tags == ["keep"]
+
+    assert client.delete("/api/map/NoWorld/pins/0").status_code == 404
 
 
 def test_alert_transition_detection(env_dir, monkeypatch):

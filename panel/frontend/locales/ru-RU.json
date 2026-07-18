@@ -140,6 +140,7 @@
       "failedToCopy": "Не удалось скопировать",
       "actionCompleted": "Действие завершено",
       "fileSaved": "Файл сохранен!",
+      "fileDeleted": "Файл удалён",
       "settingsSaved": "Настройки сохранены!",
       "listsSaved": "Списки сохранены! Сервер перезапущен, если он был онлайн.",
       "limitApplied": "Применен лимит",
@@ -1289,6 +1290,7 @@
       "dll": "библиотеки DLL",
       "plugin": "Plugins",
       "world": "Миры",
+      "json": "JSON",
       "list": "Списки",
       "backup": "Резервные копии",
       "log": "Журналы"
@@ -1296,6 +1298,17 @@
     "tree": {
       "emptyFolder": "Пустая папка",
       "inaccessible": "недоступный"
+    },
+    "delete": {
+      "title": "Удалить файл",
+      "confirm": "Вы уверены, что хотите удалить {path}?",
+      "pluginWarning": "Плагин {plugin} зависит от этой конфигурации.",
+      "recreateWarning": "Сервер запущен — BepInEx пересоздаст этот файл при загрузке плагина.",
+      "pluginDisabledHint": "Связанный плагин отключён — файл не будет пересоздан автоматически."
+    },
+    "json": {
+      "beautify": "Форматировать JSON",
+      "invalid": "Неверный JSON — исправьте синтаксис перед сохранением"
     }
   },
   "logs": {
@@ -1499,11 +1512,18 @@
     "revealAllHint": "Открывает весь диск карты. Выключено — туман войны из ServerSideMap.",
     "revealAllHintNoMod": "Открывает базовую карту по сиду. Выключено — диск в тумане (ServerSideMap не обязателен).",
     "serverSideMap": "· ServerSideMap",
+    "serverSideMapTag": "ServerSideMap",
+    "installServerSideMap": "Установить ServerSideMap",
+    "openThunderstore": "Thunderstore",
+    "deletePin": "Удалить метку",
+    "deletePinConfirm": "Удалить метку \"{name}\" с общей карты?",
+    "deletePinDone": "Метка \"{name}\" удалена",
+    "deletePinNeedsRestart": "Перезапустите игровой сервер, чтобы клиенты синхронизировали метки.",
     "zoomIn": "Приблизить",
     "zoomOut": "Отдалить",
     "zoomReset": "Сбросить вид",
     "zoomResetShort": "Сброс",
-    "zoomHint": "Колёсико — зум · перетаскивание — панорама · двойной клик — сброс"
+    "zoomHint": "Колёсико — зум · перетаскивание — панорама · двойной клик — сброс · клик по метке в списке — фокус"
   },
   "metricsPage": {
     "ranges": {

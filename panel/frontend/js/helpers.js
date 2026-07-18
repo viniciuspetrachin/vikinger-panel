@@ -57,11 +57,14 @@ export const helpers = {
     if (emptyLabel === undefined) {
       emptyLabel = this.t("common.logEmpty.waitingForOutput");
     }
-    if (!text) {
+    if (!text || !String(text).trim()) {
       return `<span class="log-line log-empty">${this.escapeHtml(emptyLabel)}</span>`;
     }
-    return text.split("\n")
-      .filter((line) => line.length > 0)
+    const lines = text.split("\n").filter((line) => line.length > 0);
+    if (!lines.length) {
+      return `<span class="log-line log-empty">${this.escapeHtml(emptyLabel)}</span>`;
+    }
+    return lines
       .map((line) => `<span class="log-line">${this.formatLogLine(line)}</span>`)
       .join("\n");
   },

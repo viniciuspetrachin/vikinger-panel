@@ -56,6 +56,7 @@ from bepinex_cfg import (
     apply_setting_values,
     build_cfg_index,
     find_orphaned_configs,
+    find_plugin_for_cfg,
     is_bepinex_plugin_cfg_path,
     match_dll_to_cfg,
     parse_bepinex_cfg,
@@ -4722,13 +4723,53 @@ def api_download_file(path: str):
     return FileResponse(target, filename=target.name)
 
 
+def _protected_file_paths() -> set[Path]:
+    return {ENV_FILE.resolve(), COMPOSE_FILE.resolve()}
+
+
+def _is_protected_file(target: Path, path: str) -> bool:
+    if target.resolve() in _protected_file_paths():
+        return True
+    norm = path.replace("\\", "/")
+    if norm.startswith("config/bepinex/"):
+        name = norm.rsplit("/", 1)[-1]
+        if name in PROTECTED_CFG_NAMES or name.lower() in {n.lower() for n in PROTECTED_CFG_NAMES}:
+            return True
+    return False
+
+
+@app.get("/api/files/delete-info")
+def api_file_delete_info(path: str):
+    target = safe_path(path)
+    if not target.exists():
+        raise HTTPException(404, "Not found")
+    if _is_protected_file(target, path):
+        raise HTTPException(403, "Protected file")
+    norm_path = path.replace("\\", "/")
+    is_cfg = is_bepinex_plugin_cfg_path(norm_path)
+    plugin = None
+    if is_cfg and target.is_file():
+        plugin = find_plugin_for_cfg(
+            target.name, BEPINEX_CFG_DIR, PLUGINS_DIR, PLUGINS_DISABLED_DIR
+        )
+    running = container_running()
+    active_plugin = bool(plugin and plugin.get("enabled"))
+    return {
+        "path": path,
+        "name": target.name,
+        "is_bepinex_cfg": is_cfg,
+        "plugin": plugin,
+        "server_running": running,
+        "will_recreate_cfg": bool(is_cfg and active_plugin and running),
+    }
+
+
 @app.delete("/api/files/delete")
 def api_delete_file(path: str):
     target = safe_path(path)
     if not target.exists():
         raise HTTPException(404, "Not found")
-    protected = {ENV_FILE.resolve(), COMPOSE_FILE.resolve()}
-    if target.resolve() in protected:
+    if _is_protected_file(target, path):
         raise HTTPException(403, "Protected file")
     if target.is_dir():
         shutil.rmtree(target)
@@ -5637,11 +5678,17 @@ def api_metrics_history(
     return {"range": range, "container": container, "samples": rows}
 
 
+def _map_plugins_dirs() -> list:
+    return [PLUGINS_DIR, PLUGINS_DISABLED_DIR]
+
+
 @app.get("/api/map/{world}")
 def api_map(world: str):
     name = validate_world_name(world)
     try:
-        return world_map.build_map(name, WORLDS_DIR, DATA_DIR)
+        return world_map.build_map(
+            name, WORLDS_DIR, DATA_DIR, plugins_dirs=_map_plugins_dirs()
+        )
     except Exception:
         logger.debug("map build failed for %s", name, exc_info=True)
         return {
@@ -5656,8 +5703,43 @@ def api_map(world: str):
                 "total": 0,
                 "image_url": f"/api/map/{name}/fog.png",
             },
-            "mod": {"serversidemap": False},
+            "mod": {
+                "serversidemap": False,
+                "serversidemap_dll": world_map.serversidemap_dll_installed(
+                    *_map_plugins_dirs()
+                ),
+            },
         }
+
+
+@app.delete("/api/map/{world}/pins/{index}")
+def api_map_delete_pin(world: str, index: int):
+    """Delete a shared ServerSideMap pin by file index."""
+    name = validate_world_name(world)
+    if index < 0:
+        raise HTTPException(400, "Invalid pin index")
+    try:
+        world_map.delete_serversidemap_pin(WORLDS_DIR, name, index)
+    except FileNotFoundError:
+        raise HTTPException(404, "ServerSideMap data not found for this world")
+    except IndexError:
+        raise HTTPException(404, "Pin not found")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    except Exception:
+        logger.exception("map pin delete failed for %s index=%s", name, index)
+        raise HTTPException(500, "Failed to delete pin")
+
+    payload = world_map.build_map(
+        name, WORLDS_DIR, DATA_DIR, plugins_dirs=_map_plugins_dirs()
+    )
+    return {
+        "ok": True,
+        "markers": payload.get("markers") or [],
+        "mod": payload.get("mod") or {},
+        "explored": payload.get("explored") or {},
+        "needs_restart": container_running(),
+    }
 
 
 @app.get("/api/map/{world}/fog.png")
@@ -5670,7 +5752,7 @@ def api_map_fog(world: str, reveal: bool = Query(False)):
     """
     name = validate_world_name(world)
     try:
-        png = world_map.build_fog_png(name, WORLDS_DIR, out_size=512, reveal_all=reveal)
+        png = world_map.build_fog_png(name, WORLDS_DIR, out_size=1024, reveal_all=reveal)
     except Exception:
         logger.debug("map fog render failed for %s", name, exc_info=True)
         png = None

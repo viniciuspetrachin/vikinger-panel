@@ -383,12 +383,12 @@
                 <h3 class="section-title flex items-center gap-2 flex-wrap">
                   <span x-text="t('mapPage.title')">World map</span>
                   <span class="nav-badge" x-text="t('nav.badges.beta')">Beta</span>
+                  <span x-show="mapHasServerSideMap()" class="map-mod-tag" x-text="t('mapPage.serverSideMapTag')">ServerSideMap</span>
                 </h3>
                 <p class="text-xs text-gray-500 mt-1">
                   <span x-text="mapDisplayWorld() || t('mapPage.noWorld')"></span>
                   <span x-show="mapWorld && mapActiveWorld && mapWorld === mapActiveWorld" class="ml-1 text-valheim-gold-light/70" x-text="'(' + t('mapPage.activeWorld') + ')'"></span>
                   <span x-show="mapData.seed" class="ml-2">· <span x-text="t('mapPage.seed')">Seed</span>: <span class="font-mono text-gray-400" x-text="mapData.seed"></span></span>
-                  <span x-show="mapData.mod?.serversidemap" class="ml-2 text-valheim-gold-light/80" x-text="t('mapPage.serverSideMap')">· ServerSideMap</span>
                 </p>
                 <p x-show="mapHasFog() && !mapRevealAll" class="text-xs text-gray-500 mt-1">
                   <span x-text="t('mapPage.explored')"></span>:
@@ -410,6 +410,19 @@
                   </select>
                 </label>
                 <button class="btn btn-sm btn-ghost" @click="loadMapPage()" :disabled="mapLoading" x-text="t('common.actions.refresh')">Refresh</button>
+              </div>
+            </div>
+            <div x-show="mapDisplayWorld() && mapNeedsServerSideMapInstall()" class="map-mod-cta">
+              <p x-text="t('mapPage.hintNoMod')"></p>
+              <div class="map-mod-cta-actions">
+                <button type="button" class="btn btn-sm btn-primary"
+                        @click="installServerSideMap()"
+                        :disabled="actionPending === 'installServerSideMap'">
+                  <span x-show="actionPending === 'installServerSideMap'" class="spinner"></span>
+                  <span x-text="t('mapPage.installServerSideMap')">Install ServerSideMap</span>
+                </button>
+                <a class="btn btn-sm btn-ghost" :href="SERVERSIDEMAP_TS_URL" target="_blank" rel="noopener noreferrer"
+                   x-text="t('mapPage.openThunderstore')">Thunderstore</a>
               </div>
             </div>
             <label x-show="mapDisplayWorld()" class="flex items-start gap-2 mb-4 text-xs text-gray-400 cursor-pointer select-none max-w-xl">
@@ -434,9 +447,12 @@
                      @dblclick.prevent="mapResetView()">
                   <div class="map-viewport" :style="mapViewportStyle()">
                     <img x-show="mapHasImage()" class="map-fog-img" :key="mapFogUrl()" :src="mapFogUrl()" alt="" draggable="false" />
-                    <template x-for="(mk, i) in mapMarkers()" :key="i">
-                      <div class="map-marker" :class="[mk.type, mk.checked && 'checked']" :style="markerStyle(mk)"
-                           :title="markerLabel(mk) + ' (' + Math.round(mk.x) + ', ' + Math.round(mk.z) + ')'"></div>
+                    <template x-for="mk in mapMarkers()" :key="markerKey(mk)">
+                      <div class="map-marker" :class="[mk.type, mk.checked && 'checked', isMapMarkerFocused(mk) && 'is-focused']"
+                           :style="markerStyle(mk)"
+                           :title="markerLabel(mk) + ' (' + Math.round(mk.x) + ', ' + Math.round(mk.z) + ')'">
+                        <span x-show="isMapMarkerFocused(mk)" class="map-marker-label" x-text="markerLabel(mk)"></span>
+                      </div>
                     </template>
                   </div>
                   <p x-show="!mapLoading && !mapDisplayWorld()" class="absolute inset-0 flex items-center justify-center text-xs text-gray-500 text-center px-4 z-10" x-text="t('mapPage.noWorld')">No active world</p>
@@ -452,14 +468,20 @@
               </div>
               <div class="flex-1 min-w-0">
                 <p class="stat-label mb-2"><span x-text="t('mapPage.markers')">Markers</span> (<span x-text="mapMarkers().length"></span>)</p>
-                <p x-show="mapDisplayWorld() && !mapMarkers().length" class="text-xs text-gray-500" x-text="mapData.mod?.serversidemap ? t('mapPage.emptyPins') : t('mapPage.hintNoMod')"></p>
+                <p x-show="mapDisplayWorld() && !mapMarkers().length && mapHasServerSideMap()" class="text-xs text-gray-500" x-text="t('mapPage.emptyPins')"></p>
                 <div class="space-y-1 max-h-96 overflow-y-auto">
-                  <template x-for="(mk, i) in mapMarkers()" :key="i">
-                    <div class="flex items-center gap-2 bg-valheim-900 rounded px-3 py-1.5 text-xs">
+                  <template x-for="mk in mapMarkers()" :key="markerKey(mk)">
+                    <div class="map-pin-row" :class="isMapMarkerFocused(mk) && 'is-focused'" @click="focusMapMarker(mk)">
                       <span class="map-marker-dot" :class="mk.type"></span>
                       <span class="text-gray-300 truncate" x-text="markerLabel(mk)"></span>
                       <span x-show="mk.checked" class="text-gray-600" title="checked">✓</span>
                       <span class="ml-auto font-mono text-gray-500 shrink-0" x-text="Math.round(mk.x) + ', ' + Math.round(mk.z)"></span>
+                      <button type="button" class="map-pin-delete"
+                              x-show="canDeleteMapPin(mk)"
+                              @click.stop="deleteMapPin(mk)"
+                              :disabled="actionPending === ('deleteMapPin:' + mk.index)"
+                              :title="t('mapPage.deletePin')"
+                              x-text="t('common.actions.delete')">Delete</button>
                     </div>
                   </template>
                 </div>
@@ -567,7 +589,7 @@
               <div class="flex items-center gap-2">
                 <button class="btn btn-sm" :class="logSource === 'docker' ? 'btn-primary' : 'btn-ghost'" @click="logSource = 'docker'; loadLogs()" x-text="t('logs.docker')">Docker</button>
                 <button class="btn btn-sm" :class="logSource === 'bepinex' ? 'btn-primary' : 'btn-ghost'" @click="logSource = 'bepinex'; loadLogs()" x-text="t('logs.bepinex')">BepInEx</button>
-                <button class="btn btn-sm btn-ghost" @click="loadLogs()" :disabled="actionPending === 'loadLogs'" x-text="t('common.actions.refresh')">Refresh</button>
+                <button class="btn btn-sm btn-ghost" @click="loadLogs()" :disabled="logsLoading" x-text="t('common.actions.refresh')">Refresh</button>
               </div>
             </div>
             <div x-ref="logConsole" class="log-viewer bg-valheim-950 border border-valheim-700 rounded-lg p-4 h-80 overflow-y-auto" x-html="formatLogHtml(logs)"></div>
@@ -1990,6 +2012,7 @@
                   <p class="text-xs text-valheim-gold font-mono truncate" x-text="editPath"></p>
                   <div class="flex gap-2">
                     <a :href="'/api/files/download?path=' + encodeURIComponent(editPath)" class="btn btn-sm btn-ghost" x-text="t('common.actions.download')">Download</a>
+                    <button type="button" @click="openDeleteFileModal()" class="btn btn-sm btn-ghost-danger" x-text="t('common.actions.delete')">Delete</button>
                     <button @click="saveFile()" :disabled="isBusy('saveFile')" class="btn btn-sm btn-primary">
                       <span x-show="actionPending === 'saveFile'" class="spinner"></span>
                       <span x-show="actionPending !== 'saveFile'" x-text="t('common.actions.save')">Save</span>
@@ -2017,6 +2040,7 @@
                       <button type="button" @click="fileEditorUndo()" class="btn btn-sm btn-ghost" title="Undo">↶</button>
                       <button type="button" @click="fileEditorRedo()" class="btn btn-sm btn-ghost" title="Redo">↷</button>
                       <button type="button" @click="fileEditorOpenSearch(cfgSearchQuery)" class="btn btn-sm btn-ghost" title="Find (Ctrl+F)" x-text="t('common.actions.find')">Find</button>
+                      <button type="button" x-show="isJsonFile(editPath)" @click="beautifyJsonFile()" class="btn btn-sm btn-ghost" x-text="t('files.json.beautify')">Format JSON</button>
                     </span>
                   </template>
                   <span x-show="fileEditorDirty" id="file-editor-dirty" class="editor-dirty-badge">Unsaved changes</span>
@@ -2445,6 +2469,39 @@
           <span x-show="restoreTarget && actionPending === ('restoreBackup:' + restoreTarget.name)" class="spinner"></span>
           <span x-show="!restoreTarget || actionPending !== ('restoreBackup:' + restoreTarget.name)" x-text="t('backups.modals.restore.confirm')">Restore and restart</span>
           <span x-show="restoreTarget && actionPending === ('restoreBackup:' + restoreTarget.name)" x-text="t('common.loading.restoring')">Restoring...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete File Modal -->
+  <div class="modal-overlay" x-show="deleteFileModalOpen" x-transition @keydown.escape.window="closeDeleteFileModal()" style="display:none">
+    <div class="bg-valheim-800 rounded-xl border border-valheim-700 w-full max-w-md p-6 space-y-4" @click.outside="closeDeleteFileModal()">
+      <div class="flex items-center justify-between">
+        <h3 class="font-display text-base font-semibold text-red-400" x-text="t('files.delete.title')">Delete file</h3>
+        <button @click="closeDeleteFileModal()" class="btn btn-sm btn-ghost">✕</button>
+      </div>
+      <div x-show="deleteFileLoading" class="text-sm text-gray-400 flex items-center gap-2">
+        <span class="spinner spinner-xs"></span>
+        <span x-text="t('common.loading.loading')">Loading...</span>
+      </div>
+      <template x-if="deleteFileInfo && !deleteFileLoading">
+        <div class="space-y-3 text-sm text-gray-300">
+          <p x-text="t('files.delete.confirm', { path: deleteFileInfo.path })"></p>
+          <div x-show="deleteFileInfo.plugin" class="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-2">
+            <p class="text-amber-300" x-text="t('files.delete.pluginWarning', { plugin: deleteFileInfo.plugin?.name })"></p>
+            <p x-show="deleteFileInfo.will_recreate_cfg" class="text-amber-200/90" x-text="t('files.delete.recreateWarning')"></p>
+            <p x-show="deleteFileInfo.plugin && deleteFileInfo.server_running && !deleteFileInfo.will_recreate_cfg" class="text-gray-400 text-xs" x-text="t('files.delete.pluginDisabledHint')"></p>
+          </div>
+        </div>
+      </template>
+      <div class="flex gap-3 pt-2">
+        <button @click="closeDeleteFileModal()" class="btn btn-ghost flex-1" x-text="t('common.actions.cancel')">Cancel</button>
+        <button @click="confirmDeleteFile()" :disabled="!deleteFileInfo || deleteFileLoading || isBusy('deleteFile')"
+                class="btn btn-ghost-danger flex-1">
+          <span x-show="isBusy('deleteFile')" class="spinner"></span>
+          <span x-show="!isBusy('deleteFile')" x-text="t('common.actions.delete')">Delete</span>
+          <span x-show="isBusy('deleteFile')" x-text="t('common.loading.deleting')">Deleting...</span>
         </button>
       </div>
     </div>

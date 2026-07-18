@@ -1,4 +1,5 @@
 // Map page: seed base map + optional ServerSideMap fog/pins, zoom/pan, reveal-all.
+// Pin sprites adapted from h0tw1r3/valheim-webmap (MIT).
 
 const EMPTY_MAP = {
   world: "",
@@ -6,13 +7,16 @@ const EMPTY_MAP = {
   markers: [],
   bounds: {},
   explored: { available: false, map_size: 0, cells: 0, total: 0, image_url: null },
-  mod: { serversidemap: false },
+  mod: { serversidemap: false, serversidemap_dll: false },
 };
 
 const MAP_REVEAL_KEY = "vikinger.mapRevealAll";
 const MAP_ZOOM_MIN = 0.6;
-const MAP_ZOOM_MAX = 8;
+const MAP_ZOOM_MAX = 12;
 const MAP_ZOOM_STEP = 1.2;
+
+export const SERVERSIDEMAP_TS_URL =
+  "https://thunderstore.io/c/valheim/p/Mydayyy/ServerSideMap/";
 
 function readMapRevealPref() {
   try {
@@ -29,7 +33,13 @@ function clamp(n, lo, hi) {
   return Math.max(lo, Math.min(hi, n));
 }
 
+function markerKey(mk) {
+  if (mk?.source === "serversidemap" && mk.index != null) return `ssm:${mk.index}`;
+  return `${mk?.source || "x"}:${mk?.type || ""}:${mk?.x}:${mk?.z}:${mk?.tag || ""}`;
+}
+
 export const mapPage = {
+  SERVERSIDEMAP_TS_URL,
   mapWorld: "",
   mapWorldOptions: [],
   mapActiveWorld: "",
@@ -40,6 +50,7 @@ export const mapPage = {
   mapPanX: 0,
   mapPanY: 0,
   mapDragging: false,
+  mapFocusedKey: null,
   _mapDragStartX: 0,
   _mapDragStartY: 0,
   _mapPanStartX: 0,
@@ -76,6 +87,7 @@ export const mapPage = {
 
   async loadMapPage() {
     this.mapLoading = true;
+    this.mapFocusedKey = null;
     try {
       if (!this.status?.config?.world_name && !this.status?.running_world_name) {
         try {
@@ -101,6 +113,7 @@ export const mapPage = {
           image_url: `/api/map/${encodeURIComponent(world)}/fog.png`,
         };
       }
+      if (!this.mapData.mod) this.mapData.mod = { ...EMPTY_MAP.mod };
       this.mapResetView();
     } catch (e) {
       this.toast(e.message, "error");
@@ -127,6 +140,19 @@ export const mapPage = {
 
   mapMarkers() {
     return this.mapData?.markers || [];
+  },
+
+  mapHasServerSideMap() {
+    const mod = this.mapData?.mod || {};
+    return !!(mod.serversidemap || mod.serversidemap_dll);
+  },
+
+  mapNeedsServerSideMapInstall() {
+    return !this.mapHasServerSideMap();
+  },
+
+  mapCanDeletePins() {
+    return !!this.mapData?.mod?.serversidemap;
   },
 
   mapFogUrl() {
@@ -164,6 +190,7 @@ export const mapPage = {
     this.mapPanX = 0;
     this.mapPanY = 0;
     this.mapDragging = false;
+    this.mapFocusedKey = null;
   },
 
   mapZoomBy(factor, originX, originY) {
@@ -236,7 +263,9 @@ export const mapPage = {
     return mk?.name || mk?.tag || mk?.type || "Pin";
   },
 
-  markerStyle(mk) {
+  markerKey,
+
+  markerNorm(mk) {
     const b = this.mapData?.bounds || {};
     const minX = b.min_x != null ? b.min_x : -10000;
     const maxX = b.max_x != null ? b.max_x : 10000;
@@ -244,9 +273,87 @@ export const mapPage = {
     const maxZ = b.max_z != null ? b.max_z : 10000;
     const spanX = maxX - minX || 1;
     const spanZ = maxZ - minZ || 1;
-    const px = ((mk.x - minX) / spanX) * 100;
+    const px = (mk.x - minX) / spanX;
     // North (higher z) at the top.
-    const py = (1 - (mk.z - minZ) / spanZ) * 100;
-    return `left:${Math.max(0, Math.min(100, px))}%;top:${Math.max(0, Math.min(100, py))}%`;
+    const py = 1 - (mk.z - minZ) / spanZ;
+    return {
+      px: clamp(px, 0, 1),
+      py: clamp(py, 0, 1),
+    };
+  },
+
+  markerStyle(mk) {
+    const { px, py } = this.markerNorm(mk);
+    return `left:${px * 100}%;top:${py * 100}%`;
+  },
+
+  focusMapMarker(mk) {
+    if (!mk || !this.mapHasImage()) return;
+    this.mapFocusedKey = markerKey(mk);
+    const wrap = this.$refs?.mapCanvasWrap;
+    const rect = wrap?.getBoundingClientRect?.();
+    if (!rect) return;
+    const { px, py } = this.markerNorm(mk);
+    const nextZoom = clamp(Math.max(this.mapZoom, 2.5), MAP_ZOOM_MIN, MAP_ZOOM_MAX);
+    this.mapZoom = nextZoom;
+    this.mapPanX = rect.width / 2 - px * rect.width * nextZoom;
+    this.mapPanY = rect.height / 2 - py * rect.height * nextZoom;
+  },
+
+  isMapMarkerFocused(mk) {
+    return this.mapFocusedKey != null && this.mapFocusedKey === markerKey(mk);
+  },
+
+  canDeleteMapPin(mk) {
+    return this.mapCanDeletePins() && mk?.source === "serversidemap" && mk.index != null;
+  },
+
+  async deleteMapPin(mk) {
+    if (!this.canDeleteMapPin(mk)) return;
+    const label = this.markerLabel(mk);
+    if (!confirm(this.t("mapPage.deletePinConfirm", { name: label }))) return;
+    const world = this.mapWorld || this.mapData?.world;
+    if (!world) return;
+    return this.withBusy(`deleteMapPin:${mk.index}`, async () => {
+      try {
+        const data = await this.api(
+          "DELETE",
+          `/api/map/${encodeURIComponent(world)}/pins/${mk.index}`,
+        );
+        this.mapData = {
+          ...this.mapData,
+          markers: data.markers || [],
+          mod: data.mod || this.mapData.mod,
+          explored: data.explored
+            ? { ...(this.mapData.explored || {}), ...data.explored }
+            : this.mapData.explored,
+        };
+        if (this.mapFocusedKey === markerKey(mk)) this.mapFocusedKey = null;
+        this.toast(this.t("mapPage.deletePinDone", { name: label }));
+        if (data.needs_restart) {
+          this.toast(this.t("mapPage.deletePinNeedsRestart"));
+        }
+      } catch (e) {
+        this.toast(e.message, "error");
+      }
+    });
+  },
+
+  async installServerSideMap() {
+    return this.withBusy("installServerSideMap", async () => {
+      try {
+        const data = await this.api("POST", "/api/mods/install-url", {
+          url: SERVERSIDEMAP_TS_URL,
+        });
+        const names = (data.installed || []).join(", ") || "ServerSideMap";
+        this.toast(this.t("common.toasts.installed", { names }));
+        if (typeof this.loadMods === "function") {
+          try { await this.loadMods(); } catch { /* ignore */ }
+        }
+        await this.loadMapPage();
+      } catch (e) {
+        this.toast(e.message, "error");
+      }
+    });
   },
 };

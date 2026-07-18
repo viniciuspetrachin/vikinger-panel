@@ -140,6 +140,7 @@
       "failedToCopy": "Falha ao copiar",
       "actionCompleted": "Ação concluída",
       "fileSaved": "Arquivo salvo!",
+      "fileDeleted": "Arquivo apagado",
       "settingsSaved": "Configurações salvas!",
       "listsSaved": "Listas salvas! O servidor foi reiniciado se estivesse online.",
       "limitApplied": "Limite aplicado",
@@ -1321,6 +1322,7 @@
       "dll": "DLLs",
       "plugin": "Plugins",
       "world": "Mundos",
+      "json": "JSON",
       "list": "Listas",
       "backup": "Cópias de segurança",
       "log": "Registros"
@@ -1328,6 +1330,17 @@
     "tree": {
       "emptyFolder": "Pasta vazia",
       "inaccessible": "inacessível"
+    },
+    "delete": {
+      "title": "Apagar arquivo",
+      "confirm": "Tem certeza que deseja apagar {path}?",
+      "pluginWarning": "O plugin {plugin} depende desta configuração.",
+      "recreateWarning": "O servidor está em execução — o BepInEx recriará este arquivo quando o plugin carregar.",
+      "pluginDisabledHint": "O plugin vinculado está desativado, então o arquivo não será recriado automaticamente."
+    },
+    "json": {
+      "beautify": "Formatar JSON",
+      "invalid": "JSON inválido — corrija a sintaxe antes de salvar"
     }
   },
   "logs": {
@@ -1531,11 +1544,18 @@
     "revealAllHint": "Revela o disco inteiro do mapa. Desligado mantém o fog of war do ServerSideMap.",
     "revealAllHintNoMod": "Revela o mapa base tintado pela seed. Desligado mantém o disco com névoa (ServerSideMap não é obrigatório).",
     "serverSideMap": "· ServerSideMap",
+    "serverSideMapTag": "ServerSideMap",
+    "installServerSideMap": "Instalar ServerSideMap",
+    "openThunderstore": "Thunderstore",
+    "deletePin": "Apagar pin",
+    "deletePinConfirm": "Apagar o pin \"{name}\" do mapa compartilhado?",
+    "deletePinDone": "Pin \"{name}\" apagado",
+    "deletePinNeedsRestart": "Reinicie o servidor do jogo para os clientes sincronizarem os pins.",
     "zoomIn": "Aumentar zoom",
     "zoomOut": "Diminuir zoom",
     "zoomReset": "Resetar visão",
     "zoomResetShort": "Reset",
-    "zoomHint": "Scroll para zoom · arraste para mover · duplo clique para resetar"
+    "zoomHint": "Scroll para zoom · arraste para mover · duplo clique para resetar · clique num pin da lista para focar"
   },
   "metricsPage": {
     "ranges": {

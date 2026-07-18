@@ -140,6 +140,7 @@
       "failedToCopy": "Kopieren fehlgeschlagen",
       "actionCompleted": "Aktion abgeschlossen",
       "fileSaved": "Datei gespeichert!",
+      "fileDeleted": "Datei gelöscht",
       "settingsSaved": "Einstellungen gespeichert!",
       "listsSaved": "Listen gespeichert! Server wurde neu gestartet, wenn er online war.",
       "limitApplied": "Limit angewendet",
@@ -1289,6 +1290,7 @@
       "dll": "DLLs",
       "plugin": "Plugins",
       "world": "Welten",
+      "json": "JSON",
       "list": "Listen",
       "backup": "Backups",
       "log": "Protokolle"
@@ -1296,6 +1298,17 @@
     "tree": {
       "emptyFolder": "Leerer Ordner",
       "inaccessible": "unzugänglich"
+    },
+    "delete": {
+      "title": "Datei löschen",
+      "confirm": "Möchten Sie {path} wirklich löschen?",
+      "pluginWarning": "Plugin {plugin} hängt von dieser Konfiguration ab.",
+      "recreateWarning": "Der Server läuft — BepInEx erstellt diese Datei neu, wenn das Plugin geladen wird.",
+      "pluginDisabledHint": "Das verknüpfte Plugin ist deaktiviert; die Datei wird nicht automatisch neu erstellt."
+    },
+    "json": {
+      "beautify": "JSON formatieren",
+      "invalid": "Ungültiges JSON — Syntax vor dem Speichern korrigieren"
     }
   },
   "logs": {
@@ -1499,11 +1512,18 @@
     "revealAllHint": "Zeigt die gesamte Karte. Aus = Nebel des Krieges von ServerSideMap.",
     "revealAllHintNoMod": "Zeigt die seed-getönte Basiskarte. Aus = vernebelte Scheibe (ServerSideMap nicht nötig).",
     "serverSideMap": "· ServerSideMap",
+    "serverSideMapTag": "ServerSideMap",
+    "installServerSideMap": "ServerSideMap installieren",
+    "openThunderstore": "Thunderstore",
+    "deletePin": "Pin löschen",
+    "deletePinConfirm": "Pin \"{name}\" von der geteilten Karte löschen?",
+    "deletePinDone": "Pin \"{name}\" gelöscht",
+    "deletePinNeedsRestart": "Starte den Spielserver neu, damit Clients die Pins synchronisieren.",
     "zoomIn": "Vergrößern",
     "zoomOut": "Verkleinern",
     "zoomReset": "Ansicht zurücksetzen",
     "zoomResetShort": "Reset",
-    "zoomHint": "Scrollen zum Zoomen · Ziehen zum Verschieben · Doppelklick zum Zurücksetzen"
+    "zoomHint": "Scrollen zum Zoomen · Ziehen zum Verschieben · Doppelklick zum Zurücksetzen · Pin in der Liste anklicken zum Fokussieren"
   },
   "metricsPage": {
     "ranges": {

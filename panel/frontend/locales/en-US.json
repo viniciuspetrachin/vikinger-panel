@@ -140,6 +140,7 @@
       "failedToCopy": "Failed to copy",
       "actionCompleted": "Action completed",
       "fileSaved": "File saved!",
+      "fileDeleted": "File deleted",
       "settingsSaved": "Settings saved!",
       "listsSaved": "Lists saved! Server restarted if it was online.",
       "limitApplied": "Limit applied",
@@ -1321,6 +1322,7 @@
       "dll": "DLLs",
       "plugin": "Plugins",
       "world": "Worlds",
+      "json": "JSON",
       "list": "Lists",
       "backup": "Backups",
       "log": "Logs"
@@ -1328,6 +1330,17 @@
     "tree": {
       "emptyFolder": "Empty folder",
       "inaccessible": "inaccessible"
+    },
+    "delete": {
+      "title": "Delete file",
+      "confirm": "Are you sure you want to delete {path}?",
+      "pluginWarning": "Plugin {plugin} depends on this configuration.",
+      "recreateWarning": "The server is running — BepInEx will recreate this file when the plugin loads.",
+      "pluginDisabledHint": "The linked plugin is disabled, so the file will not be recreated automatically."
+    },
+    "json": {
+      "beautify": "Format JSON",
+      "invalid": "Invalid JSON — fix syntax before saving"
     }
   },
   "logs": {
@@ -1531,11 +1544,18 @@
     "revealAllHint": "Reveals the whole map disc. Leave off to keep fog of war from ServerSideMap.",
     "revealAllHintNoMod": "Reveals the seed-tinted base map. Leave off for a fogged disc (ServerSideMap not required).",
     "serverSideMap": "· ServerSideMap",
+    "serverSideMapTag": "ServerSideMap",
+    "installServerSideMap": "Install ServerSideMap",
+    "openThunderstore": "Thunderstore",
+    "deletePin": "Delete pin",
+    "deletePinConfirm": "Delete pin \"{name}\" from the shared map?",
+    "deletePinDone": "Pin \"{name}\" deleted",
+    "deletePinNeedsRestart": "Restart the game server so clients sync the updated pins.",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "zoomReset": "Reset view",
     "zoomResetShort": "Reset",
-    "zoomHint": "Scroll to zoom · drag to pan · double-click to reset"
+    "zoomHint": "Scroll to zoom · drag to pan · double-click to reset · click a pin in the list to focus"
   },
   "metricsPage": {
     "ranges": {
