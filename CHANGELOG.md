@@ -169,6 +169,14 @@ All notable changes to this project will be documented in this file.
 
 - **Console / Logs:** log viewer no longer stays blank when output is empty or whitespace-only; refresh after RCON commands targets the Console page again; log polling no longer blocks on unrelated busy actions.
 
+## [2.1.16]
+
+### Added
+
+### Changed
+
+### Fixed
+
 ## [Unreleased]
 
 ### Added
