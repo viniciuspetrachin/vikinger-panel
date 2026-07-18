@@ -107,6 +107,24 @@ def describe_cron(expr: str) -> str:
     return f"cron: {expr}"
 
 
+def next_cron_fire(cron: str, *, after: float | None = None) -> float | None:
+    """Return unix timestamp of the next cron fire, or ``None`` if unavailable."""
+    if not validate_cron(cron):
+        return None
+    try:
+        from apscheduler.triggers.cron import CronTrigger
+        from datetime import datetime, timezone
+
+        trigger = CronTrigger.from_crontab(cron)
+        ref = datetime.fromtimestamp(after if after is not None else time.time(), tz=timezone.utc)
+        nxt = trigger.get_next_fire_time(None, ref)
+        if nxt is None:
+            return None
+        return nxt.timestamp()
+    except Exception:
+        return None
+
+
 def _has_apscheduler() -> bool:
     try:
         import apscheduler  # noqa: F401

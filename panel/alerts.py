@@ -15,6 +15,15 @@ Config shape (persisted by main.py in db ``settings`` under e.g. ``"alerts"``)::
             "server_high_load": bool,
             "player_join": bool,
             "player_leave": bool,
+            "player_first_join": bool,
+            "player_kick": bool,
+            "player_ban": bool,
+            "player_death": bool,
+            "player_pvp_kill": bool,
+            "boss_defeated": bool,
+            "raid_started": bool,
+            "backup_scheduled_warning": bool,
+            "restart_scheduled_warning": bool,
             "player_chat": bool,
             "mod_added": bool,
             "mod_updated": bool,
@@ -45,6 +54,15 @@ EVENT_TYPES = (
     "server_high_load",
     "player_join",
     "player_leave",
+    "player_first_join",
+    "player_kick",
+    "player_ban",
+    "player_death",
+    "player_pvp_kill",
+    "boss_defeated",
+    "raid_started",
+    "backup_scheduled_warning",
+    "restart_scheduled_warning",
     "player_chat",
     "mod_added",
     "mod_updated",
@@ -65,6 +83,46 @@ HIGH_LOAD_THRESHOLD = 80.0
 HIGH_LOAD_CLEAR_THRESHOLD = 70.0
 
 DEFAULT_CHAT_PREFIX = "@discord"
+
+BOSS_KEY_LABELS = {
+    "defeated_eikthyr": "Eikthyr",
+    "defeated_gdking": "The Elder",
+    "defeated_bonemass": "Bonemass",
+    "defeated_dragon": "Moder",
+    "defeated_goblinking": "Yagluth",
+    "defeated_queen": "The Queen",
+    "defeated_fader": "Fader",
+}
+
+RAID_EVENT_LABELS = {
+    "army_eikthyr": "Eikthyr army raid",
+    "army_theelder": "The Elder army raid",
+    "army_gdking": "The Elder army raid",
+    "army_bonemass": "Bonemass army raid",
+    "army_dragon": "Moder army raid",
+    "army_goblin": "Goblin army raid",
+    "army_goblins": "Goblin army raid",
+    "army_goblinbrute": "Goblin brute raid",
+    "army_skeletons": "Skeleton raid",
+    "army_trolls": "Troll raid",
+    "army_wolves": "Wolf raid",
+}
+
+_RE_PLAYER_DEATH = re.compile(r"Got character ZDOID from (.+?) : 0:0")
+_RE_PVP_KILLED_BY = re.compile(
+    r"(?P<victim>.+?) killed by (?P<killer>.+)$",
+    re.IGNORECASE,
+)
+_RE_PVP_KILLED = re.compile(
+    r"(?P<killer>.+?) killed (?P<victim>.+)$",
+    re.IGNORECASE,
+)
+_RE_PVP_SLAIN = re.compile(
+    r"(?P<victim>.+?) was slain by (?P<killer>.+)$",
+    re.IGNORECASE,
+)
+_RE_BOSS_KEY = re.compile(r"\b(defeated_[a-z0-9_]+)\b", re.IGNORECASE)
+_RE_RANDOM_EVENT = re.compile(r"Random event set:\s*(\S+)", re.IGNORECASE)
 
 # Common chat log line shapes from docker / BepInEx (when a mod logs chat).
 _CHAT_LINE_PATTERNS = (
@@ -87,10 +145,19 @@ def format_event(event_type: str, ctx: Optional[dict] = None) -> dict:
 
     Unknown event types get a generic title/message. ``ctx`` keys used:
     ``player`` (name), ``world``, ``error``, ``path``/``file``, ``mod``, ``version``,
-    ``cpu_percent``, ``memory_percent``, ``load_kind``, ``text`` (chat body).
+    ``cpu_percent``, ``memory_percent``, ``load_kind``, ``text`` (chat body),
+    ``killer``, ``victim``, ``boss``, ``key``, ``raid``, ``event``, ``job``,
+    ``minutes``, ``action``.
     """
     ctx = ctx or {}
     player = ctx.get("player") or ctx.get("name") or "Someone"
+    killer = ctx.get("killer") or "Someone"
+    victim = ctx.get("victim") or player
+    boss = ctx.get("boss") or ctx.get("key") or "Unknown boss"
+    raid = ctx.get("raid") or ctx.get("event") or "Unknown raid"
+    job = ctx.get("job") or "job"
+    minutes = ctx.get("minutes")
+    action = ctx.get("action") or ""
     world = ctx.get("world") or ""
     error = ctx.get("error") or ""
     backup_name = ctx.get("file") or ctx.get("path") or ""
@@ -159,6 +226,63 @@ def format_event(event_type: str, ctx: Optional[dict] = None) -> dict:
             "title": "➖ Player left",
             "message": f"{player} left the server.",
             "color": _COLOR_GRAY,
+        }
+    if event_type == "player_first_join":
+        return {
+            "title": "🆕 First-time player",
+            "message": f"{player} joined the server for the first time.",
+            "color": _COLOR_GREEN,
+        }
+    if event_type == "player_kick":
+        return {
+            "title": "👢 Player kicked",
+            "message": f"{player} was kicked from the server via the panel.",
+            "color": _COLOR_AMBER,
+        }
+    if event_type == "player_ban":
+        return {
+            "title": "🚫 Player banned",
+            "message": f"{player} was banned from the server via the panel.",
+            "color": _COLOR_RED,
+        }
+    if event_type == "player_death":
+        return {
+            "title": "💀 Player died",
+            "message": f"{player} died on the server.",
+            "color": _COLOR_RED,
+        }
+    if event_type == "player_pvp_kill":
+        return {
+            "title": "⚔️ PvP kill",
+            "message": f"{killer} killed {victim}.",
+            "color": _COLOR_RED,
+        }
+    if event_type == "boss_defeated":
+        return {
+            "title": "🏆 Boss defeated",
+            "message": f"{boss} was defeated on the server.",
+            "color": _COLOR_PURPLE,
+        }
+    if event_type == "raid_started":
+        return {
+            "title": "⚔️ Raid started",
+            "message": f"A raid/event started on the server: {raid}.",
+            "color": _COLOR_RED,
+        }
+    if event_type == "backup_scheduled_warning":
+        when = f" in about {int(minutes)} minute(s)" if minutes is not None else " soon"
+        label = "World backup" if job == "world_backup" else "Scheduled backup"
+        return {
+            "title": "⏰ Backup scheduled",
+            "message": f"{label} will run{when}.",
+            "color": _COLOR_AMBER,
+        }
+    if event_type == "restart_scheduled_warning":
+        when = f" in about {int(minutes)} minute(s)" if minutes is not None else " soon"
+        return {
+            "title": "⏰ Restart scheduled",
+            "message": f"Scheduled server restart will run{when}.",
+            "color": _COLOR_AMBER,
         }
     if event_type == "player_chat":
         body = text or ""
@@ -274,6 +398,125 @@ def extract_prefixed_chat(
             continue
         out.append({"player": player, "text": remainder, "line": line})
     return out
+
+
+def _clean_game_log_line(line: str) -> str:
+    """Strip docker/supervisor prefixes from a log line."""
+    raw = (line or "").strip()
+    if not raw:
+        return ""
+    return re.sub(
+        r"^(?:[A-Z][a-z]{2}\s+\d+\s+\d+:\d+:\d+\s+)?(?:supervisord:\s+\S+\s+)?",
+        "",
+        raw,
+    ).strip()
+
+
+def _looks_like_system_line(cleaned: str) -> bool:
+    lower = cleaned.lower()
+    if not cleaned or len(cleaned) > 200:
+        return True
+    for token in (
+        "supervisord", "bepinex", "valheim-server", "unity", "steam",
+        "got connection steamid", "got character zdoid", "closing socket",
+        "world loaded",
+    ):
+        if token in lower:
+            return True
+    return False
+
+
+def extract_player_deaths(lines: list[str] | str) -> list[dict[str, str]]:
+    """Return death events from Valheim log lines (ZDOID 0:0)."""
+    if isinstance(lines, str):
+        line_list = lines.splitlines()
+    else:
+        line_list = list(lines or [])
+    out: list[dict[str, str]] = []
+    for line in line_list:
+        cleaned = _clean_game_log_line(line)
+        if not cleaned:
+            continue
+        m = _RE_PLAYER_DEATH.search(cleaned)
+        if not m:
+            continue
+        player = (m.group(1) or "").strip()
+        if not player:
+            continue
+        out.append({"player": player, "line": line})
+    return out
+
+
+def extract_pvp_kills(lines: list[str] | str) -> list[dict[str, str]]:
+    """Return PvP kill events from log lines (mod kill-feed patterns)."""
+    if isinstance(lines, str):
+        line_list = lines.splitlines()
+    else:
+        line_list = list(lines or [])
+    out: list[dict[str, str]] = []
+    for line in line_list:
+        cleaned = _clean_game_log_line(line)
+        if _looks_like_system_line(cleaned):
+            continue
+        for pat in (_RE_PVP_KILLED_BY, _RE_PVP_SLAIN, _RE_PVP_KILLED):
+            m = pat.search(cleaned)
+            if not m:
+                continue
+            killer = (m.group("killer") or "").strip().strip(".")
+            victim = (m.group("victim") or "").strip().strip(".")
+            if not killer or not victim or killer.lower() == victim.lower():
+                continue
+            if killer.lower() in _CHAT_SKIP_NAMES or victim.lower() in _CHAT_SKIP_NAMES:
+                continue
+            out.append({"killer": killer, "victim": victim, "line": line})
+            break
+    return out
+
+
+def parse_global_boss_keys(rcon_output: str) -> set[str]:
+    """Extract defeated_* global keys from RCON globalKeys output."""
+    keys: set[str] = set()
+    for m in _RE_BOSS_KEY.finditer(rcon_output or ""):
+        key = (m.group(1) or "").lower()
+        if key.startswith("defeated_"):
+            keys.add(key)
+    return keys
+
+
+def boss_label_for_key(key: str) -> str:
+    """Human-readable boss name for a global key."""
+    normalized = (key or "").lower()
+    return BOSS_KEY_LABELS.get(normalized, normalized.replace("defeated_", "").replace("_", " ").title())
+
+
+def extract_random_events(lines: list[str] | str) -> list[dict[str, str]]:
+    """Return raid/random-event starts from Valheim log lines."""
+    if isinstance(lines, str):
+        line_list = lines.splitlines()
+    else:
+        line_list = list(lines or [])
+    out: list[dict[str, str]] = []
+    for line in line_list:
+        cleaned = _clean_game_log_line(line)
+        if not cleaned:
+            continue
+        m = _RE_RANDOM_EVENT.search(cleaned)
+        if not m:
+            continue
+        event_key = (m.group(1) or "").strip().strip(".")
+        if not event_key:
+            continue
+        out.append({"event": event_key, "line": line})
+    return out
+
+
+def raid_label_for_key(key: str) -> str:
+    """Human-readable raid name for a random-event key."""
+    normalized = (key or "").lower()
+    return RAID_EVENT_LABELS.get(
+        normalized,
+        normalized.replace("army_", "").replace("_", " ").title() + " raid",
+    )
 
 
 def _get_http(http: Any):

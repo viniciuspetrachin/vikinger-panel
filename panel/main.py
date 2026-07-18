@@ -4231,6 +4231,11 @@ def api_player_action(steam_id: str, body: PlayerActionBody):
         ids = mutate_serverlist(kind, sid, add)
         synced = {"kind": kind, "ids": ids}
 
+    if action == "kick":
+        dispatch_alert("player_kick", {"player": _alert_player_label(sid)})
+    elif action == "ban":
+        dispatch_alert("player_ban", {"player": _alert_player_label(sid)})
+
     return {"ok": True, "action": action, "steam_id": sid, "output": output, "synced": synced}
 
 
@@ -5291,6 +5296,15 @@ DEFAULT_ALERTS_CONFIG = {
         "server_high_load": False,
         "player_join": False,
         "player_leave": False,
+        "player_first_join": False,
+        "player_kick": False,
+        "player_ban": False,
+        "player_death": False,
+        "player_pvp_kill": False,
+        "boss_defeated": False,
+        "raid_started": False,
+        "backup_scheduled_warning": False,
+        "restart_scheduled_warning": False,
         "player_chat": False,
         "mod_added": False,
         "mod_updated": False,
@@ -5365,6 +5379,7 @@ def _mark_pending_ready(kind: str) -> None:
     """Remember that we expect the game world to become ready after start/restart."""
     _alert_state["pending_ready"] = kind
     _alert_state["pending_ready_since"] = time.time()
+    _alert_state["high_load"] = False
 
 
 def _clear_pending_ready() -> None:
@@ -5397,6 +5412,8 @@ def _scheduled_mod_update():
 JOIN_NAME_WAIT_SECONDS = 45.0
 PENDING_READY_TIMEOUT_SECONDS = 180.0
 WORLD_LOADED_MARKER = "World loaded"
+GLOBAL_KEYS_POLL_SECONDS = 60.0
+SCHEDULED_JOB_WARNING_MINUTES = 5
 
 _alert_state: dict = {
     "container": None,
@@ -5408,6 +5425,12 @@ _alert_state: dict = {
     "pending_ready": None,  # "start" | "restart" | None
     "pending_ready_since": None,
     "chat_seen": set(),  # recent line hashes for chat bridge dedupe
+    "game_log_seen": set(),  # death/pvp dedupe
+    "global_keys": set(),
+    "global_keys_init": False,
+    "last_global_keys_poll": 0.0,
+    "scheduled_warnings": set(),
+    "pending_first_joins": set(),
 }
 
 
@@ -5458,7 +5481,13 @@ def _flush_pending_join(
     label = _alert_player_label(steam_id, live_names)
     waited = time.time() - float(since)
     if force or label != steam_id or waited >= JOIN_NAME_WAIT_SECONDS:
-        panel_alerts.dispatch(cfg, "player_join", {"player": label})
+        events = cfg.get("events") or {}
+        pending_first = _alert_state.setdefault("pending_first_joins", set())
+        if events.get("player_first_join") and steam_id in pending_first:
+            panel_alerts.dispatch(cfg, "player_first_join", {"player": label})
+            pending_first.discard(steam_id)
+        if events.get("player_join"):
+            panel_alerts.dispatch(cfg, "player_join", {"player": label})
         pending.pop(steam_id, None)
         return True
     return False
@@ -5524,6 +5553,181 @@ def _scan_and_dispatch_chat_bridge(cfg: dict) -> None:
         _alert_state["chat_seen"] = set(list(seen)[-200:])
 
 
+def _rcon_available_for_alerts() -> bool:
+    return _auto_messages_rcon_available()
+
+
+def _game_log_digest(kind: str, item: dict) -> int:
+    line = item.get("line") or ""
+    if kind == "player_death":
+        key = f"death|{item.get('player')}|{line[-120:]}"
+    elif kind == "player_pvp_kill":
+        key = f"pvp|{item.get('killer')}|{item.get('victim')}|{line[-120:]}"
+    elif kind == "raid_started":
+        key = f"raid|{item.get('event')}|{line[-120:]}"
+    else:
+        key = f"{kind}|{item}|{line[-120:]}"
+    return hash(key)
+
+
+def _scan_and_dispatch_game_events(cfg: dict) -> None:
+    """Parse recent logs for player deaths, PvP kill-feed lines, and raids."""
+    events = cfg.get("events") or {}
+    watch_death = events.get("player_death")
+    watch_pvp = events.get("player_pvp_kill")
+    watch_raid = events.get("raid_started")
+    if not (watch_death or watch_pvp or watch_raid):
+        return
+    text = _collect_alert_log_text(150)
+    if not text.strip():
+        return
+    seen = _alert_state.setdefault("game_log_seen", set())
+    pvp_victims: set[str] = set()
+    if watch_pvp:
+        for item in panel_alerts.extract_pvp_kills(text):
+            digest = _game_log_digest("player_pvp_kill", item)
+            if digest in seen:
+                continue
+            seen.add(digest)
+            pvp_victims.add(item["victim"].lower())
+            panel_alerts.dispatch(
+                cfg,
+                "player_pvp_kill",
+                {"killer": item["killer"], "victim": item["victim"]},
+            )
+    if watch_death:
+        for item in panel_alerts.extract_player_deaths(text):
+            if item["player"].lower() in pvp_victims:
+                continue
+            digest = _game_log_digest("player_death", item)
+            if digest in seen:
+                continue
+            seen.add(digest)
+            panel_alerts.dispatch(cfg, "player_death", {"player": item["player"]})
+    if watch_raid:
+        for item in panel_alerts.extract_random_events(text):
+            digest = _game_log_digest("raid_started", item)
+            if digest in seen:
+                continue
+            seen.add(digest)
+            event_key = item["event"]
+            panel_alerts.dispatch(
+                cfg,
+                "raid_started",
+                {
+                    "raid": panel_alerts.raid_label_for_key(event_key),
+                    "event": event_key,
+                },
+            )
+    if len(seen) > 400:
+        _alert_state["game_log_seen"] = set(list(seen)[-200:])
+
+
+def _poll_boss_defeated(cfg: dict) -> None:
+    """Detect new defeated_* global keys via RCON (seed on first poll)."""
+    events = cfg.get("events") or {}
+    if not events.get("boss_defeated"):
+        return
+    if not container_running() or not _rcon_available_for_alerts():
+        return
+    now = time.time()
+    last = float(_alert_state.get("last_global_keys_poll") or 0.0)
+    if now - last < GLOBAL_KEYS_POLL_SECONDS:
+        return
+    _alert_state["last_global_keys_poll"] = now
+    try:
+        output = _run_rcon("globalKeys")
+    except Exception:
+        logger.debug("boss globalKeys poll failed", exc_info=True)
+        return
+    current = panel_alerts.parse_global_boss_keys(output)
+    known = set(_alert_state.get("global_keys") or set())
+    if not _alert_state.get("global_keys_init"):
+        _alert_state["global_keys"] = current
+        _alert_state["global_keys_init"] = True
+        return
+    for key in sorted(current - known):
+        panel_alerts.dispatch(
+            cfg,
+            "boss_defeated",
+            {"boss": panel_alerts.boss_label_for_key(key), "key": key},
+        )
+    _alert_state["global_keys"] = current
+
+
+def _backups_enabled_in_container() -> bool:
+    val = (backup_config().get("BACKUPS") or "true").strip().lower()
+    return val in ("true", "1", "yes", "on")
+
+
+def _scheduled_job_next_run(job: str, cron: str) -> float | None:
+    """Return the next fire time for a panel schedule job or raw cron."""
+    if not cron:
+        return None
+    status = panel_scheduler_instance.get_status().get(job) or {}
+    next_run = status.get("next_run")
+    if next_run is not None:
+        return float(next_run)
+    return panel_scheduler.next_cron_fire(cron)
+
+
+def _check_scheduled_job_warnings(cfg: dict) -> None:
+    """Warn shortly before scheduled backup/restart jobs (panel or container cron)."""
+    events = cfg.get("events") or {}
+    if not (events.get("backup_scheduled_warning") or events.get("restart_scheduled_warning")):
+        return
+    now = time.time()
+    window = SCHEDULED_JOB_WARNING_MINUTES * 60
+    sent = _alert_state.setdefault("scheduled_warnings", set())
+    targets: list[tuple[str, str, float | None]] = []
+
+    if events.get("backup_scheduled_warning"):
+        schedule = read_schedule_config().get("backup") or {}
+        if schedule.get("enabled") and schedule.get("cron"):
+            targets.append((
+                "backup",
+                "backup_scheduled_warning",
+                _scheduled_job_next_run("backup", str(schedule["cron"])),
+            ))
+        if _backups_enabled_in_container():
+            bcron = (backup_config().get("BACKUPS_CRON") or "").strip()
+            if bcron:
+                targets.append((
+                    "world_backup",
+                    "backup_scheduled_warning",
+                    panel_scheduler.next_cron_fire(bcron, after=now),
+                ))
+
+    if events.get("restart_scheduled_warning"):
+        schedule = read_schedule_config().get("restart") or {}
+        if schedule.get("enabled") and schedule.get("cron"):
+            targets.append((
+                "restart",
+                "restart_scheduled_warning",
+                _scheduled_job_next_run("restart", str(schedule["cron"])),
+            ))
+
+    for job_key, event_type, next_run in targets:
+        if next_run is None:
+            continue
+        seconds_until = float(next_run) - now
+        if seconds_until <= 0 or seconds_until > window:
+            continue
+        dedupe_key = f"{job_key}|{int(next_run)}"
+        if dedupe_key in sent:
+            continue
+        sent.add(dedupe_key)
+        minutes = max(1, int((seconds_until + 30) // 60))
+        panel_alerts.dispatch(
+            cfg,
+            event_type,
+            {"job": job_key, "minutes": minutes},
+        )
+
+    if len(sent) > 100:
+        _alert_state["scheduled_warnings"] = set(list(sent)[-50:])
+
+
 def _maybe_dispatch_server_ready(cfg: dict, running: bool) -> None:
     """Emit server_up when an intentional start/restart finishes (world ready)."""
     pending = _alert_state.get("pending_ready")
@@ -5562,37 +5766,51 @@ def _check_and_dispatch_alerts(cfg: dict) -> None:
 
     _maybe_dispatch_server_ready(cfg, running)
 
-    watch_players = events.get("player_join") or events.get("player_leave")
+    watch_players = (
+        events.get("player_join")
+        or events.get("player_leave")
+        or events.get("player_first_join")
+    )
     pending = prev.setdefault("pending_joins", {})
     if not running:
         # Drop player snapshot on stop so a restart does not emit mass leave alerts.
         # Flush pending joins with best-effort names before clearing.
-        if events.get("player_join"):
+        if events.get("player_join") or events.get("player_first_join"):
             for sid in list(pending):
                 _flush_pending_join(cfg, sid, prev.get("player_names") or {}, force=True)
         prev["players"] = set()
         prev["player_names"] = {}
         pending.clear()
+        prev["pending_first_joins"] = set()
     elif watch_players:
         try:
             info = get_players_info()
             players = info.get("players") or []
             current = {str(p["steam_id"]) for p in players if p.get("steam_id")}
+            seen_before = auto_messages.read_players_seen()
             names = _remember_player_names(players)
         except Exception:
             current = set()
             names = {}
+            seen_before = {}
 
         if prev["init"]:
             known_names = prev.get("player_names") or {}
-            if events.get("player_join"):
+            if events.get("player_join") or events.get("player_first_join"):
                 for sid in current - prev["players"]:
+                    is_first = sid not in seen_before
                     label = _alert_player_label(sid, names)
                     if label != sid:
-                        panel_alerts.dispatch(cfg, "player_join", {"player": label})
+                        if events.get("player_first_join") and is_first:
+                            panel_alerts.dispatch(cfg, "player_first_join", {"player": label})
+                        if events.get("player_join"):
+                            panel_alerts.dispatch(cfg, "player_join", {"player": label})
                         pending.pop(sid, None)
+                        _alert_state.setdefault("pending_first_joins", set()).discard(sid)
                     else:
                         pending.setdefault(sid, time.time())
+                        if is_first:
+                            _alert_state.setdefault("pending_first_joins", set()).add(sid)
                 # Name may appear a few seconds after Got connection SteamID.
                 for sid in list(pending):
                     if sid in current:
@@ -5603,6 +5821,7 @@ def _check_and_dispatch_alerts(cfg: dict) -> None:
             if events.get("player_leave"):
                 for sid in prev["players"] - current:
                     pending.pop(sid, None)
+                    _alert_state.setdefault("pending_first_joins", set()).discard(sid)
                     panel_alerts.dispatch(
                         cfg,
                         "player_leave",
@@ -5614,7 +5833,8 @@ def _check_and_dispatch_alerts(cfg: dict) -> None:
         }
         prev["players"] = current
 
-    if events.get("server_high_load") and running:
+    startup_in_progress = prev.get("pending_ready") in ("start", "restart")
+    if events.get("server_high_load") and running and not startup_in_progress:
         try:
             metrics = get_container_metrics_raw()
             cpu = float(normalize_valheim_cpu(metrics.get("cpu_percent") or 0.0))
@@ -5639,6 +5859,21 @@ def _check_and_dispatch_alerts(cfg: dict) -> None:
         _scan_and_dispatch_chat_bridge(cfg)
     except Exception:
         logger.debug("chat bridge scan failed", exc_info=True)
+
+    try:
+        _scan_and_dispatch_game_events(cfg)
+    except Exception:
+        logger.debug("game event scan failed", exc_info=True)
+
+    try:
+        _poll_boss_defeated(cfg)
+    except Exception:
+        logger.debug("boss defeated poll failed", exc_info=True)
+
+    try:
+        _check_scheduled_job_warnings(cfg)
+    except Exception:
+        logger.debug("scheduled job warning check failed", exc_info=True)
 
     prev["init"] = True
 
