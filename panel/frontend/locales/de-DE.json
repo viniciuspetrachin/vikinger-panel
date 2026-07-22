@@ -1326,6 +1326,8 @@
     "searchPlaceholder": "Logs durchsuchen…",
     "hideNoise": "Rauschen ausblenden",
     "clearBuffer": "Puffer leeren",
+    "scrollPinned": "Am Ende fixieren",
+    "scrollPinnedHint": "Hält den Scroll bei den neuesten Meldungen; deaktiviert sich beim Hochscrollen",
     "lineCount": "{count} Zeilen im Puffer",
     "matchCount": "{count} Treffer",
     "categories": {

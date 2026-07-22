@@ -182,19 +182,6 @@ export const dashboard = {
     } catch (e) { /* silencioso no dashboard */ }
   },
 
-  isLogAtBottom(el, threshold = 40) {
-    if (!el) return true;
-    return el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
-  },
-
-  restoreLogScroll(ref, wasAtBottom, prevScrollTop) {
-    this.$nextTick(() => {
-      const el = this.$refs[ref];
-      if (!el) return;
-      el.scrollTop = wasAtBottom ? el.scrollHeight : prevScrollTop;
-    });
-  },
-
   metricsActive() {
     return this.page === "dashboard" || this.page === "metrics";
   },

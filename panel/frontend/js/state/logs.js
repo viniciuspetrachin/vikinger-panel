@@ -3,6 +3,7 @@
 import { filterLogLines, mergeLogBuffer } from "../log-filters.js";
 
 export const LOG_REFRESH_STORAGE_KEY = "vikinger-log-refresh-mode";
+export const LOG_SCROLL_PINNED_KEY = "vikinger-log-scroll-pinned";
 export const LOG_REFRESH_INTERVALS = {
   normal: 5000,
   realtime: 1000,
@@ -14,6 +15,15 @@ function readStoredLogRefreshMode() {
     if (raw === "off" || raw === "normal" || raw === "realtime") return raw;
   } catch { /* private mode / SSR */ }
   return "normal";
+}
+
+function readStoredLogScrollPinned() {
+  try {
+    const raw = localStorage.getItem(LOG_SCROLL_PINNED_KEY);
+    if (raw === "0" || raw === "false") return false;
+    if (raw === "1" || raw === "true") return true;
+  } catch { /* private mode / SSR */ }
+  return true;
 }
 
 export const logs = {
@@ -28,6 +38,7 @@ export const logs = {
   logBuffer: [],
   logBufferMax: 5000,
   logMatchCount: 0,
+  logScrollPinned: readStoredLogScrollPinned(),
   _logPollTimer: null,
 
   get logAutoRefresh() {
@@ -106,6 +117,43 @@ export const logs = {
 
   onLogFilterChange() {
     this.logs = this.logsDisplayText();
+    this.restoreLogScroll("logConsole", false, 0);
+  },
+
+  persistLogScrollPinned() {
+    try {
+      localStorage.setItem(LOG_SCROLL_PINNED_KEY, this.logScrollPinned ? "1" : "0");
+    } catch { /* ignore */ }
+  },
+
+  toggleLogScrollPinned() {
+    this.logScrollPinned = !this.logScrollPinned;
+    this.persistLogScrollPinned();
+    if (this.logScrollPinned) {
+      this.restoreLogScroll("logConsole", true, 0);
+    }
+  },
+
+  onLogConsoleScroll() {
+    if (!this.logScrollPinned) return;
+    const el = this.$refs.logConsole;
+    if (!el || this.isLogAtBottom(el)) return;
+    this.logScrollPinned = false;
+    this.persistLogScrollPinned();
+  },
+
+  isLogAtBottom(el, threshold = 40) {
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
+  },
+
+  restoreLogScroll(ref, wasAtBottom, prevScrollTop) {
+    this.$nextTick(() => {
+      const el = this.$refs[ref];
+      if (!el) return;
+      const stickToBottom = ref === "logConsole" && this.logScrollPinned;
+      el.scrollTop = stickToBottom || wasAtBottom ? el.scrollHeight : prevScrollTop;
+    });
   },
 
   focusLogSearch() {

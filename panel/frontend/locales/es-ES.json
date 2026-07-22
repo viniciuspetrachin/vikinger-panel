@@ -1326,6 +1326,8 @@
     "searchPlaceholder": "Buscar en logs…",
     "hideNoise": "Ocultar ruido",
     "clearBuffer": "Limpiar buffer",
+    "scrollPinned": "Fijar al final",
+    "scrollPinnedHint": "Mantiene el scroll en los mensajes más recientes; se desactiva al desplazarse hacia arriba",
     "lineCount": "{count} líneas en buffer",
     "matchCount": "{count} coincidencias",
     "categories": {

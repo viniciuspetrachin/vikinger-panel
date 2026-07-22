@@ -1378,6 +1378,8 @@
     "searchPlaceholder": "Search logs…",
     "hideNoise": "Hide noise",
     "clearBuffer": "Clear buffer",
+    "scrollPinned": "Stick to bottom",
+    "scrollPinnedHint": "Keeps scroll on the latest messages; turns off when you scroll up",
     "lineCount": "{count} lines in buffer",
     "matchCount": "{count} matches",
     "categories": {

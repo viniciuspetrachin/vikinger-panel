@@ -67,6 +67,30 @@ def test_console_log_buffer_persists_on_refresh(page: Page, base_url: str) -> No
     assert count_after == count_before or int(count_after.split()[0]) >= int(count_before.split()[0])
 
 
+def test_console_log_scroll_pin(page: Page, base_url: str) -> None:
+    _boot(page, base_url)
+    open_primary(page, "console")
+    console = page.locator("[x-ref='logConsole']")
+    expect(console).to_contain_text(re.compile("World loaded|Listening|connected|TestPlayer"), timeout=8000)
+
+    console.evaluate("el => { el.scrollTop = 0; }")
+    page.wait_for_timeout(150)
+
+    logs_card = page.locator(".stat-card").filter(has=console)
+    logs_card.get_by_role("button", name=re.compile(r"Stick to bottom|Fixar no final", re.I)).click()
+
+    logs_card.get_by_role("button", name="Refresh", exact=True).click()
+    page.wait_for_timeout(500)
+
+    at_bottom = console.evaluate(
+        """el => {
+            const threshold = 40;
+            return el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
+        }"""
+    )
+    assert at_bottom
+
+
 def test_console_command(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     open_primary(page, "console")

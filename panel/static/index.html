@@ -590,6 +590,8 @@
                 <button class="btn btn-sm" :class="logSource === 'docker' ? 'btn-primary' : 'btn-ghost'" @click="logSource = 'docker'; onLogSourceChange()" x-text="t('logs.docker')">Docker</button>
                 <button class="btn btn-sm" :class="logSource === 'bepinex' ? 'btn-primary' : 'btn-ghost'" @click="logSource = 'bepinex'; onLogSourceChange()" x-text="t('logs.bepinex')">BepInEx</button>
                 <button class="btn btn-sm btn-ghost" @click="loadLogs()" :disabled="logsLoading" x-text="t('common.actions.refresh')">Refresh</button>
+                <button type="button" class="btn btn-sm" :class="logScrollPinned ? 'btn-primary' : 'btn-ghost'"
+                  @click="toggleLogScrollPinned()" :title="t('logs.scrollPinnedHint')" x-text="t('logs.scrollPinned')">Stick to bottom</button>
               </div>
             </div>
             <div class="flex flex-wrap items-center gap-2 mb-3">
@@ -616,7 +618,7 @@
               <span x-text="t('logs.lineCount', { count: logBuffer.length })"></span>
               <span x-show="logSearch" x-text="' · ' + t('logs.matchCount', { count: logMatchCount })"></span>
             </p>
-            <div x-ref="logConsole" class="log-viewer bg-valheim-950 border border-valheim-700 rounded-lg p-4 min-h-96 max-h-[32rem] overflow-y-auto" x-html="formatLogHtml(logs, undefined, logSearch)"></div>
+            <div x-ref="logConsole" @scroll="onLogConsoleScroll()" class="log-viewer bg-valheim-950 border border-valheim-700 rounded-lg p-4 min-h-96 max-h-[32rem] overflow-y-auto" x-html="formatLogHtml(logs, undefined, logSearch)"></div>
             <div class="flex flex-wrap items-center gap-3 mt-3">
               <label class="text-xs text-gray-500 shrink-0" x-text="t('logs.refreshLabel')">Auto-refresh</label>
               <select x-model="logRefreshMode" @change="onLogRefreshModeChange()"

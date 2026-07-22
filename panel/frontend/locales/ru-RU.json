@@ -1326,6 +1326,8 @@
     "searchPlaceholder": "Поиск в логах…",
     "hideNoise": "Скрыть шум",
     "clearBuffer": "Очистить буфер",
+    "scrollPinned": "Закрепить внизу",
+    "scrollPinnedHint": "Держит прокрутку на последних сообщениях; отключается при прокрутке вверх",
     "lineCount": "{count} строк в буфере",
     "matchCount": "{count} совпадений",
     "categories": {
