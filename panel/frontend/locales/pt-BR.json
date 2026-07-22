@@ -1026,14 +1026,15 @@
       "noColor": "Padrão (sem tag)",
       "hexGold": "Dourado (#FFD700)",
       "hexOrange": "Laranja (#FF6600)",
-      "hexGreen": "Verde (#00FF00)",
       "hexWhite": "Branco (#FFFFFF)",
       "hexHint": "Hex permite cor em um fragmento só — os outros usam o padrão.",
       "colorsUsed": "{count}/2 cores usadas",
-      "hint": "Divida o nome em fragmentos (+/−). “Padrão” não conta — até 2 cores diferentes no total, ou uma cor hex. As tags são aplicadas automaticamente.",
+      "hint": "Divida o nome em fragmentos (+/−). Aspas (\") e os caracteres < > não são permitidos — quebram a listagem do Valheim. Até 2 cores nomeadas ou uma cor hex. As tags são aplicadas automaticamente.",
       "errors": {
         "hexSingleOnly": "Cor hexadecimal permite apenas uma parte colorida.",
-        "maxTwoColors": "No máximo duas cores nomeadas diferentes."
+        "maxTwoColors": "No máximo duas cores nomeadas diferentes.",
+        "invalidCharacters": "O nome não pode conter aspas (\") nem os caracteres < ou >.",
+        "unsupportedColor": "Cor não suportada na listagem do Valheim — escolha outra opção."
       }
     },
     "capacity": {
@@ -1365,7 +1366,26 @@
   "logs": {
     "docker": "Docker",
     "bepinex": "BepInEx",
-    "autoRefresh": "Automático (5s)"
+    "autoRefresh": "Automático (5s)",
+    "refreshLabel": "Atualização automática",
+    "refreshOff": "Desligado",
+    "refreshNormal": "Normal (5s)",
+    "refreshRealtime": "Tempo real (1s)",
+    "refreshOverhead": {
+      "normal": "~0,5% de overhead no painel/host (est.)",
+      "realtime": "~2% de overhead no painel/host (est.)"
+    },
+    "searchPlaceholder": "Buscar nos logs…",
+    "hideNoise": "Ocultar ruído",
+    "clearBuffer": "Limpar buffer",
+    "lineCount": "{count} linhas no buffer",
+    "matchCount": "{count} correspondências",
+    "categories": {
+      "all": "Tudo",
+      "game": "Jogo",
+      "chat": "Chat",
+      "connections": "Conexões"
+    }
   },
   "audit": {
     "downloadLog": "Baixe o registro completo",
@@ -1632,8 +1652,10 @@
     "modAdded": "Mod novo adicionado",
     "modUpdated": "Mod atualizado",
     "modRemoved": "Mod removido",
-    "backupScheduledWarning": "Backup agendado em ~5 min",
-    "restartScheduledWarning": "Restart agendado em ~5 min",
+    "backupScheduledWarning": "⏰ Backup agendado",
+    "backupScheduledWarningHint": "O backup do mundo rodará em cerca de 5 minuto(s).",
+    "restartScheduledWarning": "⏰ Restart agendado",
+    "restartScheduledWarningHint": "O restart agendado do servidor rodará em cerca de 5 minuto(s).",
     "backupOk": "Backup bem-sucedido",
     "backupFail": "Backup falha",
     "chatBridge": "Bridge de chat (jogo → Discord)",

@@ -1314,7 +1314,26 @@
   "logs": {
     "docker": "Docker",
     "bepinex": "BepInEx",
-    "autoRefresh": "Automatisch (5 Sek.)"
+    "autoRefresh": "Automatisch (5 Sek.)",
+    "refreshLabel": "Auto-Aktualisierung",
+    "refreshOff": "Aus",
+    "refreshNormal": "Normal (5s)",
+    "refreshRealtime": "Echtzeit (1s)",
+    "refreshOverhead": {
+      "normal": "~0,5 % Panel/Host-Overhead (geschätzt)",
+      "realtime": "~2 % Panel/Host-Overhead (geschätzt)"
+    },
+    "searchPlaceholder": "Logs durchsuchen…",
+    "hideNoise": "Rauschen ausblenden",
+    "clearBuffer": "Puffer leeren",
+    "lineCount": "{count} Zeilen im Puffer",
+    "matchCount": "{count} Treffer",
+    "categories": {
+      "all": "Alle",
+      "game": "Spiel",
+      "chat": "Chat",
+      "connections": "Verbindungen"
+    }
   },
   "audit": {
     "downloadLog": "Laden Sie das vollständige Protokoll herunter",
@@ -1569,10 +1588,21 @@
     "serverHighLoad": "Server bei 80% Last (CPU/RAM)",
     "playerJoin": "Spieler tritt bei",
     "playerLeave": "Spieler verlässt",
+    "playerFirstJoin": "Erstes Mal auf dem Server",
+    "playerKick": "Kick über das Panel",
+    "playerBan": "Ban über das Panel",
+    "playerDeath": "Spieler gestorben",
+    "playerPvpKill": "Spieler tötet Spieler (PvP)",
+    "bossDefeated": "Boss besiegt",
+    "raidStarted": "Raid/Event gestartet",
     "playerChat": "Spieler-Chat mit Präfix",
     "modAdded": "Neuer Mod hinzugefügt",
     "modUpdated": "Mod aktualisiert",
     "modRemoved": "Mod entfernt",
+    "backupScheduledWarning": "⏰ Backup geplant",
+    "backupScheduledWarningHint": "Welt-Backup startet in etwa 5 Minute(n).",
+    "restartScheduledWarning": "⏰ Neustart geplant",
+    "restartScheduledWarningHint": "Geplanter Server-Neustart in etwa 5 Minute(n).",
     "backupOk": "Backup erfolgreich",
     "backupFail": "Backup schlägt fehl",
     "chatBridge": "Chat-Bridge (Spiel → Discord)",

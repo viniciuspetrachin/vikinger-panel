@@ -4,7 +4,7 @@
 // backend EVENT_TYPES / dispatch wiring). The UI renders from this list.
 // To add a channel later: extend CHANNELS in the HTML template the same way.
 
-/** @type {{ id: string, labelKey: string }[]} */
+/** @type {{ id: string, labelKey: string, hintKey?: string }[]} */
 export const ALERT_EVENT_DEFS = [
   { id: "server_down", labelKey: "alerts.serverDown" },
   { id: "server_up", labelKey: "alerts.serverUp" },
@@ -25,8 +25,16 @@ export const ALERT_EVENT_DEFS = [
   { id: "mod_added", labelKey: "alerts.modAdded" },
   { id: "mod_updated", labelKey: "alerts.modUpdated" },
   { id: "mod_removed", labelKey: "alerts.modRemoved" },
-  { id: "backup_scheduled_warning", labelKey: "alerts.backupScheduledWarning" },
-  { id: "restart_scheduled_warning", labelKey: "alerts.restartScheduledWarning" },
+  {
+    id: "backup_scheduled_warning",
+    labelKey: "alerts.backupScheduledWarning",
+    hintKey: "alerts.backupScheduledWarningHint",
+  },
+  {
+    id: "restart_scheduled_warning",
+    labelKey: "alerts.restartScheduledWarning",
+    hintKey: "alerts.restartScheduledWarningHint",
+  },
   { id: "backup_ok", labelKey: "alerts.backupOk" },
   { id: "backup_fail", labelKey: "alerts.backupFail" },
 ];
@@ -51,7 +59,12 @@ export const alerts = {
     return ALERT_EVENT_DEFS.map((ev) => ({
       ...ev,
       label: this.t(ev.labelKey),
+      hint: ev.hintKey ? this.t(ev.hintKey) : "",
     }));
+  },
+
+  setAlertEvent(id, enabled) {
+    this.alertsConfig.events = { ...this.alertsConfig.events, [id]: !!enabled };
   },
 
   _normalizeAlertsConfig(cfg) {

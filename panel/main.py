@@ -28,7 +28,7 @@ from pydantic import BaseModel
 
 import auto_messages
 from fwl_io import WorldConfig, WorldMeta, config_summary_from_meta, read_fwl, world_config_details, write_fwl
-from log_utils import clean_docker_logs
+from log_utils import apply_log_filters, clean_docker_logs
 from rcon_client import (
     RconError,
     STEAM_ID_RE,
@@ -4172,10 +4172,28 @@ def api_server_action(action: str):
 
 
 @app.get("/api/logs")
-def api_logs(lines: int = Query(150, ge=10, le=2000), source: str = "docker"):
+def api_logs(
+    lines: int = Query(150, ge=10, le=2000),
+    source: str = "docker",
+    hide_noise: bool = Query(False),
+    category: str = Query("all"),
+    search: str = Query(""),
+):
     if source == "bepinex":
-        return {"logs": bepinex_log(lines)}
-    return {"logs": get_logs(lines)}
+        raw = bepinex_log(lines)
+    else:
+        raw = get_logs(lines)
+    filtered, line_count, filtered_count = apply_log_filters(
+        raw,
+        hide_noise=hide_noise,
+        category=category,
+        search=search,
+    )
+    return {
+        "logs": filtered,
+        "line_count": line_count,
+        "filtered_count": filtered_count,
+    }
 
 
 # ── Console RCON ─────────────────────────────────────────────────────────────
@@ -5538,8 +5556,7 @@ def _scan_and_dispatch_chat_bridge(cfg: dict) -> None:
     seen = _alert_state.setdefault("chat_seen", set())
     matches = panel_alerts.extract_prefixed_chat(text, prefix=prefix)
     for item in matches:
-        key = f"{item['player']}|{item['text']}|{item.get('line', '')[-120:]}"
-        digest = hash(key)
+        digest = hash(panel_alerts.chat_bridge_fingerprint(item))
         if digest in seen:
             continue
         seen.add(digest)
@@ -5558,16 +5575,7 @@ def _rcon_available_for_alerts() -> bool:
 
 
 def _game_log_digest(kind: str, item: dict) -> int:
-    line = item.get("line") or ""
-    if kind == "player_death":
-        key = f"death|{item.get('player')}|{line[-120:]}"
-    elif kind == "player_pvp_kill":
-        key = f"pvp|{item.get('killer')}|{item.get('victim')}|{line[-120:]}"
-    elif kind == "raid_started":
-        key = f"raid|{item.get('event')}|{line[-120:]}"
-    else:
-        key = f"{kind}|{item}|{line[-120:]}"
-    return hash(key)
+    return hash(panel_alerts.game_log_fingerprint(kind, item))
 
 
 def _scan_and_dispatch_game_events(cfg: dict) -> None:
@@ -5595,13 +5603,18 @@ def _scan_and_dispatch_game_events(cfg: dict) -> None:
                 "player_pvp_kill",
                 {"killer": item["killer"], "victim": item["victim"]},
             )
+    death_fps_this_scan: set[str] = set()
     if watch_death:
         for item in panel_alerts.extract_player_deaths(text):
             if item["player"].lower() in pvp_victims:
                 continue
+            fp = panel_alerts.game_log_fingerprint("player_death", item)
+            if fp in death_fps_this_scan:
+                continue
             digest = _game_log_digest("player_death", item)
             if digest in seen:
                 continue
+            death_fps_this_scan.add(fp)
             seen.add(digest)
             panel_alerts.dispatch(cfg, "player_death", {"player": item["player"]})
     if watch_raid:

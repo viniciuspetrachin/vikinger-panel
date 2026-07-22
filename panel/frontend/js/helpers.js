@@ -1,6 +1,7 @@
 // Formatting + log rendering helpers (mixed into the Alpine component).
 
 import { getLocale } from "./i18n/index.js";
+import { parseGameChatLine } from "./log-filters.js";
 
 export function formatRateTick(bps) {
   if (!bps || bps <= 0) return "0 B/s";
@@ -33,27 +34,57 @@ export const helpers = {
     if (/ERROR|Failed|Fatal|Exception/i.test(msg)) return "log-error";
     if (/Update state|verifying install|progress:/i.test(msg)) return "log-warn";
     if (/^\.d\.\./.test(msg)) return "log-muted";
+    if (/\b(say|showMessage|shout|talk)\b/i.test(msg)) return "log-chat";
     return "log-default";
   },
 
-  formatLogLine(line) {
+  highlightSearch(text, search) {
+    const raw = String(text ?? "");
+    if (!search || !String(search).trim()) return this.escapeHtml(raw);
+    const q = String(search).trim();
+    const lower = raw.toLowerCase();
+    const qLower = q.toLowerCase();
+    let out = "";
+    let pos = 0;
+    while (true) {
+      const idx = lower.indexOf(qLower, pos);
+      if (idx === -1) {
+        out += this.escapeHtml(raw.slice(pos));
+        break;
+      }
+      out += this.escapeHtml(raw.slice(pos, idx));
+      out += `<mark class="log-highlight">${this.escapeHtml(raw.slice(idx, idx + q.length))}</mark>`;
+      pos = idx + q.length;
+    }
+    return out;
+  },
+
+  formatLogLine(line, search) {
+    const chat = parseGameChatLine(line);
     const legacy = line.match(/^(\[[^\]]+\])\s+(\[[^\]]+\])\s+(.*)$/);
     if (legacy) {
-      const msgCls = this.logMessageClass(legacy[3]);
+      const msgCls = chat ? "log-chat" : this.logMessageClass(legacy[3]);
+      const body = chat
+        ? `${chat.player}: ${chat.message} (${chat.channel})`
+        : legacy[3];
       return `<span class="log-ts">${this.escapeHtml(legacy[1])}</span> `
-        + `<span class="log-msg ${msgCls}">${this.escapeHtml(legacy[3])}</span>`;
+        + `<span class="log-msg ${msgCls}">${this.highlightSearch(body, search)}</span>`;
     }
     const match = line.match(/^(\[[^\]]+\])\s+(.*)$/);
     if (match) {
-      const msgCls = this.logMessageClass(match[2]);
+      const msgCls = chat ? "log-chat" : this.logMessageClass(match[2]);
+      const body = chat
+        ? `${chat.player}: ${chat.message} (${chat.channel})`
+        : match[2];
       return `<span class="log-ts">${this.escapeHtml(match[1])}</span> `
-        + `<span class="log-msg ${msgCls}">${this.escapeHtml(match[2])}</span>`;
+        + `<span class="log-msg ${msgCls}">${this.highlightSearch(body, search)}</span>`;
     }
-    const msgCls = this.logMessageClass(line);
-    return `<span class="log-msg ${msgCls}">${this.escapeHtml(line)}</span>`;
+    const msgCls = chat ? "log-chat" : this.logMessageClass(line);
+    const body = chat ? `${chat.player}: ${chat.message} (${chat.channel})` : line;
+    return `<span class="log-msg ${msgCls}">${this.highlightSearch(body, search)}</span>`;
   },
 
-  formatLogHtml(text, emptyLabel) {
+  formatLogHtml(text, emptyLabel, search) {
     if (emptyLabel === undefined) {
       emptyLabel = this.t("common.logEmpty.waitingForOutput");
     }
@@ -65,7 +96,7 @@ export const helpers = {
       return `<span class="log-line log-empty">${this.escapeHtml(emptyLabel)}</span>`;
     }
     return lines
-      .map((line) => `<span class="log-line">${this.formatLogLine(line)}</span>`)
+      .map((line) => `<span class="log-line">${this.formatLogLine(line, search)}</span>`)
       .join("\n");
   },
 

@@ -340,6 +340,18 @@
   .log-msg.log-error { color: rgb(var(--v-danger)); }
   .log-msg.log-warn { color: rgb(var(--v-warning)); }
   .log-msg.log-muted { color: rgb(var(--g-600)); }
+  .log-msg.log-chat { color: rgb(var(--v-gold-light)); font-weight: 500; }
+  .log-highlight {
+    background: rgb(var(--v-gold) / 0.35);
+    color: inherit;
+    border-radius: 0.125rem;
+    padding: 0 0.1em;
+  }
+  .cmd-chip-active {
+    border-color: rgb(var(--v-gold));
+    color: rgb(var(--v-gold-light));
+    background: rgb(var(--v-gold) / 0.12);
+  }
 
   /* ── Console RCON + ações de jogador ── */
   .console-input-wrap:focus-within {

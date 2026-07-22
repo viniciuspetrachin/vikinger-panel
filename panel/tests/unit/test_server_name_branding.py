@@ -70,7 +70,7 @@ def test_apply_env_save_colored_name():
 
 def test_apply_env_save_hex_two_colors_fails():
     with pytest.raises(ValueError, match="Hex color"):
-        apply_env_save({"SERVER_NAME": "<color=#FF0000>A</color><color=#0000FF>B</color>"})
+        apply_env_save({"SERVER_NAME": "<color=#FFD700>A</color><color=#FFFFFF>B</color>"})
 
 
 def test_effective_server_name():

@@ -335,17 +335,18 @@ def format_event(event_type: str, ctx: Optional[dict] = None) -> dict:
     }
 
 
+_DOCKER_TS_BRACKET = re.compile(
+    r"^\[[A-Za-z]{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\]\s*"
+)
+_BEPINEX_BRACKET = re.compile(
+    r"^\[(?:Info|Warning|Error|Message|Debug|Log)\s*:\s*[^\]]+\]\s*",
+    re.IGNORECASE,
+)
+
+
 def parse_chat_line(line: str) -> Optional[tuple[str, str]]:
     """Extract ``(player, message)`` from a log line, or ``None`` if not chat-like."""
-    raw = (line or "").strip()
-    if not raw:
-        return None
-    # Drop common docker/supervisor prefixes.
-    cleaned = re.sub(
-        r"^(?:[A-Z][a-z]{2}\s+\d+\s+\d+:\d+:\d+\s+)?(?:supervisord:\s+\S+\s+)?",
-        "",
-        raw,
-    ).strip()
+    cleaned = _clean_game_log_line(line)
     if not cleaned:
         return None
     for pat in _CHAT_LINE_PATTERNS:
@@ -401,15 +402,54 @@ def extract_prefixed_chat(
 
 
 def _clean_game_log_line(line: str) -> str:
-    """Strip docker/supervisor prefixes from a log line."""
+    """Strip docker/supervisor, timestamp bracket, and BepInEx prefixes from a log line."""
     raw = (line or "").strip()
     if not raw:
         return ""
-    return re.sub(
+    text = re.sub(
         r"^(?:[A-Z][a-z]{2}\s+\d+\s+\d+:\d+:\d+\s+)?(?:supervisord:\s+\S+\s+)?",
         "",
         raw,
     ).strip()
+    while True:
+        changed = False
+        m = _DOCKER_TS_BRACKET.match(text)
+        if m:
+            text = text[m.end():].strip()
+            changed = True
+        m = _BEPINEX_BRACKET.match(text)
+        if m:
+            text = text[m.end():].strip()
+            changed = True
+        if not changed:
+            break
+    return text
+
+
+def game_log_fingerprint(kind: str, item: dict) -> str:
+    """Stable dedupe key for a parsed game-log event (docker vs BepInEx safe)."""
+    stripped = _clean_game_log_line(item.get("line") or "")
+    if kind == "player_death":
+        m = _RE_PLAYER_DEATH.search(stripped)
+        return f"death|{(m.group(0) if m else stripped).lower()}"
+    if kind == "player_pvp_kill":
+        return (
+            f"pvp|{(item.get('killer') or '').lower()}|"
+            f"{(item.get('victim') or '').lower()}|{stripped.lower()}"
+        )
+    if kind == "raid_started":
+        m = _RE_RANDOM_EVENT.search(stripped)
+        event_key = (m.group(1) if m else item.get("event") or stripped).lower()
+        return f"raid|{event_key}"
+    return f"{kind}|{stripped.lower()}"
+
+
+def chat_bridge_fingerprint(item: dict) -> str:
+    """Stable dedupe key for a bridged chat message."""
+    player = (item.get("player") or "").lower()
+    text = (item.get("text") or "").lower()
+    stripped = _clean_game_log_line(item.get("line") or "")
+    return f"{player}|{text}|{stripped.lower()}"
 
 
 def _looks_like_system_line(cleaned: str) -> bool:

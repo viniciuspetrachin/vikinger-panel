@@ -81,6 +81,7 @@ function panel() {
       this.actionPending = null;
       this.initTheme();
       this.initNav();
+      this.initLogRefresh();
       await this.loadVersion();
       this.initI18nFromApi(this.versionInfo.default_locale || "en-US");
       // Open live socket early; REST fills the gap until the first frame.
@@ -100,7 +101,6 @@ function panel() {
           this.loadPlayerLists();
         }
       }, 10000);
-      setInterval(() => { if (this.page === "console" && this.logAutoRefresh) this.loadLogs(); }, 5000);
       setInterval(() => { if (this.page === "audit" && this.auditAutoRefresh) this.loadAudit(); }, 5000);
     },
 
@@ -147,6 +147,9 @@ function panel() {
         await this.withPageLoad("console", async () => {
           await Promise.all([this.loadLogs(), this.loadConsoleStatus()]);
         });
+        this.startLogPolling();
+      } else {
+        this.stopLogPolling();
       }
       if (this.page === "audit") await this.loadAudit();
       if (this.page === "about") await this.loadAboutPage();

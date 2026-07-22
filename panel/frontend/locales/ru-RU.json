@@ -1314,7 +1314,26 @@
   "logs": {
     "docker": "Докер",
     "bepinex": "БепИнЭкс",
-    "autoRefresh": "Авто (5 с)"
+    "autoRefresh": "Авто (5 с)",
+    "refreshLabel": "Автообновление",
+    "refreshOff": "Выкл.",
+    "refreshNormal": "Обычный (5 с)",
+    "refreshRealtime": "В реальном времени (1 с)",
+    "refreshOverhead": {
+      "normal": "~0,5% нагрузки на панель/хост (оценка)",
+      "realtime": "~2% нагрузки на панель/хост (оценка)"
+    },
+    "searchPlaceholder": "Поиск в логах…",
+    "hideNoise": "Скрыть шум",
+    "clearBuffer": "Очистить буфер",
+    "lineCount": "{count} строк в буфере",
+    "matchCount": "{count} совпадений",
+    "categories": {
+      "all": "Все",
+      "game": "Игра",
+      "chat": "Чат",
+      "connections": "Подключения"
+    }
   },
   "audit": {
     "downloadLog": "Скачать полный журнал",
@@ -1569,10 +1588,21 @@
     "serverHighLoad": "Сервер на 80% нагрузки (CPU/RAM)",
     "playerJoin": "Игрок подключился",
     "playerLeave": "Игрок вышел",
+    "playerFirstJoin": "Первый вход игрока",
+    "playerKick": "Кик через панель",
+    "playerBan": "Бан через панель",
+    "playerDeath": "Игрок погиб",
+    "playerPvpKill": "Игрок убил игрока (PvP)",
+    "bossDefeated": "Босс побеждён",
+    "raidStarted": "Рейд/событие началось",
     "playerChat": "Чат игрока с префиксом",
     "modAdded": "Добавлен новый мод",
     "modUpdated": "Мод обновлён",
     "modRemoved": "Мод удалён",
+    "backupScheduledWarning": "⏰ Запланирован бэкап",
+    "backupScheduledWarningHint": "Бэкап мира запустится примерно через 5 мин.",
+    "restartScheduledWarning": "⏰ Запланирован перезапуск",
+    "restartScheduledWarningHint": "Запланированный перезапуск сервера через ~5 мин.",
     "backupOk": "Бэкап успешен",
     "backupFail": "Ошибка бэкапа",
     "chatBridge": "Мост чата (игра → Discord)",

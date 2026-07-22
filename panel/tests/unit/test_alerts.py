@@ -85,6 +85,30 @@ def test_extract_prefixed_chat_default_and_custom():
     assert custom[0]["text"] == "hi there"
 
 
+def test_extract_prefixed_chat_docker_timestamp_prefix():
+    logs = "[Jul 21 03:09:00] Exforgant: @discord Ola discord\n"
+    hits = alerts.extract_prefixed_chat(logs, prefix="@discord")
+    assert len(hits) == 1
+    assert hits[0]["player"] == "Exforgant"
+    assert hits[0]["text"] == "Ola discord"
+
+
+def test_extract_prefixed_chat_bepinex_unity_log_prefix():
+    logs = "[Info   : Unity Log] Exforgant : @discord Ola discord\n"
+    hits = alerts.extract_prefixed_chat(logs, prefix="@discord")
+    assert len(hits) == 1
+    assert hits[0]["player"] == "Exforgant"
+    assert hits[0]["text"] == "Ola discord"
+
+
+def test_game_log_fingerprint_death_normalizes_sources():
+    docker = "[Jul 21 03:09:00] Got character ZDOID from Ragnar : 0:0"
+    bepinex = "[Info   : Unity Log] Got character ZDOID from Ragnar : 0:0"
+    fp_d = alerts.game_log_fingerprint("player_death", {"line": docker})
+    fp_b = alerts.game_log_fingerprint("player_death", {"line": bepinex})
+    assert fp_d == fp_b
+
+
 def test_extract_player_deaths():
     logs = (
         "Got connection SteamID 111\n"

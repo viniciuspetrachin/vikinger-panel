@@ -1,12 +1,40 @@
 /** Valheim server name color tags (Unity Rich Text). */
 
+/** Characters that break Valheim launch args or rich-text parsing. */
+export const SERVER_NAME_FORBIDDEN_CHARS_RE = /["<>]/;
+
+/** Named colors known to work in the server browser (multi-color names). */
+export const SERVER_NAME_NAMED_COLORS = [
+  "red", "green", "blue", "yellow", "orange", "cyan", "purple", "white",
+];
+
+/** Hex presets for single-color names (Valheim hex rule: one colored fragment). */
+export const SERVER_NAME_HEX_PRESETS = ["#FFD700", "#FF6600", "#FFFFFF"];
+
+export const SERVER_NAME_COLOR_OPTIONS = [
+  ...SERVER_NAME_NAMED_COLORS.map((c) => ({ value: c, display: c })),
+  { value: "#FFD700", labelKey: "hexGold" },
+  { value: "#FF6600", labelKey: "hexOrange" },
+  { value: "#FFFFFF", labelKey: "hexWhite" },
+];
+
+/** @deprecated kept for parsing legacy saved names */
 export const VALHEIM_NAMED_COLORS = [
   "red", "blue", "green", "yellow", "cyan", "magenta", "white", "black",
   "silver", "grey", "gray", "maroon", "olive", "lime", "navy", "teal", "orange", "purple",
 ];
 
+const ALLOWED_COLORS = new Set([
+  ...SERVER_NAME_NAMED_COLORS,
+  ...SERVER_NAME_HEX_PRESETS.map((h) => h.toUpperCase()),
+]);
+
 const COLOR_TAG_RE = /<color=([^>]+)>([\s\S]*?)(?:<\/color>|(?=<color=)|$)/gi;
 const HEX_SHORT_RE = /<#([0-9A-Fa-f]{3,8})>([\s\S]*?)(?=<#|$)/g;
+
+export function sanitizeServerNameFragment(text) {
+  return String(text ?? "").replace(SERVER_NAME_FORBIDDEN_CHARS_RE, "");
+}
 
 export function normalizeColorValue(raw) {
   const value = String(raw || "").trim().replace(/^["']|["']$/g, "");
@@ -19,6 +47,13 @@ export function normalizeColorValue(raw) {
 
 export function isHexColor(color) {
   return /^#[0-9A-Fa-f]{3,8}$/.test(String(color || "").trim());
+}
+
+export function isAllowedServerNameColor(color) {
+  const c = normalizeColorValue(color);
+  if (!c) return true;
+  if (isHexColor(c)) return ALLOWED_COLORS.has(c.toUpperCase());
+  return ALLOWED_COLORS.has(c);
 }
 
 export function stripColorTags(name) {
@@ -77,9 +112,12 @@ export function parseColoredServerName(raw) {
   const text = String(raw || "");
   const segments = parseSegments(text);
   if (segments.length) {
-    return segments.map((s) => ({ text: s.text, color: s.color || "" }));
+    return segments.map((s) => ({
+      text: sanitizeServerNameFragment(s.text),
+      color: isAllowedServerNameColor(s.color) ? normalizeColorValue(s.color) : "",
+    }));
   }
-  if (text) return [{ text: stripColorTags(text), color: "" }];
+  if (text) return [{ text: sanitizeServerNameFragment(stripColorTags(text)), color: "" }];
   return [{ text: "", color: "" }];
 }
 
@@ -95,13 +133,14 @@ export function buildColoredServerName(parts) {
   const slots = Array.isArray(parts) ? parts : [];
   let out = "";
   for (const slot of slots) {
-    const text = String(slot?.text ?? "");
+    const text = sanitizeServerNameFragment(slot?.text ?? "");
     const color = normalizeColorValue(slot?.color);
     if (!text) continue;
     if (!color) {
       out += text;
       continue;
     }
+    if (!isAllowedServerNameColor(color)) continue;
     const tagColor = isHexColor(color) ? color : color;
     out += `<color=${tagColor}>${text}</color>`;
   }
@@ -114,6 +153,17 @@ export function validateColoredServerName(parts) {
     .map((p) => normalizeColorValue(p.color))
     .filter(Boolean);
   const unique = [...new Set(colors)];
+
+  for (const slot of slots) {
+    const text = String(slot?.text ?? "");
+    if (SERVER_NAME_FORBIDDEN_CHARS_RE.test(text)) {
+      return { ok: false, code: "invalidCharacters" };
+    }
+    const color = normalizeColorValue(slot.color);
+    if (color && !isAllowedServerNameColor(color)) {
+      return { ok: false, code: "unsupportedColor" };
+    }
+  }
 
   if (!unique.length) return { ok: true };
 
@@ -135,11 +185,24 @@ export function validateColoredServerName(parts) {
   return { ok: true };
 }
 
+const CSS_NAMED = {
+  grey: "#808080",
+  gray: "#808080",
+  maroon: "#800000",
+  olive: "#808000",
+  lime: "#00FF00",
+  navy: "#000080",
+  teal: "#008080",
+  silver: "#C0C0C0",
+  black: "#000000",
+  magenta: "#FF00FF",
+};
+
 export function cssColorForTag(color) {
   const c = normalizeColorValue(color);
   if (!c) return null;
   if (isHexColor(c)) return c;
-  if (c === "grey") return "#808080";
+  if (CSS_NAMED[c]) return CSS_NAMED[c];
   return c;
 }
 
@@ -147,7 +210,7 @@ export function previewColoredServerName(parts, { suffix = "" } = {}) {
   const slots = Array.isArray(parts) ? parts : [];
   let html = "";
   for (const slot of slots) {
-    const text = String(slot?.text ?? "");
+    const text = sanitizeServerNameFragment(slot?.text ?? "");
     if (!text) continue;
     const css = cssColorForTag(slot?.color);
     const safe = text

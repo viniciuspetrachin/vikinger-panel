@@ -1,13 +1,14 @@
 // Servidor: .env básico + listas de jogadores + capacidade (RAM e jogadores).
 
 import {
-  VALHEIM_NAMED_COLORS,
+  SERVER_NAME_COLOR_OPTIONS,
   buildColoredServerName,
   emptyColorPart,
   findHexPartIndex,
   normalizeColorValue,
   parseColoredServerName,
   previewColoredServerName,
+  sanitizeServerNameFragment,
   validateColoredServerName,
 } from "../server_name_colors.js";
 
@@ -81,8 +82,13 @@ export const server = {
     }
   },
 
-  getValheimNamedColors() {
-    return VALHEIM_NAMED_COLORS;
+  getServerNameColorOptions() {
+    return SERVER_NAME_COLOR_OPTIONS;
+  },
+
+  serverNameColorOptionLabel(opt) {
+    if (opt.labelKey) return this.t(`server.serverNameColors.${opt.labelKey}`);
+    return opt.display || opt.value;
   },
 
   syncColorPartsFromBase() {
@@ -90,6 +96,10 @@ export const server = {
   },
 
   onServerNameColorPartsChange() {
+    for (const part of this.serverNameColorParts) {
+      const clean = sanitizeServerNameFragment(part.text);
+      if (clean !== part.text) part.text = clean;
+    }
     const hexIdx = findHexPartIndex(this.serverNameColorParts);
     if (hexIdx >= 0) {
       this.serverNameColorParts.forEach((part, i) => {

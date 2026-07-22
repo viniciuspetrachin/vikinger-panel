@@ -2,7 +2,16 @@
 
 import pytest
 
-from log_utils import clean_docker_logs, normalize_docker_log_line, strip_ansi
+from log_utils import (
+    apply_log_filters,
+    clean_docker_logs,
+    filter_log_lines,
+    is_game_event,
+    is_log_noise,
+    normalize_docker_log_line,
+    parse_game_chat_line,
+    strip_ansi,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -97,3 +106,61 @@ def test_clean_docker_logs_steamcmd_block():
     assert "Success! App '896660' fully installed." in cleaned
     assert "INFO - Valheim Server is already the latest version" in cleaned
     assert cleaned.count(" OK") == 2 or cleaned.count("\nOK") >= 1
+
+
+def test_parse_game_chat_line_valheim_native():
+    line = "[Jul 21 23:58:33] 76561198273697711/Exforgant (2146, -539, 36): say ola"
+    parsed = parse_game_chat_line(line)
+    assert parsed is not None
+    assert parsed["player"] == "Exforgant"
+    assert parsed["message"] == "ola"
+    assert parsed["channel"] == "say"
+
+
+def test_parse_game_chat_line_show_message():
+    line = "76561198273697711/Exforgant (2146, -539, 36): showMessage ola"
+    parsed = parse_game_chat_line(line)
+    assert parsed is not None
+    assert parsed["player"] == "Exforgant"
+    assert parsed["message"] == "ola"
+    assert parsed["channel"] == "showmessage"
+
+
+def test_is_log_noise_global_keys_block():
+    assert is_log_noise("[Jul 21 23:58:34] Command completed: globalKeys")
+    assert is_log_noise("Global Keys:")
+    assert is_log_noise("playerdamage 85")
+    assert is_log_noise("Connections 1 ZDOS:541341  sent:0 recv:544")
+
+
+def test_is_game_event_chat_and_connection():
+    chat = "[Jul 21 23:58:33] 76561198273697711/Exforgant (2146, -539, 36): say ola"
+    assert is_game_event(chat)
+    assert is_game_event("07/22/2026 00:03:03: New connection")
+    assert not is_game_event("playerdamage 85")
+
+
+def test_filter_log_lines_hide_noise_and_chat_category():
+    lines = [
+        "[Jul 21 23:58:34] Command completed: globalKeys",
+        "Global Keys:",
+        "playerdamage 85",
+        "[Jul 21 23:58:33] 76561198273697711/Exforgant (2146, -539, 36): say ola",
+        "07/22/2026 00:03:03: New connection",
+    ]
+    filtered = filter_log_lines(lines, hide_noise=True, category="chat")
+    assert len(filtered) == 1
+    assert "Exforgant" in filtered[0]
+    assert "say ola" in filtered[0]
+
+
+def test_apply_log_filters_counts():
+    text = "\n".join([
+        "Global Keys:",
+        "76561198273697711/Exforgant (2146, -539, 36): say ola",
+    ])
+    out, total, count = apply_log_filters(text, hide_noise=True, category="all")
+    assert total == 2
+    assert count == 1
+    assert "Exforgant" in out
+    assert "Global Keys" not in out

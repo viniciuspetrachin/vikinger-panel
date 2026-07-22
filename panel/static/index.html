@@ -539,7 +539,7 @@
         </section>
 
         <!-- CONSOLE -->
-        <section x-show="page === 'console'" class="space-y-4">
+        <section x-show="page === 'console'" class="space-y-4" @keydown.window="onLogKeydown($event)">
           <div class="stat-card">
             <div class="flex items-center justify-between mb-3">
               <h3 class="section-title" x-text="t('consolePage.title')">Console</h3>
@@ -587,16 +587,46 @@
             <div class="flex items-center justify-between mb-3">
               <h3 class="section-title" x-text="t('consolePage.logs')">Logs</h3>
               <div class="flex items-center gap-2">
-                <button class="btn btn-sm" :class="logSource === 'docker' ? 'btn-primary' : 'btn-ghost'" @click="logSource = 'docker'; loadLogs()" x-text="t('logs.docker')">Docker</button>
-                <button class="btn btn-sm" :class="logSource === 'bepinex' ? 'btn-primary' : 'btn-ghost'" @click="logSource = 'bepinex'; loadLogs()" x-text="t('logs.bepinex')">BepInEx</button>
+                <button class="btn btn-sm" :class="logSource === 'docker' ? 'btn-primary' : 'btn-ghost'" @click="logSource = 'docker'; onLogSourceChange()" x-text="t('logs.docker')">Docker</button>
+                <button class="btn btn-sm" :class="logSource === 'bepinex' ? 'btn-primary' : 'btn-ghost'" @click="logSource = 'bepinex'; onLogSourceChange()" x-text="t('logs.bepinex')">BepInEx</button>
                 <button class="btn btn-sm btn-ghost" @click="loadLogs()" :disabled="logsLoading" x-text="t('common.actions.refresh')">Refresh</button>
               </div>
             </div>
-            <div x-ref="logConsole" class="log-viewer bg-valheim-950 border border-valheim-700 rounded-lg p-4 h-80 overflow-y-auto" x-html="formatLogHtml(logs)"></div>
-            <label class="flex items-center gap-2 text-xs text-gray-500 mt-3 cursor-pointer">
-              <span class="switch"><input type="checkbox" x-model="logAutoRefresh" /><span class="switch-track"></span></span>
-              <span x-text="t('logs.autoRefresh')">Auto-refresh</span>
-            </label>
+            <div class="flex flex-wrap items-center gap-2 mb-3">
+              <input type="search" x-ref="logSearchInput" x-model="logSearch" @input="onLogFilterChange()"
+                :placeholder="t('logs.searchPlaceholder')"
+                class="input flex-1 min-w-[12rem] text-sm font-mono" />
+              <div class="flex flex-wrap gap-1">
+                <button type="button" class="cmd-chip" :class="logCategory === 'all' && 'cmd-chip-active'"
+                  @click="logCategory = 'all'; onLogFilterChange()" x-text="t('logs.categories.all')">All</button>
+                <button type="button" class="cmd-chip" :class="logCategory === 'game' && 'cmd-chip-active'"
+                  @click="logCategory = 'game'; onLogFilterChange()" x-text="t('logs.categories.game')">Game</button>
+                <button type="button" class="cmd-chip" :class="logCategory === 'chat' && 'cmd-chip-active'"
+                  @click="logCategory = 'chat'; onLogFilterChange()" x-text="t('logs.categories.chat')">Chat</button>
+                <button type="button" class="cmd-chip" :class="logCategory === 'connections' && 'cmd-chip-active'"
+                  @click="logCategory = 'connections'; onLogFilterChange()" x-text="t('logs.categories.connections')">Connections</button>
+              </div>
+              <label class="flex items-center gap-2 text-xs text-gray-500 cursor-pointer shrink-0">
+                <span class="switch"><input type="checkbox" x-model="logHideNoise" @change="onLogFilterChange()" /><span class="switch-track"></span></span>
+                <span x-text="t('logs.hideNoise')">Hide noise</span>
+              </label>
+              <button type="button" class="btn btn-sm btn-ghost shrink-0" @click="clearLogBuffer()" x-text="t('logs.clearBuffer')">Clear buffer</button>
+            </div>
+            <p class="text-xs text-gray-500 mb-2">
+              <span x-text="t('logs.lineCount', { count: logBuffer.length })"></span>
+              <span x-show="logSearch" x-text="' · ' + t('logs.matchCount', { count: logMatchCount })"></span>
+            </p>
+            <div x-ref="logConsole" class="log-viewer bg-valheim-950 border border-valheim-700 rounded-lg p-4 min-h-96 max-h-[32rem] overflow-y-auto" x-html="formatLogHtml(logs, undefined, logSearch)"></div>
+            <div class="flex flex-wrap items-center gap-3 mt-3">
+              <label class="text-xs text-gray-500 shrink-0" x-text="t('logs.refreshLabel')">Auto-refresh</label>
+              <select x-model="logRefreshMode" @change="onLogRefreshModeChange()"
+                class="input text-xs py-1.5 px-2 w-auto min-w-[11rem] max-w-full">
+                <option value="off" x-text="t('logs.refreshOff')">Off</option>
+                <option value="normal" x-text="t('logs.refreshNormal')">Normal (5s)</option>
+                <option value="realtime" x-text="t('logs.refreshRealtime')">Realtime (1s)</option>
+              </select>
+              <span class="text-xs text-gray-600" x-show="logRefreshMode !== 'off'" x-text="logRefreshOverheadHint()"></span>
+            </div>
           </div>
         </section>
 
@@ -638,9 +668,17 @@
               <p class="stat-label mb-2" x-text="t('alerts.events')">Events</p>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <template x-for="ev in alertEventDefs()" :key="ev.id">
-                  <label class="flex items-center gap-3 text-sm surface px-3 py-2">
-                    <span class="switch"><input type="checkbox" x-model="alertsConfig.events[ev.id]" /><span class="switch-track"></span></span>
-                    <span x-text="ev.label"></span>
+                  <label class="flex items-start gap-3 text-sm surface px-3 py-2 cursor-pointer">
+                    <span class="switch shrink-0 mt-0.5">
+                      <input type="checkbox"
+                             :checked="!!alertsConfig.events[ev.id]"
+                             @change="setAlertEvent(ev.id, $event.target.checked)" />
+                      <span class="switch-track"></span>
+                    </span>
+                    <span class="min-w-0">
+                      <span class="block" x-text="ev.label"></span>
+                      <span x-show="ev.hint" class="block text-xs text-gray-500 mt-0.5" x-text="ev.hint"></span>
+                    </span>
                   </label>
                 </template>
               </div>
@@ -766,13 +804,9 @@
                                     :disabled="serverNamePartColorDisabled(idx)"
                                     class="w-full bg-valheim-900 border border-valheim-600 rounded-lg px-2 py-2 text-sm focus:border-valheim-gold focus:outline-none disabled:opacity-40">
                               <option value="" x-text="t('server.serverNameColors.noColor')">None</option>
-                              <template x-for="c in getValheimNamedColors()" :key="c">
-                                <option :value="c" x-text="c"></option>
+                              <template x-for="opt in getServerNameColorOptions()" :key="opt.value">
+                                <option :value="opt.value" x-text="serverNameColorOptionLabel(opt)"></option>
                               </template>
-                              <option value="#FFD700" x-text="t('server.serverNameColors.hexGold')">Gold (#FFD700)</option>
-                              <option value="#FF6600" x-text="t('server.serverNameColors.hexOrange')">Orange (#FF6600)</option>
-                              <option value="#00FF00" x-text="t('server.serverNameColors.hexGreen')">Green (#00FF00)</option>
-                              <option value="#FFFFFF" x-text="t('server.serverNameColors.hexWhite')">White (#FFFFFF)</option>
                             </select>
                           </div>
                           <div class="flex items-end gap-1 pb-0.5">

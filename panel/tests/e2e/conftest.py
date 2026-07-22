@@ -94,6 +94,10 @@ elif cmd == "logs":
     w("Jul  7 00:45:20 supervisord: valheim-server  Got connection SteamID 76561198273697711\\n")
     w("Jul  7 00:45:20 supervisord: valheim-server  Got character ZDOID from TestPlayer : 1125091549:3\\n")
     w("Jul  7 00:45:21 supervisord: valheim-server  Connections 1 ZDOS:19178  sent:0 recv:91\\n")
+    w("Jul  7 00:45:22 supervisord: valheim-server  Command completed: globalKeys\\n")
+    w("Jul  7 00:45:22 supervisord: valheim-server  Global Keys:\\n")
+    w("Jul  7 00:45:22 supervisord: valheim-server  playerdamage 85\\n")
+    w("Jul  7 00:45:23 supervisord: valheim-server  76561198273697711/TestPlayer (100, 200, 10): say hello\\n")
     for i in range(2, 42):
         w(f"Jul  7 00:45:2{i % 10} supervisord: valheim-server  Connections {i} ZDOS:19178  sent:0 recv:91\\n")
 elif cmd == "stats":

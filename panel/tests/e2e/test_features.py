@@ -43,6 +43,30 @@ def test_console_log_prefix_cleaned(page: Page, base_url: str) -> None:
     assert re.search(r"\[Jul\s+\d", text)
 
 
+def test_console_log_search_and_filters(page: Page, base_url: str) -> None:
+    _boot(page, base_url)
+    open_primary(page, "console")
+    search = page.locator("[x-ref='logSearchInput']")
+    expect(search).to_be_visible()
+    console = page.locator("[x-ref='logConsole']")
+    expect(console).not_to_contain_text("Global Keys", timeout=8000)
+    expect(console).not_to_contain_text("playerdamage 85", timeout=3000)
+    search.fill("TestPlayer")
+    expect(console).to_contain_text("TestPlayer", timeout=5000)
+
+
+def test_console_log_buffer_persists_on_refresh(page: Page, base_url: str) -> None:
+    _boot(page, base_url)
+    open_primary(page, "console")
+    expect(page.locator("text=lines in buffer")).to_be_visible(timeout=8000)
+    count_before = page.locator("text=lines in buffer").inner_text()
+    logs_card = page.locator(".stat-card").filter(has=page.locator("[x-ref='logConsole']"))
+    logs_card.get_by_role("button", name="Refresh", exact=True).click()
+    expect(page.locator("text=lines in buffer")).to_be_visible(timeout=8000)
+    count_after = page.locator("text=lines in buffer").inner_text()
+    assert count_after == count_before or int(count_after.split()[0]) >= int(count_before.split()[0])
+
+
 def test_console_command(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     open_primary(page, "console")
@@ -95,8 +119,10 @@ def test_console_help_modal(page: Page, base_url: str) -> None:
 def test_console_auto_refresh_default_on(page: Page, base_url: str) -> None:
     _boot(page, base_url)
     open_primary(page, "console")
-    checkbox = page.locator("input[x-model='logAutoRefresh']")
-    expect(checkbox).to_be_checked()
+    select = page.locator("select[x-model='logRefreshMode']")
+    expect(select).to_be_visible()
+    expect(select).to_have_value("normal")
+    expect(page.locator("text=panel/host overhead")).to_be_visible()
 
 
 # ── Overview cockpit ─────────────────────────────────────────────────────────

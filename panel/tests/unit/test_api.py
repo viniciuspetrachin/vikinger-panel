@@ -186,6 +186,24 @@ def test_logs_bepinex(client):
     assert "bepinex" in r.json()["logs"]
 
 
+def test_logs_filter_params(client, monkeypatch):
+    raw = "\n".join([
+        "Global Keys:",
+        "playerdamage 85",
+        "76561198273697711/Exforgant (2146, -539, 36): say ola",
+    ])
+
+    monkeypatch.setattr(main, "get_logs", lambda lines=100: raw)
+
+    r = client.get("/api/logs?hide_noise=true&category=chat&search=ola")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["line_count"] == 3
+    assert body["filtered_count"] == 1
+    assert "Exforgant" in body["logs"]
+    assert "Global Keys" not in body["logs"]
+
+
 def test_logs_docker_sanitized(client, env_dir, monkeypatch):
     raw = (
         "Jul  7 00:45:17 supervisord: valheim-updater ^[[0m\n"
@@ -2392,6 +2410,46 @@ def test_alert_player_death_dispatched(env_dir, monkeypatch):
     monkeypatch.setattr(main, "bepinex_log", lambda lines=80: "")
     main._check_and_dispatch_alerts(cfg)
     assert ("player_death", {"player": "Ragnar"}) in fired
+
+
+def test_alert_player_death_dedupes_docker_and_bepinex(env_dir, monkeypatch):
+    fired = []
+    monkeypatch.setattr(main.panel_alerts, "dispatch", lambda cfg, ev, ctx=None: fired.append((ev, ctx)))
+    _reset_alert_state()
+    cfg = {"events": {"player_death": True}, "discord": {"enabled": True}}
+    monkeypatch.setattr(main, "container_running", lambda: True)
+    monkeypatch.setattr(
+        main,
+        "get_logs",
+        lambda lines=100: "[Jul 21 03:09:00] Got character ZDOID from Ragnar : 0:0\n",
+    )
+    monkeypatch.setattr(
+        main,
+        "bepinex_log",
+        lambda lines=80: "[Info   : Unity Log] Got character ZDOID from Ragnar : 0:0\n",
+    )
+    main._check_and_dispatch_alerts(cfg)
+    assert fired.count(("player_death", {"player": "Ragnar"})) == 1
+
+
+def test_alert_chat_bridge_docker_timestamp_log(env_dir, monkeypatch):
+    fired = []
+    monkeypatch.setattr(main.panel_alerts, "dispatch", lambda cfg, ev, ctx=None: fired.append((ev, ctx)))
+    _reset_alert_state()
+    cfg = {
+        "events": {"player_chat": False},
+        "chat_bridge": {"enabled": True, "prefix": "@discord"},
+        "discord": {"enabled": True, "webhook_url": "https://discord.test/hook"},
+    }
+    monkeypatch.setattr(main, "container_running", lambda: True)
+    monkeypatch.setattr(
+        main,
+        "get_logs",
+        lambda lines=100: "[Jul 21 03:09:00] Exforgant: @discord Ola discord\n",
+    )
+    monkeypatch.setattr(main, "bepinex_log", lambda lines=80: "")
+    main._check_and_dispatch_alerts(cfg)
+    assert ("player_chat", {"player": "Exforgant", "text": "Ola discord"}) in fired
 
 
 def test_alert_pvp_kill_suppresses_duplicate_death(env_dir, monkeypatch):

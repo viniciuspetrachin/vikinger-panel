@@ -1026,14 +1026,15 @@
       "noColor": "Default (no tag)",
       "hexGold": "Gold (#FFD700)",
       "hexOrange": "Orange (#FF6600)",
-      "hexGreen": "Green (#00FF00)",
       "hexWhite": "White (#FFFFFF)",
       "hexHint": "Hex allows color on one fragment only — other fragments use the default.",
       "colorsUsed": "{count}/2 colors used",
-      "hint": "Split the name into fragments (+/−). “Default” does not count — up to 2 different colors total, or one hex color. Tags are applied automatically.",
+      "hint": "Split the name into fragments (+/−). Quotes (\") and < > characters are not allowed — they break the Valheim server browser. Up to 2 named colors or one hex color. Tags are applied automatically.",
       "errors": {
         "hexSingleOnly": "Hex color allows only one colored part.",
-        "maxTwoColors": "At most two different named colors are supported."
+        "maxTwoColors": "At most two different named colors are supported.",
+        "invalidCharacters": "The name cannot contain quotes (\") or < > characters.",
+        "unsupportedColor": "Color not supported in the Valheim server browser — pick another option."
       }
     },
     "capacity": {
@@ -1365,7 +1366,26 @@
   "logs": {
     "docker": "Docker",
     "bepinex": "BepInEx",
-    "autoRefresh": "Auto (5s)"
+    "autoRefresh": "Auto (5s)",
+    "refreshLabel": "Auto-refresh",
+    "refreshOff": "Off",
+    "refreshNormal": "Normal (5s)",
+    "refreshRealtime": "Realtime (1s)",
+    "refreshOverhead": {
+      "normal": "~0.5% panel/host overhead (est.)",
+      "realtime": "~2% panel/host overhead (est.)"
+    },
+    "searchPlaceholder": "Search logs…",
+    "hideNoise": "Hide noise",
+    "clearBuffer": "Clear buffer",
+    "lineCount": "{count} lines in buffer",
+    "matchCount": "{count} matches",
+    "categories": {
+      "all": "All",
+      "game": "Game",
+      "chat": "Chat",
+      "connections": "Connections"
+    }
   },
   "audit": {
     "downloadLog": "Download full log",
@@ -1632,8 +1652,10 @@
     "modAdded": "New mod added",
     "modUpdated": "Mod updated",
     "modRemoved": "Mod removed",
-    "backupScheduledWarning": "Scheduled backup in ~5 min",
-    "restartScheduledWarning": "Scheduled restart in ~5 min",
+    "backupScheduledWarning": "⏰ Backup scheduled",
+    "backupScheduledWarningHint": "World backup will run in about 5 minute(s).",
+    "restartScheduledWarning": "⏰ Restart scheduled",
+    "restartScheduledWarningHint": "Scheduled server restart will run in about 5 minute(s).",
     "backupOk": "Backup succeeds",
     "backupFail": "Backup fails",
     "chatBridge": "Chat bridge (in-game → Discord)",
